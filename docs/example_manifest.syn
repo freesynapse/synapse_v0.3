@@ -1,0 +1,190 @@
+# ==============================================================================
+# ASSET MANIFEST
+# ==============================================================================
+# Format: Block-based YAML-like syntax
+# Two-pass loading: Pass 1 (shaders, textures, meshes), Pass 2 (materials, skyboxes)
+
+# ==============================================================================
+# SHADERS
+# ==============================================================================
+# Format: shader <name> <path>
+
+shader pbr_ibl ../assets/shaders/PBR_IBL.glsl
+
+
+# ==============================================================================
+# TEXTURES
+# ==============================================================================
+# Format: texture <name> <path>
+# Note: Textures must be loaded before materials that reference them
+
+# Damaged Helmet textures
+texture helmet_albedo ../assets/models/damaged_helmet/albedo.jpg
+texture helmet_normal ../assets/models/damaged_helmet/normal.jpg
+texture helmet_roughness ../assets/models/damaged_helmet/roughness.jpg
+texture helmet_metallic ../assets/models/damaged_helmet/metallic.jpg
+texture helmet_ao ../assets/models/damaged_helmet/AO.jpg
+texture helmet_emissive ../assets/models/damaged_helmet/emissive.jpg
+
+
+# ==============================================================================
+# MESHES
+# ==============================================================================
+# Format: mesh <name> <path>
+
+mesh helmet_mesh ../assets/models/damaged_helmet/DamagedHelmet.gltf
+
+
+# ==============================================================================
+# MATERIALS
+# ==============================================================================
+# Format: material <name> { <properties> }
+# All properties are optional except 'shader'
+
+# -----------------------------------------------------------------------------
+# Damaged Helmet - Fully textured PBR material
+# -----------------------------------------------------------------------------
+material helmet_mat
+{
+    shader: pbr_ibl
+    
+    # Texture maps
+    albedo_texture: helmet_albedo
+    normal_texture: helmet_normal
+    metallic_texture: helmet_metallic
+    roughness_texture: helmet_roughness
+    ao_texture: helmet_ao
+    emissive_texture: helmet_emissive
+    
+    # Enable all texture maps
+    use_albedo_map: true
+    use_normal_map: true
+    use_metallic_map: true
+    use_roughness_map: true
+    use_ao_map: true
+    use_emissive_map: true
+    
+    # Base colors (used as multipliers/fallbacks)
+    albedo_color: 1.0 1.0 1.0 1.0
+    emissive_color: 0.0 0.0 0.0 1.0
+    
+    # PBR properties
+    metallic: 1.0
+    roughness: 0.5
+    ao: 1.0
+    tiling_factor: 1.0
+}
+
+# -----------------------------------------------------------------------------
+# Chrome - Shiny metal (no textures)
+# -----------------------------------------------------------------------------
+material chrome
+{
+    shader: pbr_ibl
+    
+    # No textures - pure material values
+    albedo_color: 0.95 0.95 1.0 1.0
+    metallic: 1.0
+    roughness: 0.05
+    ao: 1.0
+}
+
+# -----------------------------------------------------------------------------
+# Rough Plastic - Non-metallic matte surface
+# -----------------------------------------------------------------------------
+material rough_plastic
+{
+    shader: pbr_ibl
+    
+    albedo_color: 0.8 0.2 0.2 1.0
+    metallic: 0.0
+    roughness: 0.9
+    ao: 1.0
+}
+
+# -----------------------------------------------------------------------------
+# Gold - Metallic with medium roughness
+# -----------------------------------------------------------------------------
+material gold
+{
+    shader: pbr_ibl
+    
+    albedo_color: 1.0 0.84 0.0 1.0
+    metallic: 1.0
+    roughness: 0.3
+    ao: 1.0
+}
+
+# -----------------------------------------------------------------------------
+# Emissive Panel - Glowing surface
+# -----------------------------------------------------------------------------
+material neon_glow
+{
+    shader: pbr_ibl
+    
+    albedo_color: 0.1 0.1 0.1 1.0
+    emissive_color: 0.0 1.0 0.5 1.0
+    metallic: 0.0
+    roughness: 0.8
+    ao: 1.0
+}
+
+# -----------------------------------------------------------------------------
+# Tiled Floor - UV tiling example
+# -----------------------------------------------------------------------------
+material tiled_floor
+{
+    shader: pbr_ibl
+    
+    # Assuming you have floor textures loaded
+    # albedo_texture: floor_albedo
+    # normal_texture: floor_normal
+    # roughness_texture: floor_roughness
+    
+    # use_albedo_map: true
+    # use_normal_map: true
+    # use_roughness_map: true
+    
+    albedo_color: 0.6 0.6 0.6 1.0
+    metallic: 0.0
+    roughness: 0.7
+    ao: 1.0
+    tiling_factor: 4.0
+}
+
+
+# ==============================================================================
+# SKYBOXES
+# ==============================================================================
+# Format: skybox <name> <+x> <-x> <+y> <-y> <+z> <-z>
+# Faces in order: posx, negx, posy, negy, posz, negz
+
+skybox main_sky ../assets/textures/skybox/Lycksele2/posx.jpg ../assets/textures/skybox/Lycksele2/negx.jpg ../assets/textures/skybox/Lycksele2/posy.jpg ../assets/textures/skybox/Lycksele2/negy.jpg ../assets/textures/skybox/Lycksele2/posz.jpg ../assets/textures/skybox/Lycksele2/negz.jpg
+
+
+# ==============================================================================
+# ENTITIES
+# ==============================================================================
+# Format: entity <name> { <properties> }
+# Creates scene objects with mesh, material, and transform
+
+entity helmet
+{
+    mesh: helmet_mesh
+    material: helmet_mat
+    position: 0.0 0.0 0.0
+    rotation: 90.0 90.0 0.0
+    scale: 1.0 1.0 1.0
+}
+
+entity chrome_sphere
+{
+    mesh: sphere_mesh
+    material: chrome
+    position: 2.0 0.0 0.0
+    rotation: 0.0 0.0 0.0
+    scale: 0.5 0.5 0.5
+}
+
+
+

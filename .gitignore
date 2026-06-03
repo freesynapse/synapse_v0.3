@@ -1,0 +1,15 @@
+.zed/
+.cache/
+build/
+assets/
+docs/claude/
+bak/
+include/external/
+src/external/
+lib/
+
+cmake_notes.md
+notes.md
+compile_commands.json
+.clangd
+gemini.txt
