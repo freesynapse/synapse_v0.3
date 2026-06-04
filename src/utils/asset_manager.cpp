@@ -19,6 +19,8 @@ static std::string trim(const std::string &str) {
 // 
 void asset_manager_t::load_manifest(const std::string &_path)
 {
+    m_current_manifest_path = _path;
+    
     std::ifstream file(_path);
     
     if (!file.is_open()) {
@@ -80,6 +82,20 @@ void asset_manager_t::load_manifest(const std::string &_path)
     m_load_progress.current_asset = "";
     m_load_progress.loaded_assets++;
     render_loading_assets();
+    
+}
+
+//
+void asset_manager_t::reload_manifest()
+{
+    if (m_current_manifest_path.empty()) {
+        SYN_WARNING("no manifest loaded to reload.\n");
+        return;
+    }
+
+    SYN_INFO("reloading manifest: %s.\n", m_current_manifest_path.c_str());
+
+    load_manifest(m_current_manifest_path);
     
 }
 
@@ -280,14 +296,8 @@ void asset_manager_t::parse_material(const std::vector<std::string> &_tokens)
         return;
     }
 
-    shader_t *shader_ptr = shader_lib.get(shader_it->second);
-    if (!shader_ptr) {
-        SYN_ERROR("failed to get shader pointer for '%s'.\n", shader_name.c_str());
-        return;
-    }
-
     // create the material
-    material_handle_t mat_handle = mat_lib.create_material(shader_ptr->get_id());
+    material_handle_t mat_handle = mat_lib.create_material(shader_it->second);
     material_internal_t *mat = mat_lib.get_material(mat_handle);
 
     if (!mat) {
@@ -430,14 +440,8 @@ void asset_manager_t::create_material_from_descriptor(const std::string &_mat_na
         return;
     }
 
-    shader_t *shader_ptr = shader_lib.get(shader_it->second);
-    if (!shader_ptr) {
-        SYN_ERROR("failed to get shader pointer for '%s'.\n", _desc.shader_name.c_str());
-        return;
-    }
-
     // create the material
-    material_handle_t mat_handle = mat_lib.create_material(shader_ptr->get_id());
+    material_handle_t mat_handle = mat_lib.create_material(shader_it->second);
     material_internal_t *mat = mat_lib.get_material(mat_handle);
 
     if (!mat) {
@@ -736,7 +740,7 @@ void asset_manager_t::render_loading_assets()
                                glm::vec4(0.8f, 0.8f, 0.8f, 1.0f));
 
     float filled_width = bar_width * progress;
-    renderer.draw_rect(bar_x, bar_y, filled_width, bar_height, glm::vec4(0.3f, 0.4f, 0.8f, 1.0f));
+    renderer.draw_rect(bar_x, bar_y, filled_width, bar_height, glm::vec4(1.0f, 0.56f, 0.0f, 1.0f));
 
     //
     font.begin_render_block();

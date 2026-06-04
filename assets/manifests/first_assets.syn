@@ -1,0 +1,20 @@
+# Shaders : 'shader <name> <path>'
+shader pbr_ibl ../assets/shaders/PBR_IBL.glsl
+
+# Textures : 'texture <name> <path>'
+texture helmet_albedo ../assets/models/damaged_helmet/albedo.jpg
+texture helmet_normal ../assets/models/damaged_helmet/normal.jpg
+texture helmet_roughness ../assets/models/damaged_helmet/roughness.jpg
+texture helmet_metallic ../assets/models/damaged_helmet/metallic.jpg
+texture helmet_ao ../assets/models/damaged_helmet/AO.jpg
+texture helmet_emissive ../assets/models/damaged_helmet/emissive.jpg
+
+# Meshes : 'mesh <name> <path>'
+mesh helmet_mesh ../assets/models/damaged_helmet/DamagedHelmet.gltf
+
+# Materials ' (note: texture order is ALBEDO, NORMAL, METALLIC, ROUGHNESS, AO, EMISSIVE)
+material helmet_mat pbr_ibl helmet_albedo helmet_normal helmet_metallic helmet_roughness helmet_ao helmet_emissive
+
+# Skybox
+skybox main_sky ../assets/textures/skybox/Lycksele2/posx.jpg ../assets/textures/skybox/Lycksele2/negx.jpg ../assets/textures/skybox/Lycksele2/posy.jpg ../assets/textures/skybox/Lycksele2/negy.jpg ../assets/textures/skybox/Lycksele2/posz.jpg ../assets/textures/skybox/Lycksele2/negz.jpg
+

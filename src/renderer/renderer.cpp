@@ -504,13 +504,12 @@ void renderer_t::create_scene_framebuffer()
     m_scene_fbuffer_handle = create_framebuffer(color_format_t::RGBA16F, glm::ivec2(0), 1, true, "scene_fbuffer");
     m_scene_fbuffer = get_framebuffer(m_scene_fbuffer_handle);
 
-    SYN_INFO("created framebuffer '%s' (%dx%d).\n", m_scene_fbuffer->getName().c_str(), m_scene_fbuffer->getWidth(), m_scene_fbuffer->getHeight());
+    SYN_INFO("created framebuffer '%s' (%dx%d).\n", m_scene_fbuffer->getName().c_str(), 
+        m_scene_fbuffer->getWidth(), m_scene_fbuffer->getHeight());
     
     // create the shader
-    shader_handle_t shader_handle = shader_lib.load_from_file("scene_buffer_shader", 
-                                                    "../assets/shaders/scene_fbuffer.glsl");
-    m_scene_fbuffer_shader = shader_lib.get(shader_handle);
-
+    m_scene_fbuffer_shader_handle = shader_lib.load_from_file("scene_buffer_shader", 
+                                                              "../assets/shaders/scene_fbuffer.glsl");
     // create the vertex array, no vertex data needed
     glCreateVertexArrays(1, &m_scene_fbuffer_vao);
     
@@ -534,8 +533,9 @@ void renderer_t::render_scene_fbuffer()
     glDisable(GL_CULL_FACE);
 
     // enable render buffer shader, set texture and bind color attachment of fbuffer
-    m_scene_fbuffer_shader->enable();
-    m_scene_fbuffer_shader->set_uniform_1i("u_texture_sampler", 0);
+    shader_t *shader = shader_lib.get(m_scene_fbuffer_shader_handle);
+    shader->enable();
+    shader->set_uniform_1i("u_texture_sampler", 0);
     m_scene_fbuffer->bindTexture(0, 0);
 
     // bind vao and draw
@@ -595,13 +595,13 @@ void renderer_t::cmd_flush()
     for (uint32_t i = 0; i < m_command_count; i++) {
         const render_command_t &cmd = m_command_queue[i];
         material_internal_t *mat = mat_lib.get_material(cmd.material);
-        if (!mat || mat->shader_program_id == 0) continue;
+        if (!mat) continue;
 
         // batching layer 1: only switch shader when needed
-        if (mat->shader_program_id != current_active_shader_id) {
-            shader = shader_lib.get_by_opengl_id(mat->shader_program_id);
+        shader = shader_lib.get(mat->shader_handle);
+        if (shader && shader->get_id() != current_active_shader_id) {
             shader->enable();
-            current_active_shader_id = mat->shader_program_id;
+            current_active_shader_id = shader->get_id();
 
             shader->set_matrix_4fv("u_view_projection", mat_vp);
             shader->set_uniform_3fv("u_view_pos", orbit_camera.get_position());
@@ -784,8 +784,7 @@ void renderer_t::init_ui_quad()
     vao.create(vertices, sizeof(vertices) / sizeof(glm::vec2));//, indices, 6);
     m_ui_quad_vao = vao;
 
-    shader_handle_t handle = shader_lib.load_from_file("ui_progress_shader", "../assets/shaders/ui_progress_shader.glsl");
-    m_ui_shader = shader_lib.get(handle);
+    m_ui_shader_handle = shader_lib.load_from_file("ui_progress_shader", "../assets/shaders/ui_progress_shader.glsl");
 
     SYN_INFO("asset loader gui created.\n");
     
@@ -794,7 +793,7 @@ void renderer_t::init_ui_quad()
 // 
 void renderer_t::draw_rect(float _x, float _y, float _w, float _h, const glm::vec4 &_color)
 {
-    glm::mat4 projection = glm::ortho(0.0f, window.get_width(), window.get_height(), 0.0f);
+    glm::mat4 projection = glm::ortho(0.0f, (float)m_viewport.x, (float)m_viewport.y, 0.0f);
     // translate and scale quad
     glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(_x, _y, 0.0f));
     model = glm::scale(model, glm::vec3(_w, _h, 1.0f));
@@ -802,10 +801,11 @@ void renderer_t::draw_rect(float _x, float _y, float _w, float _h, const glm::ve
     glDisable(GL_DEPTH_TEST);
     // glDisable(GL_CULL_FACE);
 
-    m_ui_shader->enable();
-    m_ui_shader->set_matrix_4fv("u_projection", projection);
-    m_ui_shader->set_matrix_4fv("u_model", model);
-    m_ui_shader->set_uniform_4fv("u_color", _color);
+    shader_t *shader = shader_lib.get(m_ui_shader_handle);
+    shader->enable();
+    shader->set_matrix_4fv("u_projection", projection);
+    shader->set_matrix_4fv("u_model", model);
+    shader->set_uniform_4fv("u_color", _color);
 
     m_ui_quad_vao.bind();
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
@@ -817,13 +817,14 @@ void renderer_t::draw_rect(float _x, float _y, float _w, float _h, const glm::ve
     
 }
 
+// 
 void renderer_t::draw_rect_outline(float _x, float _y, 
                                    float _w, float _h, 
                                    float _thickness, 
                                    const glm::vec4 &_color,
                                    const glm::vec4 &_outline_color)
 {
-    glm::mat4 projection = glm::ortho(0.0f, window.get_width(), window.get_height(), 0.0f);
+    glm::mat4 projection = glm::ortho(0.0f, (float)m_viewport.x, (float)m_viewport.y, 0.0f);
     // translate and scale quad
     glm::mat4 model = glm::translate(glm::mat4(1.0f), glm::vec3(_x, _y, 0.0f));
     model = glm::scale(model, glm::vec3(_w, _h, 1.0f));
@@ -831,17 +832,18 @@ void renderer_t::draw_rect_outline(float _x, float _y,
     glDisable(GL_DEPTH_TEST);
     // glDisable(GL_CULL_FACE);
     
-    m_ui_shader->enable();
-    m_ui_shader->set_matrix_4fv("u_projection", projection);
-    m_ui_shader->set_matrix_4fv("u_model", model);
+    shader_t *shader = shader_lib.get(m_ui_shader_handle);
+    shader->enable();
+    shader->set_matrix_4fv("u_projection", projection);
+    shader->set_matrix_4fv("u_model", model);
 
     m_ui_quad_vao.bind();
 
-    m_ui_shader->set_uniform_4fv("u_color", _color);
+    shader->set_uniform_4fv("u_color", _color);
     glDrawArrays(GL_TRIANGLE_FAN, 0, 4);
     m_perf_stats.draw_calls_per_frame++;
 
-    m_ui_shader->set_uniform_4fv("u_color", _outline_color);
+    shader->set_uniform_4fv("u_color", _outline_color);
     glLineWidth(_thickness);
     glDrawArrays(GL_LINE_LOOP, 0, 4);
     m_perf_stats.draw_calls_per_frame++;
@@ -902,10 +904,17 @@ void renderer_t::init_perf_graph()
     m_perf_stats.graph_vao.create_empty_vertices(SYN_PERF_GRAPH_SAMPLE_COUNT * 4 * 6 *sizeof(float));
     m_perf_stats.graph_vao.create_empty_indices(SYN_PERF_GRAPH_SAMPLE_COUNT * 6 * sizeof(uint32_t));
 
-    shader_handle_t handle = shader_lib.load_from_file("ui_perf_stats", "../assets/shaders/ui_perf_stats.glsl");
-    m_perf_stats.graph_shader = shader_lib.get(handle);
+    m_perf_stats.graph_shader_handle = shader_lib.load_from_file("ui_perf_stats", "../assets/shaders/ui_perf_stats.glsl");
     
     m_perf_stats.graph_vao_initialized = true;
+}
+
+// 
+void renderer_t::show_notification(const std::string &_msg, float _duration_s)
+{
+    m_notification.msg = _msg;
+    m_notification.duration = _duration_s;
+    m_notification.display_time = _duration_s;
 }
 
 // 
@@ -913,9 +922,8 @@ void renderer_t::draw_perf_stats()
 {
     if (!m_perf_stats.show_overlay) return;
 
-    glDisable(GL_DEPTH_TEST);
+    // glDisable(GL_DEPTH_TEST);
     
-    glm::vec2 dims = glm::vec2(window.m_window_dim.x, window.m_window_dim.y);
     static float padding = 10.0f;
     static float line_height = font.get_font_height();
 
@@ -933,8 +941,22 @@ void renderer_t::draw_perf_stats()
         text_y += padding;
         draw_frame_time_graph(x, text_y, w, h);
     }
+
+    // show notification
+    if (m_notification.display_time > 0.0f) {
+
+        float msg_width = font.get_string_width("%s", m_notification.msg.c_str());
+
+        float x = m_viewport.x * 0.5f - msg_width * 0.5f;
+        float y = m_viewport.y - 200.0f;
+
+        font.render_text(x, y, "%s", m_notification.msg.c_str());
+
+        m_notification.display_time -= time_step.dt;
+        
+    }
     
-    glEnable(GL_DEPTH_TEST);
+    // glEnable(GL_DEPTH_TEST);
     
 }
 
@@ -1008,10 +1030,11 @@ void renderer_t::draw_frame_time_graph(float _x, float _y, float _w, float _h)
 
     // 
     glDisable(GL_DEPTH_TEST);
-    m_perf_stats.graph_shader->enable();
-    glm::mat4 projection = glm::ortho(0.0f, window.get_width(), window.get_height(), 0.0f);
-    m_perf_stats.graph_shader->set_matrix_4fv("u_projection", projection);
-    m_perf_stats.graph_shader->set_matrix_4fv("u_model", glm::mat4(1.0f));
+    shader_t *shader = shader_lib.get(m_perf_stats.graph_shader_handle);
+    shader->enable();
+    glm::mat4 projection = glm::ortho(0.0f, (float)m_viewport.x, (float)m_viewport.y, 0.0f);
+    shader->set_matrix_4fv("u_projection", projection);
+    shader->set_matrix_4fv("u_model", glm::mat4(1.0f));
 
     // update /vertices/indices and draw
     m_perf_stats.graph_vao.bind();
@@ -1035,8 +1058,8 @@ void renderer_t::create_orienatation_obj(uint32_t _size)
     m_orientation_obj_size = _size;
     
     // create shader
-    shader_handle_t handle = shader_lib.load_from_file("orientation_obj_shader", "../assets/shaders/debug/orientation_obj.glsl");
-    m_orientation_obj_shader = shader_lib.get(handle);
+    m_orientation_obj_shader_handle = shader_lib.load_from_file("orientation_obj_shader", 
+                                                                "../assets/shaders/debug/orientation_obj.glsl");
 
     struct orientation_obj_v {
         glm::vec3 position;
@@ -1079,8 +1102,9 @@ void renderer_t::render_orientation_obj()
     static glm::mat4 ortho_proj = glm::ortho(-1.1f, 1.1f, -1.1f, 1.1f, -1.1f, 1.1f);
     glm::mat4 mvp = ortho_proj * cam_rot;
 
-    m_orientation_obj_shader->enable();
-    m_orientation_obj_shader->set_matrix_4fv("u_mvp", mvp);
+    shader_t *shader = shader_lib.get(m_orientation_obj_shader_handle);
+    shader->enable();
+    shader->set_matrix_4fv("u_mvp", mvp);
 
     m_orientation_obj_vao.bind();
     set_line_width(3.0f);
@@ -1088,7 +1112,7 @@ void renderer_t::render_orientation_obj()
     m_perf_stats.draw_calls_per_frame++;
     set_line_width(1.0f);
 
-    m_orientation_obj_shader->disable();
+    shader->disable();
 
     reset_viewport();
     
@@ -1097,8 +1121,8 @@ void renderer_t::render_orientation_obj()
 // 
 void renderer_t::init_debug_rendering()
 {
-    shader_handle_t handle = shader_lib.load_from_file("debug_normal_shader", "../assets/shaders/debug/debug_mesh_normals.glsl");
-    m_debug_state.debug_normal_shader = shader_lib.get(handle);
+    m_debug_state.debug_normal_shader_handle = shader_lib.load_from_file("debug_normal_shader", 
+        "../assets/shaders/debug/debug_mesh_normals.glsl");
 
     m_debug_state_initialized = true;
 }
@@ -1117,7 +1141,7 @@ void renderer_t::draw_debug_normals(mesh_handle_t _mesh_handle, const glm::mat4 
     const vertex_array_t *vao = mesh_lib.get(_mesh_handle);
     if (!vao) return;
 
-    shader_t *shader = m_debug_state.debug_normal_shader;
+    shader_t *shader = shader_lib.get(m_debug_state.debug_normal_shader_handle);
     shader->enable();
 
     glm::mat4 vp = orbit_camera.get_view_projection_matrix();

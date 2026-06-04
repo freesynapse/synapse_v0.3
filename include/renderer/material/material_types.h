@@ -4,7 +4,9 @@
 #include <stdint.h>
 #include <string.h>
 #include <glm/glm.hpp>
+
 #include "renderer/material/texture_types.h"
+#include "renderer/shader/shader_types.h"
 
 // 
 #define SYN_MAX_MATERIAL_COUNT       64
@@ -50,21 +52,8 @@ struct material_pbr_payload_t {
     float _pad[2];
 };
 
-// 
-//struct material_internal_t {
-//    material_payload_t payload;
-//    texture_handle_t textures[(uint32_t)texture_map_type_t::COUNT];
-//    uint32_t shader_program_id;
-//    bool is_active;
-//
-//    material_internal_t() {
-//        for (uint32_t i = 0; i < (uint32_t)texture_map_type_t::COUNT; i++) {
-//            textures[i] = { 0 };
-//        }
-//    }
-//};
 struct material_internal_t {
-    uint32_t shader_program_id;
+    shader_handle_t shader_handle;
 
     // generic data (payload) storage
     uint8_t data[SYN_MAX_MATERIAL_DATA_SIZE];
@@ -76,7 +65,7 @@ struct material_internal_t {
     bool is_active;
 
     material_internal_t() :
-        shader_program_id(0), data_size(0), is_active(false)
+        shader_handle({ 0 }), data_size(0), is_active(false)
     {
         memset(data, 0, SYN_MAX_MATERIAL_DATA_SIZE);
         for (uint32_t i = 0; i < SYN_MAX_MATERIAL_TEXTURES; i++) textures[i] = { 0 };

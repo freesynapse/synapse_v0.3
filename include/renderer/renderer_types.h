@@ -32,7 +32,7 @@ struct perf_stats_t {
     bool show_graph = true;
     vertex_array_t graph_vao;
     bool graph_vao_initialized = false;
-    shader_t *graph_shader = NULL;
+    shader_handle_t graph_shader_handle = { 0 };
     uint32_t draw_calls_per_frame = 0;
 
     float frame_times[SYN_PERF_GRAPH_SAMPLE_COUNT];
@@ -53,8 +53,8 @@ struct debug_state_t {
     float tangent_length     = 0.1f;
 
     vertex_array_t debug_line_vao;
-    shader_t *debug_line_shader;
-    shader_t *debug_normal_shader;    
+    shader_handle_t debug_line_shader_handle;
+    shader_handle_t debug_normal_shader_handle;
 };
 
 

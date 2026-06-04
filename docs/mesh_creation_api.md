@@ -1,6 +1,6 @@
 Code flow for a simple mesh/shader/material setup:
 
-1. Create a VAO from 
+1. Create a VAO from custom vertex structure (default = vertex_data_t)
 
     struct data_ {
         glm::vec3 pos;
@@ -35,7 +35,7 @@ Code flow for a simple mesh/shader/material setup:
     shader_t *shader = shader_lib.get(shader_handle);
 
     // create the material using the simple shader
-    material_handle_t mat_handle = mat_lib.create_material(shader->get_id());
+    material_handle_t mat_handle = mat_lib.create_material(shader_handle);
     material_internal_t *mat = mat_lib.get_material(mat_h);
     
     // set data_size to 0 since this shader doesn't use the material UBO
@@ -50,8 +50,10 @@ Code flow for a simple mesh/shader/material setup:
 In the rendering loop of the implementation:
 
     renderer.submit_mesh(mesh_handle, material_handle, model_matrix);
+    renderer.submit_entity(entity_handle)
     renderer.flush_commands();
 
+An entity is basically a mesh_handle, a material_handle and a transform.
 
 
 **Appendix A -- generation of a cube mesh with custom vertex data**

@@ -1,7 +1,9 @@
 .zed/
 .cache/
 build/
-assets/
+assets/models/
+assets/textures/
+assets/font/
 docs/claude/
 bak/
 include/external/

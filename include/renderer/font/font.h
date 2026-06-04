@@ -4,16 +4,11 @@
 // #pragma warning(disable : 4005)
 
 #include <vector>
-
 #include <freetype2/ft2build.h>
 #include FT_FREETYPE_H
-
 #include <glm/glm.hpp>
 
-#include "renderer/shader/shader_library.h"
 #include "event/event.h"
-
-
 
 // 
 struct font_point_t
@@ -32,6 +27,7 @@ struct character_info_s
 	float tx, ty;
 };
 
+// 
 #define FONT_MAX_BUFFER_LENGTH  8192
 #define FONT_MAX_CHAR_SET_SIZE   128
 
@@ -39,7 +35,6 @@ struct character_info_s
 class font_t
 {
 public:
-    // Constructor / destructor
 	font_t() {};
 	~font_t() = default;
 	
@@ -52,6 +47,7 @@ public:
 	// in pixels
 	float get_string_width(const char* _str, ...);
 	void set_color(const glm::vec4& _color);
+	const glm::vec4 &get_color() { return m_text_color; }
 	
 	// Accessors
 	inline float get_font_height() { return (float)(m_texture_height); }

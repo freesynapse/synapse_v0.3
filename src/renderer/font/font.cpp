@@ -124,12 +124,6 @@ int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const
 	m_texture_width = max(m_texture_width, roww);
 	m_texture_height += rowh;
 
-	// Setup swizzle mask for alpha texture shader rendering
-	//GLint m_swizzleMask[4]; 
-	//(GLint*)malloc(sizeof(GLint) * 4);
-	//GLint mask[4] = { GL_ZERO, GL_ZERO, GL_ZERO, GL_RED };
-	//memcpy(m_swizzleMask, mask, sizeof(GLint) * 4);
-
 	// Create a texture to hold the character set
 	glActiveTexture(GL_TEXTURE1);
 	glGenTextures(1, &m_atlas_texture_id);
@@ -148,10 +142,7 @@ int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	//glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, m_swizzleMask);
-
 	// Paste glyphs bitmaps into the texture
-	//
 	int ox = 0;
 	int oy = 0;
 	rowh = 0;
@@ -301,7 +292,6 @@ void font_t::end_render_block()
 	}
 
 	if (c > 0) {
-    	// glBufferData(GL_ARRAY_BUFFER, sizeof(font_point_t) * c, texture_coords.get(), GL_DYNAMIC_DRAW);
     	glBufferData(GL_ARRAY_BUFFER, sizeof(font_point_t) * c, m_texture_coords, GL_DYNAMIC_DRAW);
     	glDrawArrays(GL_TRIANGLES, 0, c);
 	}

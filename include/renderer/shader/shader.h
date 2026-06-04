@@ -3,6 +3,7 @@
 
 #include <string>
 #include <unordered_map>
+#include <filesystem>
 
 #ifndef GLAD_INCLUDED
 #include "glapi.h"
@@ -30,6 +31,7 @@ public:
     shader_t& operator=(shader_t&&) = default;
 	
 	void reload();
+	bool file_has_changed();
 
 	void load_from_file();
 	void load_from_source(const std::string &_name, const std::string &_src);
@@ -41,9 +43,7 @@ public:
 	
 protected:
 	std::unordered_map<GLenum, std::string> preprocess(const std::string& _source);
-	// std::vector<std::string> parse_uniforms();
 	int compile_shader();
-	// void resolve_uniforms(const std::vector<std::string>& _uniforms);
 
 public:
 	void enable();
@@ -53,10 +53,13 @@ public:
 	// accessors -- more below
 	// GLint get_uniform_location(const std::string& _uniform_name);
 	GLuint get_id() { return m_opengl_id; }
-	const std::string& get_name() { return m_shader_name; }
+	void set_id(GLuint _program_id) { m_opengl_id = _program_id; }
+	const std::string &get_name() { return m_shader_name; }
 	bool is_active() { return m_is_active; }
-
-// protected:
+	void set_asset_path(const std::string &_path);
+	const std::string &get_asset_path() { return m_asset_path; }
+	
+private:
 	std::string m_shader_name = "";
 	std::string m_asset_path = "";
 	std::string m_raw_src = "";
@@ -68,7 +71,8 @@ public:
 
 	uniform_cache_t m_uniform_cache[SYN_MAX_SHADER_UNIFORMS];
 	uint32_t m_uniform_count;
-	
+
+	std::filesystem::file_time_type m_last_write_time;
 
 
 private:

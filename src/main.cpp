@@ -33,14 +33,16 @@ void handle_input()
     if (input.was_key_pressed(SYN_KEY_F6)) {
         renderer.toggle_tangents();
     }
-
+    if (input.was_key_pressed(SYN_KEY_F8)) {
+        shader_lib.reload_shaders();
+    }
 }
 
 // test code
 void render(float _dt)
 {
     // renderer.cmd_submit_mesh(helmet.mesh_handle, helmet.material_handle, helmet.transform);
-    // renderer.cmd_submit_entity(helmet);
+    renderer.cmd_submit_entity(helmet);
     renderer.cmd_submit_entity(sphere);
     renderer.cmd_flush();
 
@@ -97,8 +99,8 @@ int main()
 
     mesh_handle_t sphere_mesh = generate_uv_sphere(1.0f, 36, 18);
     material_handle_t chrome_mat = assets.get_material("chrome");
-    // glm::mat4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(2.0f, 0.0f, 0.0f));
-    glm::mat4 transform(1.0f);
+    glm::mat4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -2.0f, 0.0f));
+    // glm::mat4 transform(1.0f);
 
     sphere = entity_lib.create_entity("test_sphere", sphere_mesh, chrome_mat, transform);
     

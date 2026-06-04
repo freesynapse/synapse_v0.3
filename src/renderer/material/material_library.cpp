@@ -18,7 +18,7 @@ void material_library_t::shutdown()
 }
 
 // 
-material_handle_t material_library_t::create_material(uint32_t _shader_program_id)
+material_handle_t material_library_t::create_material(shader_handle_t _shader_handle)
 {
     uint32_t free_slot = 0;
 
@@ -55,7 +55,7 @@ material_handle_t material_library_t::create_material(uint32_t _shader_program_i
         mat.textures[i] = { 0 };
     }
 
-    mat.shader_program_id = _shader_program_id;
+    mat.shader_handle = _shader_handle;
     mat.is_active = true;
     m_active_count++;
 

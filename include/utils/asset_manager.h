@@ -62,6 +62,10 @@ public:
     // Loads a manifest file and populates all libraries
     void load_manifest(const std::string &_path="./assets.syn");
 
+    // 
+    void reload_manifest();
+    const std::string &get_current_manifest_path() { return m_current_manifest_path; }
+
     // High-level accessors
     shader_handle_t   get_shader(const std::string &_name);
     texture_handle_t  get_texture(const std::string &_name);
@@ -111,12 +115,15 @@ private:
     std::unordered_map<std::string, cubemap_handle_t>  m_cubemap_map;
     std::unordered_map<std::string, entity_handle_t>   m_entity_map;
 
+    std::string m_current_manifest_path;
+    
     struct {
         uint32_t total_assets = 0;
         uint32_t loaded_assets = 0;
         std::string current_asset = "";
         bool enabled = false;
     } m_load_progress;
+
 };
 
 

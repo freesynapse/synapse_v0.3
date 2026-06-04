@@ -1,0 +1,101 @@
+# ==============================================================================
+# ASSET MANIFEST - Damaged Helmet with LDR Skybox Scene
+# ==============================================================================
+
+# SHADERS
+shader pbr_ibl ../assets/shaders/PBR_IBL.glsl
+
+# TEXTURES
+texture helmet_albedo ../assets/models/damaged_helmet/albedo.jpg
+texture helmet_normal ../assets/models/damaged_helmet/normal.jpg
+texture helmet_roughness ../assets/models/damaged_helmet/roughness.jpg
+texture helmet_metallic ../assets/models/damaged_helmet/metallic.jpg
+texture helmet_ao ../assets/models/damaged_helmet/AO.jpg
+texture helmet_emissive ../assets/models/damaged_helmet/emissive.jpg
+
+# MESHES
+mesh helmet_mesh ../assets/models/damaged_helmet/DamagedHelmet.gltf
+
+# MATERIALS
+material helmet_mat
+{
+    shader: pbr_ibl
+    
+    albedo_texture: helmet_albedo
+    normal_texture: helmet_normal
+    metallic_texture: helmet_metallic
+    roughness_texture: helmet_roughness
+    ao_texture: helmet_ao
+    emissive_texture: helmet_emissive
+    
+    use_albedo_map: true
+    use_normal_map: true
+    use_metallic_map: true
+    use_roughness_map: true
+    use_ao_map: true
+    use_emissive_map: true
+    
+    albedo_color: 1.0 1.0 1.0 1.0
+    tiling_factor: 1.0
+}
+
+# SKYBOX
+skybox main_sky ../assets/textures/skybox/Lycksele2/posx.jpg ../assets/textures/skybox/Lycksele2/negx.jpg ../assets/textures/skybox/Lycksele2/posy.jpg ../assets/textures/skybox/Lycksele2/negy.jpg ../assets/textures/skybox/Lycksele2/posz.jpg ../assets/textures/skybox/Lycksele2/negz.jpg
+#skybox main_sky ../assets/textures/skybox/sky/posx.png ../assets/textures/skybox/sky/negx.png ../assets/textures/skybox/sky/posy.png ../assets/textures/skybox/sky/negy.png ../assets/textures/skybox/sky/posz.png ../assets/textures/skybox/sky/negz.png
+
+
+# -----------------------------------------------------------------------------
+# Chrome - Shiny metal (no textures)
+# -----------------------------------------------------------------------------
+material chrome
+{
+    shader: pbr_ibl
+    
+    # No textures - pure material values
+    albedo_color: 0.95 0.95 1.0 1.0
+    metallic: 1.0
+    roughness: 0.05
+    ao: 1.0
+}
+
+# -----------------------------------------------------------------------------
+# Rough Plastic - Non-metallic matte surface
+# -----------------------------------------------------------------------------
+material rough_plastic
+{
+    shader: pbr_ibl
+    
+    albedo_color: 0.8 0.2 0.2 1.0
+    metallic: 0.0
+    roughness: 0.9
+    ao: 1.0
+}
+
+# -----------------------------------------------------------------------------
+# Gold - Metallic with medium roughness
+# -----------------------------------------------------------------------------
+material gold
+{
+    shader: pbr_ibl
+    
+    albedo_color: 1.0 0.84 0.0 1.0
+    metallic: 1.0
+    roughness: 0.3
+    ao: 1.0
+}
+
+# ==============================================================================
+# ENTITIES
+# ==============================================================================
+# Format: entity <name> { <properties> }
+# Creates scene objects with mesh, material, and transform
+
+entity helmet
+{
+    mesh: helmet_mesh
+    material: helmet_mat
+    position: 0.0 0.0 0.0
+    rotation: 90.0 90.0 0.0
+    scale: 1.0 1.0 1.0
+}
+

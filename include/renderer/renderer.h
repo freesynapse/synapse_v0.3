@@ -110,6 +110,7 @@ public:
 	void record_frame_time(float _dt_ms);
 	void toggle_perf_overlay();
 	void init_perf_graph();
+	void show_notification(const std::string &_msg, float _duration_s=2.0f);
 	void draw_perf_stats();
 	void draw_frame_time_graph(float _x, float _y, float _w, float _h);
 	
@@ -146,7 +147,7 @@ public:
 	
 	// main, final, framebuffer -- everything renders to this
 	uint32_t m_scene_fbuffer_vao;
-	shader_t *m_scene_fbuffer_shader;
+	shader_handle_t m_scene_fbuffer_shader_handle;
 	framebuffer_handle_t m_scene_fbuffer_handle;
 	framebuffer_t *m_scene_fbuffer;
 
@@ -167,19 +168,26 @@ public:
 	render_command_t m_command_queue[SYN_MAX_RENDER_COMMANDS];
 	uint32_t m_command_count;
 
-	// performance stats
-	perf_stats_t m_perf_stats; // .draw_calls_per_frame reset in window.prerender()
-	
 	// quad drawing
 	vertex_array_t m_ui_quad_vao;
-	shader_t *m_ui_shader;
+	shader_handle_t m_ui_shader_handle;
+	
+	// performance stats
+	perf_stats_t m_perf_stats; // .draw_calls_per_frame reset in window.prerender()
+
+	// notifications
+	struct {
+	    std::string msg;
+		float display_time = 0.0f;
+		float duration = 2.0f;
+	} m_notification;
 	
 	// debug
 	debug_state_t m_debug_state;
 	bool m_debug_state_initialized = false;
 
 	vertex_array_t m_orientation_obj_vao;
-	shader_t *m_orientation_obj_shader;
+	shader_handle_t m_orientation_obj_shader_handle;
 	uint32_t m_orientation_obj_size;
 	
 };

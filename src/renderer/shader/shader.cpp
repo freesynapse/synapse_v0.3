@@ -197,7 +197,11 @@ void shader_t::reload()
 	// reset setup flag
 	m_is_active = false;
 
-	if (m_raw_src == "") {
+	if (!m_asset_path.empty()) {
+        load_from_file();
+	}
+	
+	if (m_raw_src.empty()) {
 		SYN_INFO("no shader source provided.");
 		return;
 	}
@@ -207,9 +211,6 @@ void shader_t::reload()
 
 	// parse all uniforms for resolving below, threaded
 	// std::vector<std::string> uniforms = parse_uniforms();
-
-	if (m_opengl_id)
-		glDeleteProgram(m_opengl_id);
 
 	// compile the shader program
 	int res = compile_shader();
@@ -225,6 +226,25 @@ void shader_t::reload()
 	// update flag
 	m_is_active = true;
 
+	if (!m_asset_path.empty()) {
+	    try {
+			m_last_write_time = std::filesystem::last_write_time(m_asset_path);
+		} catch (...) {}
+	}
+	
+}
+
+// 
+bool shader_t::file_has_changed()
+{
+    if (m_asset_path.empty()) return false;
+
+    try {
+        auto current_time = std::filesystem::last_write_time(m_asset_path);
+        return current_time != m_last_write_time;
+    } catch (...) {
+        return false;
+    }
 }
 
 // 
@@ -413,6 +433,17 @@ void shader_t::print_uniforms()
 	}
 	str = str.substr(0, str.size()-1);
 	SYN_INFO("%s\n", str.c_str());
+}
+
+// 
+void shader_t::set_asset_path(const std::string &_path)
+{
+    m_asset_path = _path;
+    if (!m_asset_path.empty()) {
+        try {
+            m_last_write_time = std::filesystem::last_write_time(m_asset_path);
+        } catch (...) {}
+    }
 }
 
 //-----------------------------------------------------------------------------------
