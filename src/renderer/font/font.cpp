@@ -182,16 +182,12 @@ int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const
 		ox += g->bitmap.width + 1;
 	}
 
-	// Generate VAO
-	glGenVertexArrays(1, &m_font_vao);
-	glBindVertexArray(m_font_vao);
-
-	// Generate the VBO for fonts
-	glGenBuffers(1, &m_font_vbo);
-
-	// unbind vertex array
-	glBindVertexArray(0);
-
+	m_vao.set_buffer_layout({
+	    { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT4 }
+	});
+	m_vao.create_empty_vertices(sizeof(font_point_t) * FONT_MAX_BUFFER_LENGTH, GL_DYNAMIC_DRAW);
+	
+	
 	SYN_INFO("generated %dx%d text atlas.\n", m_texture_width, m_texture_height);
 
 	return RETURN_SUCCESS;
@@ -215,22 +211,6 @@ void font_t::end_render_block()
     if (m_render_offsets.size() == 0) {
         return;
     }
-
-    renderer.set_depth_testing(false);
-	
-	shader_t *shader = shader_lib.get(m_shader_handle);
-	shader->enable();
-	
-	// Bind texture
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, m_atlas_texture_id);
-	glUniform1i(m_uniform_sampler, 0);
-
-	// Select the font VBO
-	glBindVertexArray(m_font_vao);
-	glBindBuffer(GL_ARRAY_BUFFER, m_font_vbo);
-	glEnableVertexAttribArray(VERTEX_ATTRIB_LOCATION_POSITION);
-	glVertexAttribPointer(VERTEX_ATTRIB_LOCATION_POSITION, 4, GL_FLOAT, GL_FALSE, 0, (const GLvoid*)0);
 
 	uint32_t c = 0;
 	
@@ -292,18 +272,24 @@ void font_t::end_render_block()
 	}
 
 	if (c > 0) {
-    	glBufferData(GL_ARRAY_BUFFER, sizeof(font_point_t) * c, m_texture_coords, GL_DYNAMIC_DRAW);
-    	glDrawArrays(GL_TRIANGLES, 0, c);
+	    renderer.set_depth_testing(false);
+
+		shader_t *shader = shader_lib.get(m_shader_handle);
+		shader->enable();
+
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, m_atlas_texture_id);
+		glUniform1i(m_uniform_sampler, 0);
+
+		//
+		m_vao.bind();
+
+		m_vao.update_vertices(m_texture_coords, sizeof(font_point_t) * c, 0);
+		glDrawArrays(GL_TRIANGLES, 0, c);
+		
+        shader->disable();
+        renderer.set_depth_testing(true);
 	}
-
-	glDisableVertexAttribArray(VERTEX_ATTRIB_LOCATION_POSITION);
-	glBindVertexArray(0);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindTexture(GL_TEXTURE_2D, 0);
-
-	//
-	shader->disable();
-	renderer.set_depth_testing(true);
 
 }
 

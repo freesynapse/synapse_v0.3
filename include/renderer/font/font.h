@@ -8,6 +8,7 @@
 #include FT_FREETYPE_H
 #include <glm/glm.hpp>
 
+#include "renderer/buffers/vertex_array.h"
 #include "event/event.h"
 
 // 
@@ -83,6 +84,7 @@ private:
 	// vbo
 	GLuint m_font_vao = 0;
 	GLuint m_font_vbo = 0;
+	vertex_array_t m_vao;
 
 	// GLSL shaders
 	shader_handle_t m_shader_handle = { 0 };
