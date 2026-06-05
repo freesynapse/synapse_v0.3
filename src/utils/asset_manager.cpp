@@ -743,7 +743,6 @@ void asset_manager_t::render_loading_assets()
     renderer.draw_rect(bar_x, bar_y, filled_width, bar_height, glm::vec4(1.0f, 0.56f, 0.0f, 1.0f));
 
     //
-    font.begin_render_block();
 
     int percent = (int)(progress * 100.0f);
     float percent_x = bar_x + bar_width * 0.5f - font.get_string_width("%d%%", percent) * 0.5f;

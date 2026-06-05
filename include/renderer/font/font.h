@@ -12,11 +12,20 @@
 #include "event/event.h"
 
 // 
-struct font_point_t
+struct font_vertex_t
 {
-	GLfloat x, y, s, t;
-	font_point_t(float _x, float _y, float _s, float _t) : x(_x), y(_y), s(_s), t(_t) {}
-	font_point_t() : x(0.0f), y(0.0f), s(0.0f), t(1.0f) {}
+	glm::vec2 position;
+	glm::vec2 uv;
+	glm::vec4 color;
+
+	font_vertex_t(const glm::vec2 _pos, const glm::vec2 _uv, const glm::vec4 _color) :
+        position(_pos), uv(_uv), color(_color) {}
+	// font_vertex_t(float _x, float _y, float _u, float _v) : 
+	    // position({ _x, _y }), uv({ _u, _v }), color(glm::vec4(1.0f)) {}
+	// font_vertex_t() : position(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)), color(glm::vec4(1.0f)) {}
+
+	// glm::vec4 color;
+
 };
 
 // 
@@ -29,14 +38,15 @@ struct character_info_s
 };
 
 // 
-#define FONT_MAX_BUFFER_LENGTH  8192
-#define FONT_MAX_CHAR_SET_SIZE   128
+#define SYN_FONT_MAX_BUFFER_LENGTH  8192
+#define SYN_FONT_MAX_STRING_LENGTH   512
+#define SYN_FONT_MAX_CHAR_SET_SIZE   128
 
 // 
 class font_t
 {
 public:
-	font_t() {};
+	font_t() = default;
 	~font_t() = default;
 	
 	void init(const char *_filename, const int& _pixel_size=12, const glm::vec2& _vp_sz=glm::vec2(0.0f));
@@ -47,7 +57,7 @@ public:
 	void render_text(const float& _x, const float& _y, const char* _str, ...);
 	// in pixels
 	float get_string_width(const char* _str, ...);
-	void set_color(const glm::vec4& _color);
+	void set_color(const glm::vec4& _color) { m_text_color = _color; }
 	const glm::vec4 &get_color() { return m_text_color; }
 	
 	// Accessors
@@ -66,33 +76,21 @@ private:
 	FT_GlyphSlot m_glyph;
 
 	// texture
-	GLuint m_font_texture_id = 0;
 	GLuint m_atlas_texture_id = 0;
 	unsigned int m_texture_width = 0;
 	unsigned int m_texture_height = 0;
-	//GLint *m_swizzleMask;
 
 	// atlas
-	char m_render_buffer[FONT_MAX_BUFFER_LENGTH];
-	char m_tmp_buffer[1024];
-	std::vector<uint32_t> m_buffer_offsets;
-	uint32_t m_buffer_len;
-	std::vector<glm::vec2> m_render_offsets;
-	character_info_s m_chars[FONT_MAX_CHAR_SET_SIZE];
-	font_point_t m_texture_coords[FONT_MAX_BUFFER_LENGTH * 6];
-
-	// vbo
-	GLuint m_font_vao = 0;
-	GLuint m_font_vbo = 0;
-	vertex_array_t m_vao;
+	char m_tmp_buffer[SYN_FONT_MAX_STRING_LENGTH];
+	std::vector<font_vertex_t> m_vertices;
+	character_info_s m_chars[SYN_FONT_MAX_CHAR_SET_SIZE];
 
 	// GLSL shaders
 	shader_handle_t m_shader_handle = { 0 };
-	GLuint m_uniform_sampler = 0;
-	GLuint m_uniform_color = 0;
+	vertex_array_t m_vao;
 	glm::vec4 m_text_color = glm::vec4(1.0f);
 
-	// .text rendering attributes
+	// rendering parameters
 	glm::vec2 m_viewport_size = { 0.0f, 0.0f };
 	bool m_update_on_resize = true;
 	float m_sx = 0.0f;

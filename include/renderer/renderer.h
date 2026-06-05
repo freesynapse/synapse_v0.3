@@ -126,6 +126,7 @@ public:
 	void toggle_wireframe();
 	void toggle_normals();
 	void toggle_tangents();
+	void toggle_bounding_boxes();
 	void toggle_grid();
 
 	void draw_debug_normals(mesh_handle_t _mesh_handle, const glm::mat4 &_transform);
@@ -182,10 +183,10 @@ public:
 		float duration = 2.0f;
 	} m_notification;
 	
-	// debug
+	// debug (vaos and shader handles in debug_state_t)
 	debug_state_t m_debug_state;
 	bool m_debug_state_initialized = false;
-
+	
 	vertex_array_t m_orientation_obj_vao;
 	shader_handle_t m_orientation_obj_shader_handle;
 	uint32_t m_orientation_obj_size;

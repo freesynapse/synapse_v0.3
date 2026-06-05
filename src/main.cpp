@@ -24,15 +24,23 @@ void handle_input()
     if (input.was_key_pressed(SYN_KEY_F2)) {
         renderer.toggle_wireframe();
     }
+    
     if (input.was_key_pressed(SYN_KEY_F3)) {
         renderer.toggle_perf_overlay();
     }
+    
     if (input.was_key_pressed(SYN_KEY_F5)) {
         renderer.toggle_normals();
     }
+    
     if (input.was_key_pressed(SYN_KEY_F6)) {
         renderer.toggle_tangents();
     }
+
+    if (input.was_key_pressed(SYN_KEY_F7)) {
+        renderer.toggle_bounding_boxes();
+    }
+
     if (input.was_key_pressed(SYN_KEY_F8)) {
         shader_lib.reload_shaders();
     }
@@ -51,6 +59,14 @@ void render(float _dt)
         renderer.draw_debug_normals(e->mesh_handle, e->transform);
     }
 
+    if (renderer.m_debug_state.show_bounding_boxes) {
+        entity_t *e = entity_lib.get_entity(helmet);
+        mesh_internal_t *mesh = mesh_lib.get_mesh(e->mesh_handle);
+        if (mesh) {
+            renderer.draw_debug_bounding_boxes(mesh->aabb_min, mesh->aabb_max, e->transform);
+        }
+    }
+    
 }
 
 void setup_lights()

@@ -52,9 +52,9 @@ struct debug_state_t {
     float normal_length      = 0.1f;
     float tangent_length     = 0.1f;
 
-    vertex_array_t debug_line_vao;
-    shader_handle_t debug_line_shader_handle;
-    shader_handle_t debug_normal_shader_handle;
+    vertex_array_t line_vao;
+    shader_handle_t line_shader_handle;
+    shader_handle_t normal_shader_handle;
 };
 
 

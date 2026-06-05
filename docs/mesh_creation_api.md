@@ -27,12 +27,16 @@ Code flow for a simple mesh/shader/material setup:
     // Load it into the library
     mesh_handle_t simple_mesh = mesh_lib.load_mesh_from_vao("my_simple_mesh", vao);
 
+    // for setup of AABBs, a pointer to the vertex data has to be provided when loading
+    // the mesh
+    mesh_handle_t simple_mesh_w_AABB = mesh_lib.load_mesh_from_vao("my_simple_mesh", vao, (void *)vertices);
+
 
 2. Shader and material setup
 
     // setup the shader
     shader_handle = shader_lib.load_from_file("simple_shader", "../assets/shaders/simpel.glsl");
-    shader_t *shader = shader_lib.get(shader_handle);
+    shader_t *shader = shader_lib.get_shader(shader_handle);
 
     // create the material using the simple shader
     material_handle_t mat_handle = mat_lib.create_material(shader_handle);

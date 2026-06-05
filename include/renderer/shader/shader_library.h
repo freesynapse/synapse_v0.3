@@ -31,7 +31,7 @@ public:
     
     //
     shader_handle_t get_handle(const std::string &_name);
-    shader_t *get(shader_handle_t handle);
+    shader_t *get_shader(shader_handle_t handle);
     shader_t *get_by_opengl_id(uint32_t _opengl_id);
 
 

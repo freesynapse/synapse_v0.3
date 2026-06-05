@@ -17,19 +17,15 @@
 static void __font_on_resize_callback(const event_t &_e) { font.on_resize(_e); }
 
 // 
-void font_t::init(const char* _filename,
-                  const int& _pixel_size,
-                  const glm::vec2& _vp_sz)
+void font_t::init(const char *_filename, const int &_pixel_size, const glm::vec2 &_vp_sz)
 {
-    // create shader from static lib
-	SYN_INFO("creating font shader.\n");
+	m_shader_handle = shader_lib.load_from_file("font_shader", "../assets/shaders/font.glsl");
 
-	m_shader_handle = shader_lib.load_from_file("static_font_shader", "../assets/shaders/font.glsl");
-	
+	// TODO : remove
 	// prepare rendering objects
-	memset(m_render_buffer, 0, FONT_MAX_BUFFER_LENGTH);
-	m_buffer_offsets.reserve(512);
-	m_render_offsets.reserve(512);
+	// memset(m_render_buffer, 0, SYN_FONT_MAX_BUFFER_LENGTH);
+	// m_buffer_offsets.reserve(512);
+	// m_render_offsets.reserve(512);
 	
 	// register resize events
 	// events.register_callback(event_type_t::VIEWPORT_RESIZE, SYN_EVENT_MEMBER_FNC(font_t::resize_event));
@@ -40,45 +36,33 @@ void font_t::init(const char* _filename,
 	
 	m_viewport_size = _vp_sz;
 
+	// 6 vertices per character
+	m_vertices.reserve(SYN_FONT_MAX_BUFFER_LENGTH * 6);
+	
 }
 
 // 
 void font_t::destroy()
 {
-    SYN_INFO("deleting buffers...\n");
-	glDeleteBuffers(1, &m_font_vbo);
-	glDeleteVertexArrays(1, &m_font_vao);
-	glDeleteTextures(1, &m_atlas_texture_id);
+    m_vao.destroy();
+    glDeleteTextures(1, &m_atlas_texture_id);
 
 }
 
 // 
 int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const glm::vec2& _vp_sz)
 {
-	// Use program for initiation of shader attributes
-	// GLuint shader_id = shader_ptr->getShaderID();
-	shader_t *shader = shader_lib.get(m_shader_handle);
-	glUseProgram(shader->get_id());
-
-	m_uniform_sampler = glGetUniformLocation(shader->get_id(), "u_texture_sampler");
-	m_uniform_color = glGetUniformLocation(shader->get_id(), "u_color");
-	
 	// Init the FreeType lib
 	if (FT_Init_FreeType(&m_ft_lib)) {
 		// Error::raise_error(nullptr, __func__, "FreeType could not be initialized.");
-		SYN_ERROR("FreeType could not be initialized.");
+		SYN_ERROR("FreeType could not be initialized.\n");
 		return (RETURN_FAILURE);
 	}
 	
-	#ifdef DEBUG_FONT
-	SYN_INFO("FreeType successfully initialized.")
-	#endif
-
-	//
-	SYN_INFO("loading atlas from '%s'.\n", _filename);
+	SYN_INFO("loading font atlas from '%s'.\n", _filename);
 	
 	if (FT_New_Face(m_ft_lib, _filename, 0, &m_ft_face)) {
-		SYN_ERROR("could not load atlas.");
+		SYN_ERROR("could not font load atlas from '%s'.\n", _filename);
 		return (RETURN_FAILURE);
 	}
 
@@ -101,10 +85,10 @@ int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const
 	m_texture_width = 0;
 	m_texture_height = 0;
 
-	memset(m_chars, 0, sizeof(character_info_s) * FONT_MAX_CHAR_SET_SIZE);
+	memset(m_chars, 0, sizeof(character_info_s) * SYN_FONT_MAX_CHAR_SET_SIZE);
 
 	// Find the minimum size for a texture holding the complete ASCII m_charset
-	for (int i = 32; i < FONT_MAX_CHAR_SET_SIZE; i++) {
+	for (int i = 32; i < SYN_FONT_MAX_CHAR_SET_SIZE; i++) {
 		if (FT_Load_Char(m_ft_face, i, FT_LOAD_RENDER)) {
 			SYN_WARNING("could not log char %c.\n", i);
 			continue;
@@ -125,10 +109,8 @@ int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const
 	m_texture_height += rowh;
 
 	// Create a texture to hold the character set
-	glActiveTexture(GL_TEXTURE1);
 	glGenTextures(1, &m_atlas_texture_id);
 	glBindTexture(GL_TEXTURE_2D, m_atlas_texture_id);
-	glUniform1i(m_uniform_sampler, 1);
 
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_texture_width, m_texture_height, 0, GL_RED, GL_UNSIGNED_BYTE, 0);
 
@@ -147,7 +129,7 @@ int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const
 	int oy = 0;
 	rowh = 0;
 
-	for (int i = 32; i < FONT_MAX_CHAR_SET_SIZE; i++) {
+	for (int i = 32; i < SYN_FONT_MAX_CHAR_SET_SIZE; i++) {
 		if (FT_Load_Char(m_ft_face, i, FT_LOAD_RENDER)) {
 			SYN_WARNING("could not load char bitmap '%c' into texture.\n", i);
 			continue;
@@ -183,9 +165,11 @@ int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const
 	}
 
 	m_vao.set_buffer_layout({
-	    { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT4 }
+	    { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT2 },
+		{ VERTEX_ATTRIB_LOCATION_UV, shader_data_type_t::FLOAT2 },
+		{ VERTEX_ATTRIB_LOCATION_COLOR, shader_data_type_t::FLOAT4 }
 	});
-	m_vao.create_empty_vertices(sizeof(font_point_t) * FONT_MAX_BUFFER_LENGTH, GL_DYNAMIC_DRAW);
+	m_vao.create_empty_vertices(sizeof(font_vertex_t) * SYN_FONT_MAX_BUFFER_LENGTH, GL_DYNAMIC_DRAW);
 	
 	
 	SYN_INFO("generated %dx%d text atlas.\n", m_texture_width, m_texture_height);
@@ -195,126 +179,76 @@ int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const
 }
 
 // 
-void font_t::begin_render_block()
+void font_t::render_text(const float& _x, const float& _y, const char* _str, ...)
 {
-	// clear everything
-	memset(m_render_buffer, 0, FONT_MAX_BUFFER_LENGTH);
-	m_buffer_offsets.clear();
-	m_buffer_offsets.push_back(0);
-	m_buffer_len = 0;
-	m_render_offsets.clear();
+	if (!_str) return;
+
+	//
+	va_list arglist;
+	memset(m_tmp_buffer, 0, SYN_FONT_MAX_STRING_LENGTH);
+	va_start(arglist, _str);
+	size_t str_len = vsnprintf(m_tmp_buffer, SYN_FONT_MAX_STRING_LENGTH, _str, arglist);
+	va_end(arglist);
+
+	// add vertices to the buffer
+	float x = -1 + _x * m_sx;
+	float y =  1 - _y * m_sy;
+	for (size_t i = 0; i < str_len; i++) {
+    	if (m_tmp_buffer[i] == '\0') break;
+
+        uint8_t ascii_val = (uint8_t)m_tmp_buffer[i];
+        if (ascii_val >= SYN_FONT_MAX_CHAR_SET_SIZE) continue;
+
+        // calculate vertex and texture coordinates
+        character_info_s c = m_chars[ascii_val];
+        float x2 =  x + c.bl * m_sx;
+        float y2 = y + c.bt * m_sy;
+        float w = c.bw * m_sx;
+        float h = c.bh * m_sy;
+        
+        // advance cursor
+        x += c.ax * m_sx;
+        y += c.ay * m_sy;
+        
+        // skip empty m_chars
+        if (!w || !h) continue;
+        
+        float bw_tw = c.bw / (float)m_texture_width;
+        float bh_th = c.bh / (float)m_texture_height;
+        
+        m_vertices.push_back(font_vertex_t({ x2 + w,  y2     }, { c.tx + bw_tw, c.ty         }, m_text_color ));
+        m_vertices.push_back(font_vertex_t({ x2,      y2     }, { c.tx,         c.ty         }, m_text_color ));
+        m_vertices.push_back(font_vertex_t({ x2,      y2 - h }, { c.tx,         c.ty + bh_th }, m_text_color ));
+        m_vertices.push_back(font_vertex_t({ x2 + w,  y2     }, { c.tx + bw_tw, c.ty         }, m_text_color ));
+        m_vertices.push_back(font_vertex_t({ x2,      y2 - h }, { c.tx,         c.ty + bh_th }, m_text_color ));
+        m_vertices.push_back(font_vertex_t({ x2 + w,  y2 - h }, { c.tx + bw_tw, c.ty + bh_th }, m_text_color));
+	}
+
 }
 
 // 
 void font_t::end_render_block()
 {
-    if (m_render_offsets.size() == 0) {
-        return;
-    }
+    if (m_vertices.empty()) return;
 
-	uint32_t c = 0;
+    renderer.set_depth_testing(false);
+
+	shader_t *shader = shader_lib.get_shader(m_shader_handle);
+	shader->enable();
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, m_atlas_texture_id);
 	
+	m_vao.bind();
+	m_vao.update_vertices(&m_vertices[0], sizeof(font_vertex_t) * m_vertices.size(), 0);
+	glDrawArrays(GL_TRIANGLES, 0, m_vertices.size());
+	m_vao.unbind();
+
+    shader->disable();
+    renderer.set_depth_testing(true);
+
+	m_vertices.clear();
 	
-	for (size_t i = 0; i < m_render_offsets.size(); i++) {
-		glm::vec2& pos = m_render_offsets[i];
-		float x = -1 + pos.x * m_sx;
-		float y =  1 - pos.y * m_sy;
-
-		size_t start_j = m_buffer_offsets[i];
-        size_t end_j = m_buffer_offsets[i+1];
-      		
-        if (i + 1 >= m_buffer_offsets.size()) {
-		    break;
-		}
-
-		if (start_j >= FONT_MAX_BUFFER_LENGTH) continue;
-        if (end_j > FONT_MAX_BUFFER_LENGTH) end_j = FONT_MAX_BUFFER_LENGTH;
-		
-		// Loop through all characters
-		for (size_t j = m_buffer_offsets[i]; j < m_buffer_offsets[i+1]; j++) {
-            if (m_render_buffer[j] == '\0') {
-                break;
-            }
-            
-            if (c + 6 >= FONT_MAX_BUFFER_LENGTH * 6) {
-                break; 
-			}
-		
-		    uint8_t ascii_val = (uint8_t)m_render_buffer[j];
-			if (ascii_val >= FONT_MAX_CHAR_SET_SIZE) {
-                continue;
-			}
-			
-			// calculate vertex and texture coordinates
-			float x2 =  x + m_chars[ascii_val].bl * m_sx;
-			float y2 = y + m_chars[ascii_val].bt * m_sy;
-			float w = m_chars[ascii_val].bw * m_sx;
-			float h = m_chars[ascii_val].bh * m_sy;
-
-			// advance cursor
-			x += m_chars[ascii_val].ax * m_sx;
-			y += m_chars[ascii_val].ay * m_sy;
-
-			// skip empty m_chars
-			if (!w || !h)
-				continue;
-
-            m_texture_coords[c + 0] = font_point_t(x2 + w,  y2,     m_chars[ascii_val].tx + m_chars[ascii_val].bw / (float)m_texture_width, m_chars[ascii_val].ty);
-            m_texture_coords[c + 1] = font_point_t(x2,      y2,     m_chars[ascii_val].tx,                                                  m_chars[ascii_val].ty);
-            m_texture_coords[c + 2] = font_point_t(x2,      y2 - h, m_chars[ascii_val].tx,                                                  m_chars[ascii_val].ty + m_chars[ascii_val].bh / (float)m_texture_height);
-            
-            m_texture_coords[c + 3] = font_point_t(x2 + w,  y2,     m_chars[ascii_val].tx + m_chars[ascii_val].bw / (float)m_texture_width, m_chars[ascii_val].ty);
-            m_texture_coords[c + 4] = font_point_t(x2,      y2 - h, m_chars[ascii_val].tx,                                                  m_chars[ascii_val].ty + m_chars[ascii_val].bh / (float)m_texture_height);
-            m_texture_coords[c + 5] = font_point_t(x2 + w,  y2 - h, m_chars[ascii_val].tx + m_chars[ascii_val].bw / (float)m_texture_width, m_chars[ascii_val].ty + m_chars[ascii_val].bh / (float)m_texture_height);
-            
-            c += 6;			
-		}
-	}
-
-	if (c > 0) {
-	    renderer.set_depth_testing(false);
-
-		shader_t *shader = shader_lib.get(m_shader_handle);
-		shader->enable();
-
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, m_atlas_texture_id);
-		glUniform1i(m_uniform_sampler, 0);
-
-		//
-		m_vao.bind();
-
-		m_vao.update_vertices(m_texture_coords, sizeof(font_point_t) * c, 0);
-		glDrawArrays(GL_TRIANGLES, 0, c);
-		
-        shader->disable();
-        renderer.set_depth_testing(true);
-	}
-
-}
-
-// 
-void font_t::render_text(const float& _x, const float& _y, const char* _str, ...)
-{
-	va_list arglist;
-
-	if (!_str)
-		return;
-
-	// set the new buffer and store the incremented offset
-	memset(m_tmp_buffer, 0, 1024);
-	va_start(arglist, _str);
-	int str_len = vsprintf(m_tmp_buffer, _str, arglist);
-	va_end(arglist);
-
-	// cpy to static buffer
-	memcpy(m_render_buffer + m_buffer_len, m_tmp_buffer, str_len);
-	m_buffer_len += str_len;
-
-	// store render coordinates and new buffer offset
-	m_render_offsets.push_back(glm::vec2(_x, _y));
-	m_buffer_offsets.push_back(m_buffer_len);
-
 }
 
 // 
@@ -327,18 +261,7 @@ float font_t::get_string_width(const char* _str, ...)
 	int offset = vsprintf(m_tmp_buffer, _str, arglist);
 	va_end(arglist);
 
-	return offset * m_chars[m_tmp_buffer[0]].ax;
-}
-
-// 
-void font_t::set_color(const glm::vec4& _color)
-{
-    m_text_color = _color;
-
-    shader_t *shader = shader_lib.get(m_shader_handle);
-	shader->enable();
-	glUniform4fv(m_uniform_color, 1, (GLfloat*)(&m_text_color));
-	shader->disable();
+	return offset * m_chars[(uint32_t)m_tmp_buffer[0]].ax;
 }
 
 // 

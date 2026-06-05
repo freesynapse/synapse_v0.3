@@ -154,7 +154,7 @@ shader_handle_t shader_library_t::get_handle(const std::string& name)
 }
 
 // 
-shader_t *shader_library_t::get(shader_handle_t handle)
+shader_t *shader_library_t::get_shader(shader_handle_t handle)
 {
     // check index in bounds
     uint32_t index = handle.id - 1;

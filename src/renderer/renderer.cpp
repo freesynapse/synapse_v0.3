@@ -243,7 +243,7 @@ void renderer_t::render_skybox()
     
     glDepthFunc(GL_LEQUAL);
 
-    shader_t *sky_shader = shader_lib.get(m_skybox.shader_handle);
+    shader_t *sky_shader = shader_lib.get_shader(m_skybox.shader_handle);
     sky_shader->enable();
     sky_shader->set_matrix_4fv("u_view", orbit_camera.get_view_matrix());
     sky_shader->set_matrix_4fv("u_projection", orbit_camera.get_projection_matrix());
@@ -253,12 +253,14 @@ void renderer_t::render_skybox()
     glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap->opengl_id);
     sky_shader->set_uniform_1i("u_skybox_sampler", 0);
 
-    const vertex_array_t *cube_vao = mesh_lib.get(m_skybox.mesh_handle);
-    cube_vao->bind();
-    glDrawElements(GL_TRIANGLES, cube_vao->get_index_count(), GL_UNSIGNED_INT, 0);
+    mesh_internal_t *mesh = mesh_lib.get_mesh(m_skybox.mesh_handle);
+    if (!mesh) return;
+    mesh->vao.bind();
+    glDrawElements(GL_TRIANGLES, mesh->index_count, GL_UNSIGNED_INT, 0);
+    mesh->vao.unbind();
+
     m_perf_stats.draw_calls_per_frame++;
 
-    cube_vao->unbind();
     glDepthFunc(GL_LESS);
     
 }
@@ -280,7 +282,7 @@ void renderer_t::bake_irradiance_hdr()
     };
 
     // single use
-    shader_t *conv_shader = shader_lib.get(shader_lib.load_from_file("irradiance_shader", "../assets/shaders/ibl_irradiance.glsl"));
+    shader_t *conv_shader = shader_lib.get_shader(shader_lib.load_from_file("irradiance_shader", "../assets/shaders/ibl_irradiance.glsl"));
     conv_shader->enable();
     conv_shader->set_matrix_4fv("u_projection", capture_proj);
 
@@ -308,9 +310,12 @@ void renderer_t::bake_irradiance_hdr()
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, irr_map->opengl_id, 0);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        const vertex_array_t *vao = mesh_lib.get(m_skybox.mesh_handle);
-        vao->bind();
-        glDrawElements(GL_TRIANGLES, vao->get_index_count(), GL_UNSIGNED_INT, 0);
+        mesh_internal_t *mesh = mesh_lib.get_mesh(m_skybox.mesh_handle);
+        if (!mesh) return;
+        
+        mesh->vao.bind();
+        glDrawElements(GL_TRIANGLES, mesh->index_count, GL_UNSIGNED_INT, 0);
+        mesh->vao.unbind();
     }
 
     // cleanup
@@ -338,7 +343,7 @@ void renderer_t::bake_specular_hdr()
         glm::lookAt(glm::vec3(0.0f), glm::vec3( 0.0f,  0.0f, -1.0f), glm::vec3(0.0f, -1.0f,  0.0f))  // -Z
     };
 
-    shader_t *spec_shader = shader_lib.get(shader_lib.load_from_file("prefilter_conv", "../assets/shaders/ibl_prefilter.glsl"));
+    shader_t *spec_shader = shader_lib.get_shader(shader_lib.load_from_file("prefilter_conv", "../assets/shaders/ibl_prefilter.glsl"));
     spec_shader->enable();
     spec_shader->set_uniform_1i("u_environment_map", 0);
     spec_shader->set_matrix_4fv("u_projection", capture_proj);
@@ -375,9 +380,12 @@ void renderer_t::bake_specular_hdr()
             }
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-            const vertex_array_t *vao = mesh_lib.get(m_skybox.mesh_handle);
-            vao->bind();
-            glDrawElements(GL_TRIANGLES, vao->get_index_count(), GL_UNSIGNED_INT, 0);
+            mesh_internal_t *mesh = mesh_lib.get_mesh(m_skybox.mesh_handle);
+            if (!mesh) return;
+            
+            mesh->vao.bind();
+            glDrawElements(GL_TRIANGLES, mesh->index_count, GL_UNSIGNED_INT, 0);
+            mesh->vao.unbind();
         }
     }
 
@@ -416,7 +424,7 @@ cubemap_handle_t renderer_t::convert_equirect_to_cubemap(const texture_handle_t 
     };
 
     //
-    shader_t *convert_shader = shader_lib.get(shader_lib.load_from_file("hdr_convert_shader", "../assets/shaders/equirect_to_cube.glsl"));
+    shader_t *convert_shader = shader_lib.get_shader(shader_lib.load_from_file("hdr_convert_shader", "../assets/shaders/equirect_to_cube.glsl"));
     convert_shader->enable();
     convert_shader->set_matrix_4fv("u_projection", capture_proj);
 
@@ -444,9 +452,12 @@ cubemap_handle_t renderer_t::convert_equirect_to_cubemap(const texture_handle_t 
         glClear(GL_COLOR_BUFFER_BIT);
 
         // Render the cube mesh
-        const vertex_array_t* vao = mesh_lib.get(m_skybox.mesh_handle);
-        vao->bind();
-        glDrawElements(GL_TRIANGLES, vao->get_index_count(), GL_UNSIGNED_INT, 0);
+        mesh_internal_t *mesh = mesh_lib.get_mesh(m_skybox.mesh_handle);
+        if (!mesh) return { 0 };
+        
+        mesh->vao.bind();
+        glDrawElements(GL_TRIANGLES, mesh->index_count, GL_UNSIGNED_INT, 0);
+        mesh->vao.unbind();
     }
 
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -533,7 +544,7 @@ void renderer_t::render_scene_fbuffer()
     glDisable(GL_CULL_FACE);
 
     // enable render buffer shader, set texture and bind color attachment of fbuffer
-    shader_t *shader = shader_lib.get(m_scene_fbuffer_shader_handle);
+    shader_t *shader = shader_lib.get_shader(m_scene_fbuffer_shader_handle);
     shader->enable();
     shader->set_uniform_1i("u_texture_sampler", 0);
     m_scene_fbuffer->bindTexture(0, 0);
@@ -598,7 +609,7 @@ void renderer_t::cmd_flush()
         if (!mat) continue;
 
         // batching layer 1: only switch shader when needed
-        shader = shader_lib.get(mat->shader_handle);
+        shader = shader_lib.get_shader(mat->shader_handle);
         if (shader && shader->get_id() != current_active_shader_id) {
             shader->enable();
             current_active_shader_id = shader->get_id();
@@ -646,11 +657,13 @@ void renderer_t::cmd_flush()
         shader->set_matrix_3fv("u_normal_matrix", mat_normal);
 
         // render mesh
-        const vertex_array_t *vao = mesh_lib.get(cmd.mesh);
-        vao->bind();
-        glDrawElements(GL_TRIANGLES, vao->get_index_count(), GL_UNSIGNED_INT, 0);
+        mesh_internal_t *mesh = mesh_lib.get_mesh(cmd.mesh);
+        if (!mesh) return;
+        
+        mesh->vao.bind();
+        glDrawElements(GL_TRIANGLES, mesh->index_count, GL_UNSIGNED_INT, 0);
         m_perf_stats.draw_calls_per_frame++;
-        vao->unbind();
+        mesh->vao.unbind();
     }
 
     m_command_count = 0;
@@ -801,7 +814,7 @@ void renderer_t::draw_rect(float _x, float _y, float _w, float _h, const glm::ve
     glDisable(GL_DEPTH_TEST);
     // glDisable(GL_CULL_FACE);
 
-    shader_t *shader = shader_lib.get(m_ui_shader_handle);
+    shader_t *shader = shader_lib.get_shader(m_ui_shader_handle);
     shader->enable();
     shader->set_matrix_4fv("u_projection", projection);
     shader->set_matrix_4fv("u_model", model);
@@ -832,7 +845,7 @@ void renderer_t::draw_rect_outline(float _x, float _y,
     glDisable(GL_DEPTH_TEST);
     // glDisable(GL_CULL_FACE);
     
-    shader_t *shader = shader_lib.get(m_ui_shader_handle);
+    shader_t *shader = shader_lib.get_shader(m_ui_shader_handle);
     shader->enable();
     shader->set_matrix_4fv("u_projection", projection);
     shader->set_matrix_4fv("u_model", model);
@@ -944,13 +957,18 @@ void renderer_t::draw_perf_stats()
 
     // show notification
     if (m_notification.display_time > 0.0f) {
-
+        float alpha = glm::clamp(m_notification.display_time / m_notification.duration, 0.0f, 1.0f);
         float msg_width = font.get_string_width("%s", m_notification.msg.c_str());
 
         float x = m_viewport.x * 0.5f - msg_width * 0.5f;
         float y = m_viewport.y - 200.0f;
 
+        glm::vec4 prev_color = font.get_color();
+        glm::vec4 color = prev_color;
+        color.a = alpha;
+        font.set_color(color);
         font.render_text(x, y, "%s", m_notification.msg.c_str());
+        font.set_color(prev_color);
 
         m_notification.display_time -= time_step.dt;
         
@@ -1030,7 +1048,7 @@ void renderer_t::draw_frame_time_graph(float _x, float _y, float _w, float _h)
 
     // 
     glDisable(GL_DEPTH_TEST);
-    shader_t *shader = shader_lib.get(m_perf_stats.graph_shader_handle);
+    shader_t *shader = shader_lib.get_shader(m_perf_stats.graph_shader_handle);
     shader->enable();
     glm::mat4 projection = glm::ortho(0.0f, (float)m_viewport.x, (float)m_viewport.y, 0.0f);
     shader->set_matrix_4fv("u_projection", projection);
@@ -1102,7 +1120,7 @@ void renderer_t::render_orientation_obj()
     static glm::mat4 ortho_proj = glm::ortho(-1.1f, 1.1f, -1.1f, 1.1f, -1.1f, 1.1f);
     glm::mat4 mvp = ortho_proj * cam_rot;
 
-    shader_t *shader = shader_lib.get(m_orientation_obj_shader_handle);
+    shader_t *shader = shader_lib.get_shader(m_orientation_obj_shader_handle);
     shader->enable();
     shader->set_matrix_4fv("u_mvp", mvp);
 
@@ -1121,27 +1139,43 @@ void renderer_t::render_orientation_obj()
 // 
 void renderer_t::init_debug_rendering()
 {
-    m_debug_state.debug_normal_shader_handle = shader_lib.load_from_file("debug_normal_shader", 
+    m_debug_state.normal_shader_handle = shader_lib.load_from_file("debug_normal_shader", 
         "../assets/shaders/debug/debug_mesh_normals.glsl");
 
+    m_debug_state.line_shader_handle = shader_lib.load_from_file("debug_line_shader", 
+        "../assets/shaders/debug/debug_lines.glsl");
+
+    // shader contains posistion (vec3) and color (vec4)
+    size_t max_lines = 10000;
+    size_t buffer_size = max_lines * 2 * (sizeof(glm::vec3) + sizeof(glm::vec4));
+    m_debug_state.line_vao.set_buffer_layout({
+        { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT3 },
+        { VERTEX_ATTRIB_LOCATION_COLOR, shader_data_type_t::FLOAT4 }
+    });
+    m_debug_state.line_vao.create_empty_vertices(buffer_size);
+
+    // 
     m_debug_state_initialized = true;
+    
 }
 
 // 
-void renderer_t::toggle_wireframe() { m_debug_state.show_wireframe = !m_debug_state.show_wireframe;  SYN_INFO("show_wireframe = %d.\n", m_debug_state.show_wireframe);  }
-void renderer_t::toggle_normals()   { m_debug_state.show_normals   = !m_debug_state.show_normals;    SYN_INFO("show_normals = %d.\n", m_debug_state.show_normals);      }
-void renderer_t::toggle_tangents()  { m_debug_state.show_tangents  = !m_debug_state.show_tangents;   SYN_INFO("show_tangents = %d.\n", m_debug_state.show_tangents);    }
-void renderer_t::toggle_grid()      { m_debug_state.show_grid      = !m_debug_state.show_grid;       SYN_INFO("show_grid = %d.\n", m_debug_state.show_grid);            }
+void renderer_t::toggle_wireframe()      { m_debug_state.show_wireframe      = !m_debug_state.show_wireframe;       SYN_INFO("show_wireframe = %d.\n", m_debug_state.show_wireframe);          }
+void renderer_t::toggle_normals()        { m_debug_state.show_normals        = !m_debug_state.show_normals;         SYN_INFO("show_normals = %d.\n", m_debug_state.show_normals);              }
+void renderer_t::toggle_tangents()       { m_debug_state.show_tangents       = !m_debug_state.show_tangents;        SYN_INFO("show_tangents = %d.\n", m_debug_state.show_tangents);            }
+void renderer_t::toggle_bounding_boxes() { m_debug_state.show_bounding_boxes = !m_debug_state.show_bounding_boxes; SYN_INFO("show_bounding_boxes = %d.\n", m_debug_state.show_bounding_boxes); }
+void renderer_t::toggle_grid()           { m_debug_state.show_grid           = !m_debug_state.show_grid;            SYN_INFO("show_grid = %d.\n", m_debug_state.show_grid);                    }
 
+// 
 void renderer_t::draw_debug_normals(mesh_handle_t _mesh_handle, const glm::mat4 &_transform)
 {
     if (!m_debug_state.show_normals && !m_debug_state.show_tangents) return;
     if (!m_debug_state_initialized) return;
 
-    const vertex_array_t *vao = mesh_lib.get(_mesh_handle);
-    if (!vao) return;
+    mesh_internal_t *mesh = mesh_lib.get_mesh(_mesh_handle);
+    if (!mesh) return;
 
-    shader_t *shader = shader_lib.get(m_debug_state.debug_normal_shader_handle);
+    shader_t *shader = shader_lib.get_shader(m_debug_state.normal_shader_handle);
     shader->enable();
 
     glm::mat4 vp = orbit_camera.get_view_projection_matrix();
@@ -1153,8 +1187,68 @@ void renderer_t::draw_debug_normals(mesh_handle_t _mesh_handle, const glm::mat4 
     shader->set_uniform_1f("u_normal_length", m_debug_state.normal_length);
     shader->set_uniform_1i("u_show_tangents", m_debug_state.show_tangents ? 1 : 0);
 
-    vao->bind();
-    glDrawElements(GL_TRIANGLES, vao->get_index_count(), GL_UNSIGNED_INT, 0);
-    vao->unbind();
+    mesh->vao.bind();
+    glDrawElements(GL_TRIANGLES, mesh->index_count, GL_UNSIGNED_INT, 0);
+    mesh->vao.unbind();
     
+}
+
+// 
+void renderer_t::draw_debug_bounding_boxes(const glm::vec3 &_min, const glm::vec3 &_max, const glm::mat4 &_transform)
+{
+    if (!m_debug_state.show_bounding_boxes) return;
+    if (!m_debug_state_initialized) init_debug_rendering();
+
+    glm::vec4 color(1.0f, 1.0f, 0.0f, 1.0f);
+
+    // local coordinate corners
+    glm::vec3 corners[8] = {
+        glm::vec3(_min.x, _min.y, _min.z),  // 0: bottom-left-back
+        glm::vec3(_max.x, _min.y, _min.z),  // 1: bottom-right-back
+        glm::vec3(_max.x, _max.y, _min.z),  // 2: top-right-back
+        glm::vec3(_min.x, _max.y, _min.z),  // 3: top-left-back
+        glm::vec3(_min.x, _min.y, _max.z),  // 4: bottom-left-front
+        glm::vec3(_max.x, _min.y, _max.z),  // 5: bottom-right-front
+        glm::vec3(_max.x, _max.y, _max.z),  // 6: top-right-front
+        glm::vec3(_min.x, _max.y, _max.z),  // 7: top-left-front
+    };
+
+    for (uint32_t i = 0; i < 8; i++) {
+        glm::vec4 world_pos = _transform * glm::vec4(corners[i], 1.0f);
+        corners[i] = glm::vec3(world_pos);
+    }
+
+    // vertices
+    std::vector<float> lines;
+
+    auto add_line = [&](int a, int b) {
+        // vertex 0
+         lines.push_back(corners[a].x); lines.push_back(corners[a].y); lines.push_back(corners[a].z);
+         lines.push_back(color.r); lines.push_back(color.g); lines.push_back(color.b); lines.push_back(color.a);
+         // vertex 1
+         lines.push_back(corners[b].x); lines.push_back(corners[b].y); lines.push_back(corners[b].z);
+         lines.push_back(color.r); lines.push_back(color.g); lines.push_back(color.b); lines.push_back(color.a);
+    };
+
+    add_line(0, 1); add_line(1, 2); add_line(2, 3); add_line(3, 0);
+    add_line(4, 5); add_line(5, 6); add_line(6, 7); add_line(7, 4);
+    add_line(0, 4); add_line(1, 5); add_line(2, 6); add_line(3, 7);    
+
+    m_debug_state.line_vao.bind();
+    m_debug_state.line_vao.update_vertices((void *)&lines[0], lines.size() * sizeof(float));
+    
+    shader_t *shader = shader_lib.get_shader(m_debug_state.line_shader_handle);
+    if (!shader) return;
+
+    shader->enable();
+    shader->set_matrix_4fv("u_view_projection", orbit_camera.get_view_projection_matrix());
+
+    glLineWidth(2.0f);
+    glDrawArrays(GL_LINES, 0, lines.size() / 7);
+    glLineWidth(1.0f);
+
+    m_debug_state.line_vao.unbind();
+    
+    m_perf_stats.draw_calls_per_frame++;
+	
 }

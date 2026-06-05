@@ -196,7 +196,7 @@ mesh_handle_t generate_uv_sphere(float _radius, uint32_t _sectors, uint32_t _sta
     });
     vao.create(&vertices[0], vertices.size(), &indices[0], indices.size());
 
-    return mesh_lib.load_mesh_from_vao("uv_spehere", vao);
+    return mesh_lib.load_mesh_from_vao("uv_spehere", vao, (void *)&vertices[0]);
     
 }
 

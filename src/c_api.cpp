@@ -179,10 +179,7 @@ void syn_render_begin_3d()
 
     renderer.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     renderer.render_skybox();
-    
-    // start renderblock for fonts
-    font.begin_render_block();
-    
+        
 }
 
 // 
