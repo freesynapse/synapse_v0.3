@@ -309,7 +309,6 @@ void asset_manager_t::parse_material(const std::vector<std::string> &_tokens)
     for (size_t i = 3; i < _tokens.size(); i++) {
         const std::string &tex_name = _tokens[i];
         size_t idx = i - 3;
-        printf("texture at slot %ld: %s\n", idx, tex_name.c_str());
 
         if (tex_name == "none") {
             mat->textures[idx] = { 0 };
@@ -317,7 +316,6 @@ void asset_manager_t::parse_material(const std::vector<std::string> &_tokens)
             auto tex_it = m_texture_map.find(tex_name);
             if (tex_it != m_texture_map.end()) {
                 mat->textures[idx] = tex_it->second;
-                printf("texture id = %d (%s)\n", mat->textures[idx].id, tex_lib.get_texture(mat->textures[idx])->asset_path);
             } else {
                 SYN_WARNING("material '%s' references unknown texture '%s'.\n", mat_name.c_str(), tex_name.c_str());
                 mat->textures[idx] = { 0 };

@@ -98,6 +98,11 @@ void renderer_t::shutdown()
 {
     shutdown_material_ubo();
     shutdown_lighting_ubo();
+
+    // cleanup debug
+    if (m_debug.grid_vao_id != 0) {
+        glDeleteVertexArrays(1, &m_debug.grid_vao_id);
+    }
     
 }
 
@@ -587,7 +592,7 @@ void renderer_t::cmd_flush()
     if (m_command_count == 0) return;
 
     // 
-    if (m_debug_state.show_wireframe) {
+    if (m_debug.show_wireframe) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     }
     
@@ -668,7 +673,7 @@ void renderer_t::cmd_flush()
 
     m_command_count = 0;
 
-    if (m_debug_state.show_wireframe) {
+    if (m_debug.show_wireframe) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
     
@@ -1139,43 +1144,50 @@ void renderer_t::render_orientation_obj()
 // 
 void renderer_t::init_debug_rendering()
 {
-    m_debug_state.normal_shader_handle = shader_lib.load_from_file("debug_normal_shader", 
+    m_debug.normal_shader_handle = shader_lib.load_from_file("debug_normal_shader", 
         "../assets/shaders/debug/debug_mesh_normals.glsl");
 
-    m_debug_state.line_shader_handle = shader_lib.load_from_file("debug_line_shader", 
+    m_debug.line_shader_handle = shader_lib.load_from_file("debug_line_shader", 
         "../assets/shaders/debug/debug_lines.glsl");
 
     // shader contains posistion (vec3) and color (vec4)
     size_t max_lines = 10000;
     size_t buffer_size = max_lines * 2 * (sizeof(glm::vec3) + sizeof(glm::vec4));
-    m_debug_state.line_vao.set_buffer_layout({
+    m_debug.line_vao.set_buffer_layout({
         { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT3 },
         { VERTEX_ATTRIB_LOCATION_COLOR, shader_data_type_t::FLOAT4 }
     });
-    m_debug_state.line_vao.create_empty_vertices(buffer_size);
+    m_debug.line_vao.create_empty_vertices(buffer_size);
 
+    // grid
+    m_debug.grid_shader_handle = shader_lib.load_from_file("debug_grid_shader",
+        "../assets/shaders/debug/debug_grid.glsl");
+
+    // create a custom vao, since no vbo is needed
+    glGenVertexArrays(1, &m_debug.grid_vao_id);    
+    
     // 
-    m_debug_state_initialized = true;
+    m_debug_initialized = true;
     
 }
 
 // 
-void renderer_t::toggle_wireframe()      { m_debug_state.show_wireframe      = !m_debug_state.show_wireframe;       SYN_INFO("show_wireframe = %d.\n", m_debug_state.show_wireframe);          }
-void renderer_t::toggle_normals()        { m_debug_state.show_normals        = !m_debug_state.show_normals;         SYN_INFO("show_normals = %d.\n", m_debug_state.show_normals);              }
-void renderer_t::toggle_tangents()       { m_debug_state.show_tangents       = !m_debug_state.show_tangents;        SYN_INFO("show_tangents = %d.\n", m_debug_state.show_tangents);            }
-void renderer_t::toggle_bounding_boxes() { m_debug_state.show_bounding_boxes = !m_debug_state.show_bounding_boxes; SYN_INFO("show_bounding_boxes = %d.\n", m_debug_state.show_bounding_boxes); }
-void renderer_t::toggle_grid()           { m_debug_state.show_grid           = !m_debug_state.show_grid;            SYN_INFO("show_grid = %d.\n", m_debug_state.show_grid);                    }
+void renderer_t::toggle_wireframe()      { m_debug.show_wireframe      = !m_debug.show_wireframe;       SYN_INFO("show_wireframe = %d.\n", m_debug.show_wireframe);           }
+void renderer_t::toggle_normals()        { m_debug.show_normals        = !m_debug.show_normals;         SYN_INFO("show_normals = %d.\n", m_debug.show_normals);               }
+void renderer_t::toggle_tangents()       { m_debug.show_tangents       = !m_debug.show_tangents;        SYN_INFO("show_tangents = %d.\n", m_debug.show_tangents);             }
+void renderer_t::toggle_bounding_boxes() { m_debug.show_bounding_boxes = !m_debug.show_bounding_boxes;  SYN_INFO("show_bounding_boxes = %d.\n", m_debug.show_bounding_boxes); }
+void renderer_t::toggle_grid()           { m_debug.show_grid           = !m_debug.show_grid;            SYN_INFO("show_grid = %d.\n", m_debug.show_grid);                     }
 
 // 
 void renderer_t::draw_debug_normals(mesh_handle_t _mesh_handle, const glm::mat4 &_transform)
 {
-    if (!m_debug_state.show_normals && !m_debug_state.show_tangents) return;
-    if (!m_debug_state_initialized) return;
+    if (!m_debug.show_normals && !m_debug.show_tangents) return;
+    if (!m_debug_initialized) return;
 
     mesh_internal_t *mesh = mesh_lib.get_mesh(_mesh_handle);
     if (!mesh) return;
 
-    shader_t *shader = shader_lib.get_shader(m_debug_state.normal_shader_handle);
+    shader_t *shader = shader_lib.get_shader(m_debug.normal_shader_handle);
     shader->enable();
 
     glm::mat4 vp = orbit_camera.get_view_projection_matrix();
@@ -1184,8 +1196,8 @@ void renderer_t::draw_debug_normals(mesh_handle_t _mesh_handle, const glm::mat4 
     shader->set_matrix_4fv("u_model", _transform);
     shader->set_matrix_4fv("u_view_projection", vp);
     shader->set_matrix_3fv("u_normal_matrix", normal_matrix);
-    shader->set_uniform_1f("u_normal_length", m_debug_state.normal_length);
-    shader->set_uniform_1i("u_show_tangents", m_debug_state.show_tangents ? 1 : 0);
+    shader->set_uniform_1f("u_normal_length", m_debug.normal_length);
+    shader->set_uniform_1i("u_show_tangents", m_debug.show_tangents ? 1 : 0);
 
     mesh->vao.bind();
     glDrawElements(GL_TRIANGLES, mesh->index_count, GL_UNSIGNED_INT, 0);
@@ -1194,10 +1206,31 @@ void renderer_t::draw_debug_normals(mesh_handle_t _mesh_handle, const glm::mat4 
 }
 
 // 
-void renderer_t::draw_debug_bounding_boxes(const glm::vec3 &_min, const glm::vec3 &_max, const glm::mat4 &_transform)
+void renderer_t::draw_debug_bounding_box_entities(entity_t *_entity)
 {
-    if (!m_debug_state.show_bounding_boxes) return;
-    if (!m_debug_state_initialized) init_debug_rendering();
+    if (!_entity) {
+        for (uint32_t i = 0; i < entity_lib.m_active_count; i++) {
+            entity_t *e = &entity_lib.m_pool[i];
+            mesh_internal_t *mesh = mesh_lib.get_mesh(e->mesh_handle);
+            if (mesh) {
+                renderer.draw_debug_bounding_boxes(mesh->aabb_min, mesh->aabb_max, e->transform);
+            }
+        }
+    } else {
+        mesh_internal_t *mesh = mesh_lib.get_mesh(_entity->mesh_handle);
+        if (mesh) {
+            renderer.draw_debug_bounding_boxes(mesh->aabb_min, mesh->aabb_max, _entity->transform);
+        }
+    }
+}
+
+// 
+void renderer_t::draw_debug_bounding_boxes(const glm::vec3 &_min,
+                                           const glm::vec3 &_max,
+                                           const glm::mat4 &_transform)
+{
+    if (!m_debug.show_bounding_boxes) return;
+    if (!m_debug_initialized) init_debug_rendering();
 
     glm::vec4 color(1.0f, 1.0f, 0.0f, 1.0f);
 
@@ -1234,10 +1267,10 @@ void renderer_t::draw_debug_bounding_boxes(const glm::vec3 &_min, const glm::vec
     add_line(4, 5); add_line(5, 6); add_line(6, 7); add_line(7, 4);
     add_line(0, 4); add_line(1, 5); add_line(2, 6); add_line(3, 7);    
 
-    m_debug_state.line_vao.bind();
-    m_debug_state.line_vao.update_vertices((void *)&lines[0], lines.size() * sizeof(float));
+    m_debug.line_vao.bind();
+    m_debug.line_vao.update_vertices((void *)&lines[0], lines.size() * sizeof(float));
     
-    shader_t *shader = shader_lib.get_shader(m_debug_state.line_shader_handle);
+    shader_t *shader = shader_lib.get_shader(m_debug.line_shader_handle);
     if (!shader) return;
 
     shader->enable();
@@ -1247,8 +1280,26 @@ void renderer_t::draw_debug_bounding_boxes(const glm::vec3 &_min, const glm::vec
     glDrawArrays(GL_LINES, 0, lines.size() / 7);
     glLineWidth(1.0f);
 
-    m_debug_state.line_vao.unbind();
+    m_debug.line_vao.unbind();
     
     m_perf_stats.draw_calls_per_frame++;
 	
+}
+
+// 
+void renderer_t::draw_debug_grid()
+{
+    if (!m_debug.show_grid) return;
+    shader_t *shader = shader_lib.get_shader(m_debug.grid_shader_handle);
+    if (!shader) return;
+
+    glBindVertexArray(m_debug.grid_vao_id);
+    shader->enable();
+    glm::mat4 vp = orbit_camera.get_view_projection_matrix();
+    shader->set_matrix_4fv("u_inv_view_projection", glm::inverse(vp));
+    shader->set_matrix_4fv("u_view_projection", vp);
+    shader->set_uniform_1f("u_near", orbit_camera.get_z_near());
+    shader->set_uniform_1f("u_far", orbit_camera.get_z_far());
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    
 }

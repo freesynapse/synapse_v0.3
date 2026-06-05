@@ -131,8 +131,11 @@ public:
 
 	void draw_debug_normals(mesh_handle_t _mesh_handle, const glm::mat4 &_transform);
 	void draw_debug_tangents(mesh_handle_t _mesh_handle, const glm::mat4 &_transform);
+	// if _entity is nullptr, AABBs of all entities in the entity library are drawn
+	void draw_debug_bounding_box_entities(entity_t *_entity=nullptr);
 	void draw_debug_bounding_boxes(const glm::vec3 &_min, const glm::vec3 &_max, const glm::mat4 &_transform);
-	void draw_debug_grid(float _size, int _divisions);
+	void draw_debug_bounding_boxes(entity_t *_entity=nullptr);
+	void draw_debug_grid();
 	
 
 public:
@@ -184,8 +187,8 @@ public:
 	} m_notification;
 	
 	// debug (vaos and shader handles in debug_state_t)
-	debug_state_t m_debug_state;
-	bool m_debug_state_initialized = false;
+	debug_state_t m_debug;
+	bool m_debug_initialized = false;
 	
 	vertex_array_t m_orientation_obj_vao;
 	shader_handle_t m_orientation_obj_shader_handle;

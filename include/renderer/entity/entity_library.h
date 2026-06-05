@@ -12,6 +12,9 @@
 class entity_library_t
 {
 public:
+    friend class renderer_t;
+    
+public:
     void init();
 
     entity_handle_t create_entity(const std::string &_name,
@@ -20,7 +23,7 @@ public:
                                   const glm::mat4 &_transform);
     entity_handle_t add_entity(const entity_t &_entity);
     entity_t *get_entity(entity_handle_t _handle);
-    
+
 private:
     entity_t m_pool[SYN_MAX_ENTITY_COUNT];
     uint32_t m_active_count = 0;

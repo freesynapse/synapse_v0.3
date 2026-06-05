@@ -44,6 +44,11 @@ void handle_input()
     if (input.was_key_pressed(SYN_KEY_F8)) {
         shader_lib.reload_shaders();
     }
+
+    if (input.was_key_pressed(SYN_KEY_F10)) {
+        renderer.toggle_grid();
+    }
+    
 }
 
 // test code
@@ -54,17 +59,17 @@ void render(float _dt)
     renderer.cmd_submit_entity(sphere);
     renderer.cmd_flush();
 
-    if (renderer.m_debug_state.show_normals || renderer.m_debug_state.show_tangents) {
+    if (renderer.m_debug.show_normals || renderer.m_debug.show_tangents) {
         entity_t *e = entity_lib.get_entity(sphere);
         renderer.draw_debug_normals(e->mesh_handle, e->transform);
     }
 
-    if (renderer.m_debug_state.show_bounding_boxes) {
-        entity_t *e = entity_lib.get_entity(helmet);
-        mesh_internal_t *mesh = mesh_lib.get_mesh(e->mesh_handle);
-        if (mesh) {
-            renderer.draw_debug_bounding_boxes(mesh->aabb_min, mesh->aabb_max, e->transform);
-        }
+    if (renderer.m_debug.show_bounding_boxes) {
+        renderer.draw_debug_bounding_box_entities();
+    }
+
+    if (renderer.m_debug.show_grid) {
+        renderer.draw_debug_grid();
     }
     
 }

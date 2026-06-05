@@ -55,6 +55,8 @@ struct debug_state_t {
     vertex_array_t line_vao;
     shader_handle_t line_shader_handle;
     shader_handle_t normal_shader_handle;
+    GLuint grid_vao_id = 0;
+    shader_handle_t grid_shader_handle;
 };
 
 
