@@ -2,7 +2,7 @@
 #define __WINDOW_H
 
 #ifndef GLAD_INCLUDED
-#include "glapi.h"
+#include "gl_api.h"
 #endif
 
 #include "event/event.h"

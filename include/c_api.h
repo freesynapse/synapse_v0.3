@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 
 #include "window.h"
+#include "gl_api.h"
 #include "event/input_manager.h"
 #include "event/event_handler.h"
 #include "renderer/renderer.h"
@@ -43,6 +44,7 @@
 
 // engine core
 extern window_t                     window;
+extern gl_api_t                     api;
 extern input_handler_t              input;
 extern events_t                     events;
 extern renderer_t                   renderer;

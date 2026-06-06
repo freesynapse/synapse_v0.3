@@ -6,7 +6,6 @@
 
 #include "renderer/mesh/mesh_types.h"
 #include "renderer/material/material_types.h"
-#include "renderer/shader/shader.h"
 #include "renderer/buffers/vertex_array.h"
 
 // 

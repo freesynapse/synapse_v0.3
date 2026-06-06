@@ -683,13 +683,6 @@ void renderer_t::cmd_flush()
 const glm::vec2 renderer_t::get_viewport_f() { return glm::vec2(m_viewport.x, m_viewport.y); }
 float renderer_t::get_aspect_ratio() { return (float)m_viewport.x / (float)m_viewport.y; }
 
-//
-// API calls
-
-// buffers
-void renderer_t::clear_color_buffer() { glClear(GL_COLOR_BUFFER_BIT); }
-void renderer_t::clear_depth_buffer() { glClear(GL_DEPTH_BUFFER_BIT); }
-void renderer_t::clear(uint32_t _bitfield) { glClear(_bitfield); }
 void renderer_t::set_clear_color(float _r, float _g, float _b, float _a)
 {
     m_clear_color = glm::vec4(_r, _g, _b, _a);
@@ -711,75 +704,6 @@ void renderer_t::reset_viewport()
 {
     glViewport(0, 0, m_viewport.x, m_viewport.y);
 }
-
-// blending equation
-void renderer_t::set_blending_eq(GLenum _src_factor, GLenum _dest_factor) 
-{
-    glBlendFunc(_src_factor, _dest_factor);
-}
-
-void renderer_t::set_wireframe(bool _wireframe) 
-{
-    if (_wireframe) {
-        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        return;
-    }
-    glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-}
-
-// 
-void renderer_t::set_depth_testing(bool _depth_test) 
-{
-    if (_depth_test) {
-        glEnable(GL_DEPTH_TEST);
-        return;
-    }
-    glDisable(GL_DEPTH_TEST);
-}
-
-// 
-void renderer_t::set_depth_mask(bool _depth_mask) 
-{
-    if (_depth_mask) {
-        glDepthMask(GL_TRUE);
-        return;
-    }
-    glDepthMask(GL_FALSE);
-}
-
-// 
-void renderer_t::set_culling(bool _cull) 
-{
-    if (_cull) {
-        glEnable(GL_CULL_FACE);
-        return;
-    }
-    glDisable(GL_CULL_FACE);
-}
-
-// 
-void renderer_t::set_blending(bool _blending) 
-{
-    m_is_blending = _blending;
-    if (_blending) {
-        glEnable(GL_BLEND);
-        return;
-    }
-    glDisable(GL_BLEND);
-}
-
-// 
-void renderer_t::set_GLenum(GLenum _gl_enum, bool _b) 
-{
-    if (_b) {
-        glEnable(_gl_enum);
-        return;
-    }
-    glDisable(_gl_enum);
-}
-
-//
-void renderer_t::set_line_width(float _width) { glLineWidth(_width); }
 
 // 
 void renderer_t::init_ui_quad()
@@ -1118,7 +1042,7 @@ void renderer_t::render_orientation_obj()
     set_viewport({ 0, 0 }, { m_orientation_obj_size, m_orientation_obj_size });
 
     // render on top
-    clear_depth_buffer();
+    api.clear_depth_buffer();
 
     // 
     glm::mat4 cam_rot = glm::mat4(glm::mat3(orbit_camera.get_view_matrix()));
@@ -1130,10 +1054,10 @@ void renderer_t::render_orientation_obj()
     shader->set_matrix_4fv("u_mvp", mvp);
 
     m_orientation_obj_vao.bind();
-    set_line_width(3.0f);
+    api.set_line_width(3.0f);
     glDrawArrays(GL_LINES, 0, 6);
     m_perf_stats.draw_calls_per_frame++;
-    set_line_width(1.0f);
+    api.set_line_width(1.0f);
 
     shader->disable();
 
@@ -1172,11 +1096,11 @@ void renderer_t::init_debug_rendering()
 }
 
 // 
-void renderer_t::toggle_wireframe()      { m_debug.show_wireframe      = !m_debug.show_wireframe;       SYN_INFO("show_wireframe = %d.\n", m_debug.show_wireframe);           }
-void renderer_t::toggle_normals()        { m_debug.show_normals        = !m_debug.show_normals;         SYN_INFO("show_normals = %d.\n", m_debug.show_normals);               }
-void renderer_t::toggle_tangents()       { m_debug.show_tangents       = !m_debug.show_tangents;        SYN_INFO("show_tangents = %d.\n", m_debug.show_tangents);             }
-void renderer_t::toggle_bounding_boxes() { m_debug.show_bounding_boxes = !m_debug.show_bounding_boxes;  SYN_INFO("show_bounding_boxes = %d.\n", m_debug.show_bounding_boxes); }
-void renderer_t::toggle_grid()           { m_debug.show_grid           = !m_debug.show_grid;            SYN_INFO("show_grid = %d.\n", m_debug.show_grid);                     }
+void renderer_t::toggle_wireframe()      { m_debug.show_wireframe      = !m_debug.show_wireframe;      }
+void renderer_t::toggle_normals()        { m_debug.show_normals        = !m_debug.show_normals;        }
+void renderer_t::toggle_tangents()       { m_debug.show_tangents       = !m_debug.show_tangents;       }
+void renderer_t::toggle_bounding_boxes() { m_debug.show_bounding_boxes = !m_debug.show_bounding_boxes; }
+void renderer_t::toggle_grid()           { m_debug.show_grid           = !m_debug.show_grid;           }
 
 // 
 void renderer_t::draw_debug_normals(mesh_handle_t _mesh_handle, const glm::mat4 &_transform)
@@ -1287,19 +1211,24 @@ void renderer_t::draw_debug_bounding_boxes(const glm::vec3 &_min,
 }
 
 // 
-void renderer_t::draw_debug_grid()
+void renderer_t::draw_debug_grid(float _y_level)
 {
     if (!m_debug.show_grid) return;
     shader_t *shader = shader_lib.get_shader(m_debug.grid_shader_handle);
     if (!shader) return;
 
     glBindVertexArray(m_debug.grid_vao_id);
+
     shader->enable();
     glm::mat4 vp = orbit_camera.get_view_projection_matrix();
     shader->set_matrix_4fv("u_inv_view_projection", glm::inverse(vp));
     shader->set_matrix_4fv("u_view_projection", vp);
     shader->set_uniform_1f("u_near", orbit_camera.get_z_near());
     shader->set_uniform_1f("u_far", orbit_camera.get_z_far());
+    shader->set_uniform_1f("u_grid_y", _y_level);
+
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    
+
+    m_perf_stats.draw_calls_per_frame++;
+   
 }

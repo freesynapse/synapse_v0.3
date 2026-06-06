@@ -231,7 +231,7 @@ void font_t::end_render_block()
 {
     if (m_vertices.empty()) return;
 
-    renderer.set_depth_testing(false);
+    api.set_depth_testing(false);
 
 	shader_t *shader = shader_lib.get_shader(m_shader_handle);
 	shader->enable();
@@ -245,7 +245,7 @@ void font_t::end_render_block()
 	m_vao.unbind();
 
     shader->disable();
-    renderer.set_depth_testing(true);
+    api.set_depth_testing(true);
 
 	m_vertices.clear();
 	

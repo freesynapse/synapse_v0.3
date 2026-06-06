@@ -64,37 +64,15 @@ public:
 	void cmd_submit_entity(entity_handle_t _entity_handle);
 	void cmd_flush();
 
-	// accessors
+	// api wrappers
 	const glm::vec2 get_viewport_f();
 	float get_aspect_ratio();
-	
-	// API calls
-	//
 
-	// buffers
-	void clear_color_buffer();
-	void clear_depth_buffer();
-	void clear(uint32_t _bitfield);
 	void set_clear_color(float _r, float _g, float _b, float _a);
-	void set_clear_color(const glm::vec4 &_color);
-
-	// viewport
-	void set_viewport(const glm::ivec2 &_position, const glm::ivec2 &_size);
-	void reset_viewport();
-
-	// blending
-	void set_blending_eq(GLenum _src_factor, GLenum _dest_factor);
-
-	// states
-	void set_wireframe(bool _wireframe);
-	void set_depth_testing(bool _depth_test);
-	void set_depth_mask(bool _depth_mask);
-	void set_culling(bool _cull);
-	void set_blending(bool _blending);
-	void set_GLenum(GLenum _gl_enum, bool _b);
-
-	// rendering
-	void set_line_width(float _width);
+    void set_clear_color(const glm::vec4 &_color);
+    
+    void set_viewport(const glm::ivec2 &_position, const glm::ivec2 &_size);
+    void reset_viewport();
 
 	// 2D functions, here for now
 	void init_ui_quad();
@@ -135,7 +113,7 @@ public:
 	void draw_debug_bounding_box_entities(entity_t *_entity=nullptr);
 	void draw_debug_bounding_boxes(const glm::vec3 &_min, const glm::vec3 &_max, const glm::mat4 &_transform);
 	void draw_debug_bounding_boxes(entity_t *_entity=nullptr);
-	void draw_debug_grid();
+	void draw_debug_grid(float _y_level=0.0f);
 	
 
 public:

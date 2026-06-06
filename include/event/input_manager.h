@@ -3,7 +3,7 @@
 
 
 #ifndef GLAD_INCLUDED
-#include "glapi.h"
+#include "gl_api.h"
 #endif
 #include <glm/glm.hpp>
 

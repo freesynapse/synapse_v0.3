@@ -40,6 +40,7 @@ out vec4 frag_color;
 uniform mat4 u_view_projection;
 uniform float u_near;
 uniform float u_far;
+uniform float u_grid_y;
 
 // 
 vec4 grid(vec3 pos, float scale, bool draw_axes)
@@ -85,7 +86,7 @@ float fade(vec3 pos)
 void main()
 {
     // Ray-plane intersection at y = 0
-    float t = -v_near_point.y / (v_far_point.y - v_near_point.y);
+    float t = (u_grid_y -v_near_point.y) / (v_far_point.y - v_near_point.y);
     vec3  pos = v_near_point + t * (v_far_point - v_near_point);
 
     if (t < 0.0) discard;   // intersection is behind camera

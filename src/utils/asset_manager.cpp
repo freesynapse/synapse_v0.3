@@ -718,7 +718,7 @@ void asset_manager_t::update_load_progress(const std::string _type, const std::s
 // 
 void asset_manager_t::render_loading_assets()
 {
-    renderer.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    api.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     float progress = 0.0f;
     if (m_load_progress.total_assets > 0) {

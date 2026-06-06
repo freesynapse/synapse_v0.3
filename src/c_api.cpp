@@ -20,6 +20,7 @@
 
 // engine core
 window_t                    window;
+gl_api_t                    api;
 input_handler_t             input;
 events_t                    events;
 renderer_t                  renderer;
@@ -177,7 +178,7 @@ void syn_render_begin_3d()
     // bind the scene framebuffer, everything is rendered to this buffer
     renderer.bind_scene_fbuffer();
 
-    renderer.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    api.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     renderer.render_skybox();
         
 }

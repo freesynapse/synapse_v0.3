@@ -69,7 +69,7 @@ void render(float _dt)
     }
 
     if (renderer.m_debug.show_grid) {
-        renderer.draw_debug_grid();
+        renderer.draw_debug_grid(-2.0f);
     }
     
 }
