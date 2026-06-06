@@ -24,6 +24,7 @@ gl_api_t                    api;
 input_handler_t             input;
 events_t                    events;
 renderer_t                  renderer;
+renderer_2d_t               renderer_2d;
 shader_library_t            shader_lib;
 texture_library_t           tex_lib;
 material_library_t          mat_lib;
@@ -68,11 +69,15 @@ void syn_init(const char *_name, int _width, int _height, int _mode)
     //
     input.init();
 
+    // 
+    api.init();
+    api.set_clear_color({ 0.2f, 0.2f, 0.2f, 1.0f });
+
     //
     renderer.init();
-    renderer.set_clear_color({ 0.2f, 0.2f, 0.2f, 1.0f });
     renderer.create_scene_framebuffer();
-
+    renderer_2d.init();
+    
     //
     tex_lib.init();
     mat_lib.init();

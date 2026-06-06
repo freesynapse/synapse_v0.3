@@ -17,6 +17,9 @@
 class renderer_t
 {
 public:
+    friend class renderer_2d_t;
+    
+public:
     void init();
     void shutdown();
     
@@ -64,25 +67,6 @@ public:
 	void cmd_submit_entity(entity_handle_t _entity_handle);
 	void cmd_flush();
 
-	// api wrappers
-	const glm::vec2 get_viewport_f();
-	float get_aspect_ratio();
-
-	void set_clear_color(float _r, float _g, float _b, float _a);
-    void set_clear_color(const glm::vec4 &_color);
-    
-    void set_viewport(const glm::ivec2 &_position, const glm::ivec2 &_size);
-    void reset_viewport();
-
-	// 2D functions, here for now
-	void init_ui_quad();
-	void draw_rect(float _x, float _y, float _w, float _h, const glm::vec4 &_color);
-	void draw_rect_outline(float _x, float _y, 
-	                       float _w, float _h, 
-	                       float _thickness, 
-	                       const glm::vec4 &_color, 
-	                       const glm::vec4 &_outline_color);
-
 	// performance stats
 	void reset_perf_counters();
 	void record_frame_time(float _dt_ms);
@@ -117,11 +101,6 @@ public:
 	
 
 public:
-	// renderer variables
-	glm::ivec2 m_viewport = { 0, 0 };
-	glm::vec4 m_clear_color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-	bool m_is_blending = true;
-	
 	// framebuffer storage
 	GLuint m_stored_framebuffer = 0;
 	framebuffer_t m_framebuffers[SYN_MAX_FRAMEBUFFERS];
@@ -150,10 +129,6 @@ public:
 	render_command_t m_command_queue[SYN_MAX_RENDER_COMMANDS];
 	uint32_t m_command_count;
 
-	// quad drawing
-	vertex_array_t m_ui_quad_vao;
-	shader_handle_t m_ui_shader_handle;
-	
 	// performance stats
 	perf_stats_t m_perf_stats; // .draw_calls_per_frame reset in window.prerender()
 

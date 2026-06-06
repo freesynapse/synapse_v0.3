@@ -8,6 +8,7 @@
 #include "event/input_manager.h"
 #include "event/event_handler.h"
 #include "renderer/renderer.h"
+#include "renderer/renderer_2d.h"
 #include "renderer/material/texture_library.h"
 #include "renderer/material/material_library.h"
 #include "renderer/material/cubemap_library.h"
@@ -48,6 +49,7 @@ extern gl_api_t                     api;
 extern input_handler_t              input;
 extern events_t                     events;
 extern renderer_t                   renderer;
+extern renderer_2d_t                renderer_2d;
 extern shader_library_t             shader_lib;
 extern texture_library_t            tex_lib;
 extern material_library_t           mat_lib;

@@ -94,7 +94,7 @@ void framebuffer_base_t::saveAsPNG(const std::string &_file_path/* ="" */)
 //-----------------------------------------------------------------------------------
 void framebuffer_base_t::init(const glm::ivec2 &_size)
 {
-	glm::ivec2 size = (_size == glm::ivec2(0) ? renderer.m_viewport : _size);
+	glm::ivec2 size = (_size == glm::ivec2(0) ? api.get_viewport() : _size);
 	resize(size);
 	
 }	
@@ -196,7 +196,7 @@ void framebuffer_base_t::bindTexture(uint32_t _tex_slot,
 //-----------------------------------------------------------------------------------
 void framebuffer_base_t::clear(uint32_t _buffer_mask) const
 {
-	glm::vec4 clearColor = renderer.m_clear_color;
+	glm::vec4 clearColor = api.get_clear_color();
 	glBindFramebuffer(GL_FRAMEBUFFER, m_framebufferID);
 	glClearColor(clearColor.r, clearColor.g, clearColor.b, clearColor.a);
 	glClear(_buffer_mask);
@@ -207,13 +207,13 @@ void framebuffer_base_t::clear(uint32_t _buffer_mask) const
 void framebuffer_base_t::clear(const glm::vec4 &_clear_color, uint32_t _buffer_mask) const
 {
 	// store current color
-	glm::vec4 renderer_clear_color = renderer.m_clear_color;
+	glm::vec4 renderer_clear_color = api.get_clear_color();
 
 	glBindFramebuffer(GL_FRAMEBUFFER, m_framebufferID);
 	glClearColor(_clear_color.r, _clear_color.g, _clear_color.b, _clear_color.a);
 	glClear(_buffer_mask);
 
-	renderer.set_clear_color(renderer_clear_color);
+	api.set_clear_color(renderer_clear_color);
 
 	// restore clear color
 

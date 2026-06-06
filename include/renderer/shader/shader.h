@@ -5,9 +5,7 @@
 #include <unordered_map>
 #include <filesystem>
 
-#ifndef GLAD_INCLUDED
-#include "gl_api.h"
-#endif
+// #include "gl_api.h"
 #include <glm/glm.hpp>
 
 #include "renderer/shader/shader_types.h"

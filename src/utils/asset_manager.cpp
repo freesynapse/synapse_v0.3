@@ -731,14 +731,14 @@ void asset_manager_t::render_loading_assets()
     static float bar_x = (dims.x - bar_width) / 2.0f;
     static float bar_y = dims.y / 2.0f;
 
-    renderer.draw_rect_outline(bar_x, bar_y, 
-                               bar_width, bar_height, 
-                               2.0f, 
-                               glm::vec4(0.3f, 0.3f, 0.3f, 1.0f), 
-                               glm::vec4(0.8f, 0.8f, 0.8f, 1.0f));
+    renderer_2d.draw_rect_outline(bar_x, bar_y, 
+                                  bar_width, bar_height, 
+                                  2.0f, 
+                                  glm::vec4(0.3f, 0.3f, 0.3f, 1.0f), 
+                                  glm::vec4(0.8f, 0.8f, 0.8f, 1.0f));
 
     float filled_width = bar_width * progress;
-    renderer.draw_rect(bar_x, bar_y, filled_width, bar_height, glm::vec4(1.0f, 0.56f, 0.0f, 1.0f));
+    renderer_2d.draw_rect(bar_x, bar_y, filled_width, bar_height, glm::vec4(1.0f, 0.56f, 0.0f, 1.0f));
 
     //
 

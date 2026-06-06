@@ -4,6 +4,41 @@
 #include "core.h"
 #include "utils/log.h"
 
+#include "c_api.h"
+
+
+// static event callback wrappers
+static void __gl_api_on_resize_callback(const event_t &_e)
+{
+    api.on_resize(_e);
+    
+}
+
+// 
+void gl_api_t::init()
+{
+    m_viewport = window.m_window_dim;
+
+    // register function to receive viewport resize events
+    events.register_callback(event_type_t::VIEWPORT_RESIZE, __gl_api_on_resize_callback);
+    
+}
+
+//
+void gl_api_t::on_resize(const event_t &_e)
+{
+
+    glm::ivec2 new_viewport = _e.as.viewport_resize.viewport;
+    
+    // set main viewport
+    if (new_viewport.x > 0 && new_viewport.y > 0) {
+        m_viewport = new_viewport;
+        set_viewport(glm::ivec2(0, 0), new_viewport);
+    
+    } else {
+        SYN_WARNING("viewport not set : new viewport = [%d, %d]\n", new_viewport.x, new_viewport.y);
+    }
+}
 
 //
 void gl_api_t::clear_color_buffer() { glClear(GL_COLOR_BUFFER_BIT); }
@@ -78,6 +113,54 @@ void gl_api_t::set_GLenum(GLenum _gl_enum, bool _b)
 
 //
 void gl_api_t::set_line_width(float _width) { glLineWidth(_width); }
+
+//
+const glm::ivec2 &gl_api_t::get_viewport()
+{
+    return m_viewport;
+}
+
+//
+const glm::vec2 gl_api_t::get_viewport_f()
+{
+    return glm::vec2(m_viewport.x, m_viewport.y);
+}
+
+// 
+float gl_api_t::get_aspect_ratio() 
+{
+    return (float)m_viewport.x / (float)m_viewport.y;
+    
+}
+
+void gl_api_t::set_viewport(const glm::ivec2 &_position, const glm::ivec2 &_size) 
+{
+    glViewport(_position.x, _position.y, _size.x, _size.y);
+
+}
+
+// 
+void gl_api_t::reset_viewport()
+{
+    glViewport(0, 0, m_viewport.x, m_viewport.y);
+  
+}
+
+// 
+void gl_api_t::set_clear_color(float _r, float _g, float _b, float _a)
+{
+    m_clear_color = glm::vec4(_r, _g, _b, _a);
+    glClearColor(_r, _g, _b, _a);
+    
+}
+
+// 
+void gl_api_t::set_clear_color(const glm::vec4 &_color)
+{
+    m_clear_color = _color;
+    glClearColor(_color.r, _color.g, _color.b, _color.a);
+    
+}
 
 // 
 std::string &gl_api_t::get_gl_error_string(GLenum _error_code)
