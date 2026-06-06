@@ -35,4 +35,27 @@ struct mesh_internal_t {
     
 };
 
+// 2D "meshes" are kept here
+struct vertex_data_2d_t {
+    glm::vec2 position;
+    glm::vec2 uv;
+    glm::vec4 color;
+    float tex_index;
+    float depth;
+};
+
+struct transform_2d_t {
+    glm::vec2 position;
+    glm::vec2 scale;
+    float rotation; // in radians
+};
+
+struct quad_2d_t {
+    transform_2d_t transform;
+    glm::vec4 color;
+    float tex_index;
+    float depth;
+};
+
+
 #endif // __MESH_TYPES_H

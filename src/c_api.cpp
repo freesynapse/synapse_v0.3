@@ -4,7 +4,7 @@
 #include "c_api.h"
 
 #include "core.h"
-#include "window.h"
+#include "glfw_window.h"
 #include "event/input_manager.h"
 #include "event/event_handler.h"
 #include "renderer/renderer.h"
@@ -19,7 +19,7 @@
 // globals
 
 // engine core
-window_t                    window;
+glfw_window_t               root_window;
 gl_api_t                    api;
 input_handler_t             input;
 events_t                    events;
@@ -34,17 +34,11 @@ entity_library_t            entity_lib;
 time_step_t                 time_step;
 asset_manager_t             assets;
 
-// rendering 
+// rendering
 font_t                      font;
 perspective_camera_t        perspective_camera;
 orbit_camera_t              orbit_camera;
 orthographic_camera_t       orthographic_camera;
-
-
-//---------------------------------------------------------------------------------------
-// global accessors
-// 
-void syn_set_window_to_close_key(unsigned int _key) { window.m_to_close_key = _key; }
 
 
 //---------------------------------------------------------------------------------------
@@ -57,9 +51,9 @@ void syn_init(const char *_name, int _width, int _height, int _mode)
 
     // initalize event handler
     events.init();
-    
+
     // create GLFW window
-    if (window.init(_name, _width, _height) == RETURN_FAILURE) {
+    if (root_window.init(_name, _width, _height) == RETURN_FAILURE) {
 		SYN_ERROR("GLFW window initialization failed. Terminating.");
 		glfwTerminate();
 	} else {
@@ -69,7 +63,7 @@ void syn_init(const char *_name, int _width, int _height, int _mode)
     //
     input.init();
 
-    // 
+    //
     api.init();
     api.set_clear_color({ 0.2f, 0.2f, 0.2f, 1.0f });
 
@@ -77,12 +71,12 @@ void syn_init(const char *_name, int _width, int _height, int _mode)
     renderer.init();
     renderer.create_scene_framebuffer();
     renderer_2d.init();
-    
+
     //
     tex_lib.init();
     mat_lib.init();
     cubemap_lib.init();
-    
+
     font.init("../assets/font/JetBrainsMono-Regular.ttf", 16);
     font.set_color(glm::vec4(1.0f));
 
@@ -97,10 +91,10 @@ void syn_init(const char *_name, int _width, int _height, int _mode)
     //e.type = event_type_t::WINDOW_TOGGLE_FROZEN_CURSOR;
     //events.dispatch_event(e);
 
-    
+
 }
 
-// 
+//
 void syn_load_assets(const char *_asset_file)
 {
     scope_timer_t t;
@@ -112,26 +106,26 @@ void syn_load_assets(const char *_asset_file)
         renderer.bake_irradiance_hdr();
         renderer.bake_specular_hdr();
     }
-    
+
     SYN_INFO("assets loaded in %.2f ms.\n", t.get_dt_ms());
 
     // reset performance statistics
     renderer.m_perf_stats.frame_time_idx = 0;
     memset(renderer.m_perf_stats.frame_times, 0, sizeof(renderer.m_perf_stats.frame_times));
-    
+
 }
 
-// 
+//
 void syn_mode_2d()
 {
-    orthographic_camera = orthographic_camera_t((float)window.m_window_dim.x / (float)window.m_window_dim.y);
+    orthographic_camera = orthographic_camera_t((float)root_window.m_window_dim.x / (float)root_window.m_window_dim.y);
 }
 
-// 
+//
 void syn_mode_3d()
 {
-    orbit_camera.init(60.0f, window.m_window_dim.x, window.m_window_dim.y, 0.1f, 1000.0f);
-    perspective_camera.init(60.0f, window.m_window_dim.x, window.m_window_dim.y, 0.1f, 1000.0f);
+    orbit_camera.init(60.0f, root_window.m_window_dim.x, root_window.m_window_dim.y, 0.1f, 1000.0f);
+    perspective_camera.init(60.0f, root_window.m_window_dim.x, root_window.m_window_dim.y, 0.1f, 1000.0f);
 
 }
 
@@ -144,19 +138,19 @@ void syn_shutdown()
     cubemap_lib.shutdown();
     renderer.shutdown();
     syn_close_log();
-    window.destroy();
+    root_window.destroy();
 }
 
 
 //---------------------------------------------------------------------------------------
 // accessors and helpers
-// 
+//
 void syn_set_window_pos_quadrant(int _quadrant)
 {
     int xoffset, yoffset;
-    glfwGetWindowPos(window.m_window_ptr, &xoffset, &yoffset);
-    glm::ivec2 screen_dim = window.m_screen_dim;
-    glm::ivec2 win_dim = window.m_window_dim;
+    glfwGetWindowPos(root_window.m_window_ptr, &xoffset, &yoffset);
+    glm::ivec2 screen_dim = root_window.m_screen_dim;
+    glm::ivec2 win_dim = root_window.m_window_dim;
     switch (_quadrant) {
         case UPPER_LEFT:    xoffset =                        0;  yoffset =                        0;    break;
         case UPPER_RIGHT:   xoffset = screen_dim.x - win_dim.x;  yoffset =                        0;    break;
@@ -164,19 +158,19 @@ void syn_set_window_pos_quadrant(int _quadrant)
         case LOWER_RIGHT:   xoffset = screen_dim.x - win_dim.x;  yoffset = screen_dim.y - win_dim.y;    break;
         default: SYN_WARNING("unknown screen quadrant (%d).\n", _quadrant);
     }
-    window.set_window_position(xoffset, yoffset);
-    
+    root_window.set_window_position(xoffset, yoffset);
+
 }
 
 
 //---------------------------------------------------------------------------------------
 // rendering loop functions
-// 
-void syn_render_begin_3d() 
+//
+void syn_render_begin_3d()
 {
-    window.pre_render();
+    root_window.pre_render();
     renderer.reset_perf_counters();
-    
+
     // perspective_camera.update(time_step.dt);
     orbit_camera.update(time_step.dt);
 
@@ -185,36 +179,38 @@ void syn_render_begin_3d()
 
     api.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     renderer.render_skybox();
-        
+
 }
 
-// 
+//
 void syn_render_end_3d()
 {
-    syn_render_end();
-}
-
-// 
-void syn_render_end()
-{     
     //
-    renderer.render_orientation_obj();
+    renderer.draw_debug_orientation_obj();
 
     // draw_perf_overlay does NOT contain font.start_/.end_render_block()
     renderer.record_frame_time(time_step.dt * 1000.0f);
     renderer.draw_perf_stats();
+    renderer.draw_notifications();
 
+    //
+    syn_render_end();
+
+}
+
+//
+void syn_render_end()
+{
     // here we call end_render_block, effectively rendering all text with one call
     font.end_render_block();
-    
+
     // everything is drawn, render the screen NDC quad
     renderer.render_scene_fbuffer();
 
     //
-    window.post_render();
+    root_window.post_render();
     events.process_events();
     time_step.update();
     time_step.calculate_fps();
-        
-}
 
+}

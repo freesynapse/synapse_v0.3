@@ -2,10 +2,11 @@
 #define __RENDERER2D_H
 
 #include <glm/glm.hpp>
+#include <array>
 
+#include "renderer/renderer_types.h"
 #include "renderer/buffers/vertex_array.h"
 #include "renderer/shader/shader_types.h"
-
 
 // 
 class renderer_2d_t
@@ -17,8 +18,14 @@ public:
     void init();
     void shutdown();
 
+    // conversion of of quad_t to vertex_2d_t[4] for batch rendering
+private:
+     std::array<vertex_data_2d_t, 4> quad_t_to_vertex_2d_t(const quad_2d_t &_q);
+
     void init_ui_quad();
-	void draw_rect(float _x, float _y, float _w, float _h, const glm::vec4 &_color);
+
+public:
+    void draw_rect(float _x, float _y, float _w, float _h, const glm::vec4 &_color);
 	void draw_rect_outline(float _x, float _y, 
 	                       float _w, float _h, 
 	                       float _thickness, 

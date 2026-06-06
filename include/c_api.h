@@ -3,7 +3,7 @@
 
 #include <glm/glm.hpp>
 
-#include "window.h"
+#include "glfw_window.h"
 #include "gl_api.h"
 #include "event/input_manager.h"
 #include "event/event_handler.h"
@@ -30,7 +30,7 @@
 
 //---------------------------------------------------------------------------------------
 // definitions and enums
-// 
+//
 #define SYN_MODE_2D     1
 #define SYN_MODE_3D     2
 
@@ -44,7 +44,7 @@
 // globals
 
 // engine core
-extern window_t                     window;
+extern glfw_window_t                root_window;
 extern gl_api_t                     api;
 extern input_handler_t              input;
 extern events_t                     events;
@@ -70,8 +70,8 @@ extern orthographic_camera_t        orthographic_camera;
 // high-level control functions
 //
 
-/*  _name, _width and _height of window. _mode dictates which cameras are initiated
-    by default, where SYN_MODE_2D creates a orthographic camera and SYN_MODE_3D 
+/*  _name, _width and _height of root_window. _mode dictates which cameras are initiated
+    by default, where SYN_MODE_2D creates a orthographic camera and SYN_MODE_3D
     creates a perspective camera and an orbit camera.
  */
 void syn_init(const char *_name, int _width, int _height, int _mode);
@@ -83,14 +83,14 @@ void syn_shutdown();
 
 //---------------------------------------------------------------------------------------
 // accessors and helpers
-// 
+//
 void syn_destroy_window();
 void syn_set_window_pos_quadrant(int _quadrant);
 
 
 //---------------------------------------------------------------------------------------
 // rendering loop functions
-// 
+//
 void syn_render_begin_3d();
 void syn_render_end_3d();
 void syn_render_end();
@@ -98,8 +98,8 @@ void syn_render_end();
 
 //---------------------------------------------------------------------------------------
 // rendering functions
-// 
-#define syn_render_text(float_x, float_y, ...) font->addString((float_x), (float_y), __VA_ARGS__) 
+//
+#define syn_render_text(float_x, float_y, ...) font->addString((float_x), (float_y), __VA_ARGS__)
 
 
 

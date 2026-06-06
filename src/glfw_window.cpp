@@ -1,5 +1,5 @@
 
-#include "window.h"
+#include "glfw_window.h"
 #include "core.h"
 #include "utils/log.h"
 #include "event/event.h"
@@ -8,31 +8,31 @@
 #include "c_api.h"
 
 // static event callback wrappers
-static void __window_window_close_callback(const event_t &_e) { window.on_window_close_event(_e); }
-static void __window_toggle_fullscreen_callback(const event_t &_e) { window.on_toggle_fullscreen_event(_e); }
-static void __window_toggle_cursor_callback(const event_t &_e) { window.on_toggle_cursor_event(_e); }
-static void __window_toggle_frozen_cursor_callback(const event_t &_e) { window.on_toggle_frozen_cursor_event(_e); }
-static void __window_keydown_callback(const event_t &_e) { window.on_keydown_event(_e); }
+static void __window_window_close_callback(const event_t &_e) { root_window.on_window_close_event(_e); }
+static void __window_toggle_fullscreen_callback(const event_t &_e) { root_window.on_toggle_fullscreen_event(_e); }
+static void __window_toggle_cursor_callback(const event_t &_e) { root_window.on_toggle_cursor_event(_e); }
+static void __window_toggle_frozen_cursor_callback(const event_t &_e) { root_window.on_toggle_frozen_cursor_event(_e); }
+static void __window_keydown_callback(const event_t &_e) { root_window.on_keydown_event(_e); }
 
 // glfw callbacks
-void __glfw_window_resize_callback(GLFWwindow *_window, int _width, int _height) { window.glfw_window_resize_callback(window.m_window_ptr, _width, _height); }
+void __glfw_window_resize_callback(GLFWwindow *_window, int _width, int _height) { root_window.glfw_window_resize_callback(root_window.m_window_ptr, _width, _height); }
 
 //
-int window_t::init(const char *_name, int _width, int _height)
+int glfw_window_t::init(const char *_name, int _width, int _height)
 {
     m_title  = _name;
     int w  = _width == 0 ? 1280 : _width;
     int h = _height == 0 ?  800 : _height;
     m_window_dim = { w, h };
-    
+
 	// init GLFW
 	//
-	glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11); 
+	glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
 	if (!glfwInit()) {
 		SYN_ERROR("glfwInit() failed.\n");
 		return RETURN_FAILURE;
 	}
-	
+
 	// desktop resolution (for positioning and size)
 	#ifdef _WIN64
 	RECT desktop;
@@ -42,12 +42,12 @@ int window_t::init(const char *_name, int _width, int _height)
 	#endif
 
 	glfwDefaultWindowHints();
-	
+
 	glfwWindowHint(GLFW_DECORATED, GLFW_FALSE);
-	glfwWindowHint(GLFW_FOCUSED, GLFW_TRUE);	
+	glfwWindowHint(GLFW_FOCUSED, GLFW_TRUE);
 	glfwWindowHint(GLFW_SCALE_FRAMEBUFFER, GLFW_FALSE);
 	glfwWindowHint(GLFW_FLOATING, GLFW_TRUE);
-	
+
 	// create window
 	m_window_ptr = glfwCreateWindow(m_window_dim.x, m_window_dim.y, m_title, NULL, NULL);
 	if (m_window_ptr) {
@@ -128,7 +128,7 @@ int window_t::init(const char *_name, int _width, int _height)
 }
 
 //
-void window_t::destroy()
+void glfw_window_t::destroy()
 {
     SYN_INFO("destroying window and GLFW context.\n");
 	glfwDestroyWindow(m_window_ptr);
@@ -136,22 +136,22 @@ void window_t::destroy()
 }
 
 //
-void window_t::pre_render()
+void glfw_window_t::pre_render()
 {
 	glfwPollEvents();
-	
+
 }
 
 //
-void window_t::post_render()
+void glfw_window_t::post_render()
 {
     glfwSwapBuffers(m_window_ptr);
-    
+
 }
 
-// 
-void window_t::update()
-{	
+//
+void glfw_window_t::update()
+{
     // handle GLFW events
 	glfwPollEvents();
 
@@ -160,11 +160,11 @@ void window_t::update()
 	}
 
 	glfwSwapBuffers(m_window_ptr);
-	
+
 }
 
 //
-void window_t::center_cursor()
+void glfw_window_t::center_cursor()
 {
 	// glm::vec2 half_vp = Renderer::getViewportF() * 0.5f;
 	// glfwSetCursorPos(m_window_ptr, floor(half_vp.x), floor(half_vp.y));
@@ -172,7 +172,7 @@ void window_t::center_cursor()
 }
 
 //
-void window_t::set_fullscreen(const bool& _fullscreen)
+void glfw_window_t::set_fullscreen(const bool& _fullscreen)
 {
     // fullscreen here refers to maximized, borderless window
 	m_is_fullscreen = _fullscreen;
@@ -185,7 +185,7 @@ void window_t::set_fullscreen(const bool& _fullscreen)
 }
 
 //
-void window_t::glfw_window_resize_callback(GLFWwindow* _window, int _width, int _height)
+void glfw_window_t::glfw_window_resize_callback(GLFWwindow* _window, int _width, int _height)
 {
     (void)_window;
     event_t e;
@@ -200,23 +200,23 @@ void window_t::glfw_window_resize_callback(GLFWwindow* _window, int _width, int 
     events.dispatch_event(e);
 }
 
-// 
-void window_t::on_window_close_event(const event_t &_e)
+//
+void glfw_window_t::on_window_close_event(const event_t &_e)
 {
-    SYN_INFO("closing window.\n");
+    SYN_INFO("closing root_window.\n");
     m_to_close_window = true;
 
 }
 
-// 
-void window_t::on_toggle_fullscreen_event(const event_t &_e)
+//
+void glfw_window_t::on_toggle_fullscreen_event(const event_t &_e)
 {
     set_fullscreen(!m_is_fullscreen);
 
 }
 
-// 
-void window_t::on_toggle_cursor_event(const event_t &_e)
+//
+void glfw_window_t::on_toggle_cursor_event(const event_t &_e)
 {
 	if (!m_is_cursor_visible) {
 		glfwSetInputMode(m_window_ptr, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -226,8 +226,8 @@ void window_t::on_toggle_cursor_event(const event_t &_e)
 
 }
 
-// 
-void window_t::on_toggle_frozen_cursor_event(const event_t &_e)
+//
+void glfw_window_t::on_toggle_frozen_cursor_event(const event_t &_e)
 {
     m_is_cursor_frozen = !m_is_cursor_frozen;
 
@@ -239,8 +239,8 @@ void window_t::on_toggle_frozen_cursor_event(const event_t &_e)
 
 }
 
-// 
-void window_t::on_keydown_event(const event_t &_e)
+//
+void glfw_window_t::on_keydown_event(const event_t &_e)
 {
     if (_e.as.keydown.key == (int)m_to_close_key && _e.as.keydown.action == 1) {
         SYN_INFO("exit signal recieved.\n");

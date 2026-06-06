@@ -73,13 +73,13 @@ void renderer_t::init()
     m_command_count = 0;
     
     // DEBUG/DEV
-    //
-    // setup vao and shader for rendering orientation object
-    create_orienatation_obj(100);
+    
     // perfomancce graph
     init_perf_graph();
+
     // debug geometry
     init_debug_rendering();
+    
 }
 
 //
@@ -764,7 +764,12 @@ void renderer_t::draw_perf_stats()
         draw_frame_time_graph(x, text_y, w, h);
     }
     
-    // show notification
+  // glEnable(GL_DEPTH_TEST);
+}
+
+// 
+void renderer_t::draw_notifications()
+{
     if (m_notification.display_time > 0.0f) {
         float alpha = glm::clamp(m_notification.display_time / m_notification.duration, 0.0f, 1.0f);
         float msg_width = font.get_string_width("%s", m_notification.msg.c_str());
@@ -781,8 +786,7 @@ void renderer_t::draw_perf_stats()
     
         m_notification.display_time -= time_step.dt;
     }
-
-  // glEnable(GL_DEPTH_TEST);
+    
 }
 
 //
@@ -876,7 +880,40 @@ void renderer_t::draw_frame_time_graph(float _x, float _y, float _w, float _h)
 }
 
 //
-void renderer_t::create_orienatation_obj(uint32_t _size)
+void renderer_t::init_debug_rendering() 
+{
+    m_debug.normal_shader_handle = shader_lib.load_from_file("debug_normal_shader", 
+        "../assets/shaders/debug/debug_mesh_normals.glsl");
+    
+    m_debug.line_shader_handle = shader_lib.load_from_file("debug_line_shader", 
+        "../assets/shaders/debug/debug_lines.glsl");
+    
+    // shader contains posistion (vec3) and color (vec4)
+    size_t max_lines = 10000;
+    size_t buffer_size = max_lines * 2 * (sizeof(glm::vec3) + sizeof(glm::vec4));
+
+    m_debug.line_vao.set_buffer_layout({
+        { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT3 },
+        { VERTEX_ATTRIB_LOCATION_COLOR, shader_data_type_t::FLOAT4 }
+    });
+    m_debug.line_vao.create_empty_vertices(buffer_size);
+    
+    // grid
+    m_debug.grid_shader_handle = shader_lib.load_from_file("debug_grid_shader", 
+        "../assets/shaders/debug/debug_grid.glsl");
+    
+    // create a custom vao, since no vbo is needed
+    glGenVertexArrays(1, &m_debug.grid_vao_id);
+    
+    //
+    m_debug_initialized = true;
+
+    init_orienatation_obj(100);
+    
+}
+
+//
+void renderer_t::init_orienatation_obj(uint32_t _size)
 {
     m_orientation_obj_size = _size;
     
@@ -910,66 +947,6 @@ void renderer_t::create_orienatation_obj(uint32_t _size)
     
     SYN_INFO("orientation visualizer created.\n");
   
-}
-
-//
-void renderer_t::render_orientation_obj()
-{
-    api.set_viewport({0, 0}, {m_orientation_obj_size, m_orientation_obj_size});
-    
-    // render on top
-    api.clear_depth_buffer();
-    
-    //
-    glm::mat4 cam_rot = glm::mat4(glm::mat3(orbit_camera.get_view_matrix()));
-    static glm::mat4 ortho_proj = glm::ortho(-1.1f, 1.1f, -1.1f, 1.1f, -1.1f, 1.1f);
-    glm::mat4 mvp = ortho_proj * cam_rot;
-    
-    shader_t *shader = shader_lib.get_shader(m_orientation_obj_shader_handle);
-    shader->enable();
-    shader->set_matrix_4fv("u_mvp", mvp);
-    
-    m_orientation_obj_vao.bind();
-    api.set_line_width(3.0f);
-    glDrawArrays(GL_LINES, 0, 6);
-    m_perf_stats.draw_calls_per_frame++;
-    api.set_line_width(1.0f);
-    
-    shader->disable();
-    
-    api.reset_viewport();
-
-}
-
-//
-void renderer_t::init_debug_rendering() 
-{
-    m_debug.normal_shader_handle = shader_lib.load_from_file("debug_normal_shader", 
-        "../assets/shaders/debug/debug_mesh_normals.glsl");
-    
-    m_debug.line_shader_handle = shader_lib.load_from_file("debug_line_shader", 
-        "../assets/shaders/debug/debug_lines.glsl");
-    
-    // shader contains posistion (vec3) and color (vec4)
-    size_t max_lines = 10000;
-    size_t buffer_size = max_lines * 2 * (sizeof(glm::vec3) + sizeof(glm::vec4));
-
-    m_debug.line_vao.set_buffer_layout({
-        { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT3 },
-        { VERTEX_ATTRIB_LOCATION_COLOR, shader_data_type_t::FLOAT4 }
-    });
-    m_debug.line_vao.create_empty_vertices(buffer_size);
-    
-    // grid
-    m_debug.grid_shader_handle = shader_lib.load_from_file("debug_grid_shader", 
-        "../assets/shaders/debug/debug_grid.glsl");
-    
-    // create a custom vao, since no vbo is needed
-    glGenVertexArrays(1, &m_debug.grid_vao_id);
-    
-    //
-    m_debug_initialized = true;
-
 }
 
 //
@@ -1112,3 +1089,33 @@ void renderer_t::draw_debug_grid(float _y_level)
     m_perf_stats.draw_calls_per_frame++;
     
 }
+
+//
+void renderer_t::draw_debug_orientation_obj()
+{
+    api.set_viewport({0, 0}, {m_orientation_obj_size, m_orientation_obj_size});
+    
+    // render on top
+    api.clear_depth_buffer();
+    
+    //
+    glm::mat4 cam_rot = glm::mat4(glm::mat3(orbit_camera.get_view_matrix()));
+    static glm::mat4 ortho_proj = glm::ortho(-1.1f, 1.1f, -1.1f, 1.1f, -1.1f, 1.1f);
+    glm::mat4 mvp = ortho_proj * cam_rot;
+    
+    shader_t *shader = shader_lib.get_shader(m_orientation_obj_shader_handle);
+    shader->enable();
+    shader->set_matrix_4fv("u_mvp", mvp);
+    
+    m_orientation_obj_vao.bind();
+    api.set_line_width(3.0f);
+    glDrawArrays(GL_LINES, 0, 6);
+    m_perf_stats.draw_calls_per_frame++;
+    api.set_line_width(1.0f);
+    
+    shader->disable();
+    
+    api.reset_viewport();
+
+}
+

@@ -5,9 +5,9 @@
 entity_handle_t helmet;
 entity_handle_t sphere;
 
-// 
+//
 void handle_input()
-{    
+{
     if (input.was_key_pressed(SYN_KEY_F)) {
         event_t e;
         e.type = event_type_t::WINDOW_TOGGLE_FULLSCREEN;
@@ -24,15 +24,15 @@ void handle_input()
     if (input.was_key_pressed(SYN_KEY_F2)) {
         renderer.toggle_wireframe();
     }
-    
+
     if (input.was_key_pressed(SYN_KEY_F3)) {
         renderer.toggle_perf_overlay();
     }
-    
+
     if (input.was_key_pressed(SYN_KEY_F5)) {
         renderer.toggle_normals();
     }
-    
+
     if (input.was_key_pressed(SYN_KEY_F6)) {
         renderer.toggle_tangents();
     }
@@ -48,7 +48,7 @@ void handle_input()
     if (input.was_key_pressed(SYN_KEY_F10)) {
         renderer.toggle_grid();
     }
-    
+
 }
 
 // test code
@@ -71,7 +71,7 @@ void render(float _dt)
     if (renderer.m_debug.show_grid) {
         renderer.draw_debug_grid(-2.0f);
     }
-    
+
 }
 
 void setup_lights()
@@ -98,21 +98,21 @@ void setup_lights()
     renderer.set_light(3, sun);
 
     renderer.update_lighting_ubo();
-    
+
 }
 
-// 
+//
 int main()
 {
     syn_init("synapse v0.3", 1280, 800, SYN_MODE_3D);
-    window.set_exit_key(SYN_KEY_ESCAPE);
+    root_window.set_exit_key(SYN_KEY_ESCAPE);
     syn_set_window_pos_quadrant(UPPER_RIGHT);
     // syn_toggle_fullscreen();
-    
+
     syn_load_assets("../assets/manifests/helmet_test.syn");
     helmet = assets.get_entity("helmet");
-    
-    // 
+
+    //
     time_step.fps_limit = 60.0f;
     perspective_camera.m_position = { 0.0f, 2.0f, 20.0f };
 
@@ -124,7 +124,7 @@ int main()
     // glm::mat4 transform(1.0f);
 
     sphere = entity_lib.create_entity("test_sphere", sphere_mesh, chrome_mat, transform);
-    
+
     // perspective_camera.set_x_angle(320.0f);
     // perspective_camera.set_y_angle(30.0f);
     // perspective_camera.set_position({ 2.7f, 2.0f, 2.7f });
@@ -134,22 +134,20 @@ int main()
     orbit_camera.m_radius = 3.0f;
 
     //
-    while (!window.should_close()) {
+    while (!root_window.should_close()) {
 
         handle_input();
-        
+
         // RENDERING 3D tests
         syn_render_begin_3d();
 
         render(time_step.dt);
-         
+
         syn_render_end_3d();
     }
 
     syn_shutdown();
 
     return 0;
-    
+
 }
-
-

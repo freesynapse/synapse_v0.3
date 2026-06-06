@@ -10,10 +10,10 @@
 
 
 // TODO : remove as class? (not for now at least, see below)
-struct window_t
+struct glfw_window_t
 {
-    window_t() = default;
-    ~window_t() = default;
+    glfw_window_t() = default;
+    ~glfw_window_t() = default;
 
     /*  If _width or _height is set to 0, default dimensions 1280 x 800 is used. */
     int init(const char *_name, int _width, int _height);

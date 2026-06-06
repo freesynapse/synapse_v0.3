@@ -8,7 +8,7 @@
 
 #include "c_api.h"
 
-// 
+//
 static std::string trim(const std::string &str) {
     size_t start = str.find_first_not_of(" \t\r\n");
     if (start == std::string::npos) return "";
@@ -16,13 +16,13 @@ static std::string trim(const std::string &str) {
     return str.substr(start, end - start + 1);
 }
 
-// 
+//
 void asset_manager_t::load_manifest(const std::string &_path)
 {
     m_current_manifest_path = _path;
-    
+
     std::ifstream file(_path);
-    
+
     if (!file.is_open()) {
         SYN_ERROR("failed to open manifest file: %s.\n", _path.c_str());
         return;
@@ -32,15 +32,15 @@ void asset_manager_t::load_manifest(const std::string &_path)
     std::string line;
     while (std::getline(file, line)) {
         if (line.empty() || line[0] == '#') continue;
-        
+
         // Check if this starts a block (peek next line for '{')
         std::string trimmed = line;
         trimmed.erase(0, trimmed.find_first_not_of(" \t"));
-        
+
         std::streampos pos = file.tellg();  // Save position
         std::string next_line;
         bool is_block = false;
-        
+
         if (std::getline(file, next_line)) {
             next_line.erase(0, next_line.find_first_not_of(" \t"));
             if (next_line[0] == '{') {
@@ -48,7 +48,7 @@ void asset_manager_t::load_manifest(const std::string &_path)
             }
             file.seekg(pos);  // Restore position
         }
-        
+
         if (is_block || line.find('{') != std::string::npos) {
             // Read entire block
             std::string block = line + "\n";
@@ -67,11 +67,11 @@ void asset_manager_t::load_manifest(const std::string &_path)
     count_assets_in_manifest(lines);
     m_load_progress.loaded_assets = 0;
     m_load_progress.enabled = true;
-    
+
     // 1st pass: shaders, textures, meshes
     SYN_INFO("loading shaders, textures and meshes.\n");
     for (const auto &line : lines) parse_line(line, 1);
-    
+
     // 2nd pass: materials, skybox
     SYN_INFO("loading materials and cubemaps.\n");
     for (const auto &line : lines) parse_line(line, 2);
@@ -82,7 +82,7 @@ void asset_manager_t::load_manifest(const std::string &_path)
     m_load_progress.current_asset = "";
     m_load_progress.loaded_assets++;
     render_loading_assets();
-    
+
 }
 
 //
@@ -96,10 +96,10 @@ void asset_manager_t::reload_manifest()
     SYN_INFO("reloading manifest: %s.\n", m_current_manifest_path.c_str());
 
     load_manifest(m_current_manifest_path);
-    
+
 }
 
-// 
+//
 shader_handle_t asset_manager_t::get_shader(const std::string &_name)
 {
     auto it = m_shader_map.find(_name);
@@ -108,10 +108,10 @@ shader_handle_t asset_manager_t::get_shader(const std::string &_name)
         return { 0 };
     }
     return it->second;
-    
+
 }
 
-// 
+//
 texture_handle_t asset_manager_t::get_texture(const std::string &_name)
 {
     auto it = m_texture_map.find(_name);
@@ -120,10 +120,10 @@ texture_handle_t asset_manager_t::get_texture(const std::string &_name)
         return { 0 };
     }
     return it->second;
-    
+
 }
 
-// 
+//
 material_handle_t asset_manager_t::get_material(const std::string &_name)
 {
     auto it = m_material_map.find(_name);
@@ -133,10 +133,10 @@ material_handle_t asset_manager_t::get_material(const std::string &_name)
     }
 
     return it->second;
-    
+
 }
 
-// 
+//
 mesh_handle_t asset_manager_t::get_mesh(const std::string &_name)
 {
     auto it = m_mesh_map.find(_name);
@@ -145,10 +145,10 @@ mesh_handle_t asset_manager_t::get_mesh(const std::string &_name)
         return { 0 };
     }
     return it->second;
-    
+
 }
 
-// 
+//
 cubemap_handle_t asset_manager_t::get_skybox(const std::string &_name)
 {
     auto it = m_cubemap_map.find(_name);
@@ -157,10 +157,10 @@ cubemap_handle_t asset_manager_t::get_skybox(const std::string &_name)
         return { 0 };
     }
     return it->second;
-    
+
 }
 
-// 
+//
 entity_handle_t asset_manager_t::get_entity(const std::string &_name)
 {
     auto it = m_entity_map.find(_name);
@@ -171,7 +171,7 @@ entity_handle_t asset_manager_t::get_entity(const std::string &_name)
     return it->second;
 }
 
-// 
+//
 void asset_manager_t::parse_line(const std::string &_line, size_t _pass)
 {
     bool is_block = (_line.find('\n') != std::string::npos);
@@ -181,7 +181,7 @@ void asset_manager_t::parse_line(const std::string &_line, size_t _pass)
     std::vector<std::string> tokens;
     std::string token;
 
-    
+
     // tokenize by whitespace (' ')
     while (iss >> token) {
         tokens.push_back(token);
@@ -212,7 +212,7 @@ void asset_manager_t::parse_line(const std::string &_line, size_t _pass)
     }
 }
 
-// 
+//
 void asset_manager_t::parse_shader(const std::vector<std::string> &_tokens)
 {
     // format: shader <name> <path>
@@ -230,10 +230,10 @@ void asset_manager_t::parse_shader(const std::vector<std::string> &_tokens)
     m_shader_map[name] = handle;
 
     SYN_INFO("loaded shader '%s' from '%s'.\n", name.c_str(), path.c_str());
-    
+
 }
 
-// 
+//
 void asset_manager_t::parse_texture(const std::vector<std::string> &_tokens)
 {
     // format: texture <name> <path>
@@ -254,7 +254,7 @@ void asset_manager_t::parse_texture(const std::vector<std::string> &_tokens)
 
 }
 
-// 
+//
 void asset_manager_t::parse_mesh(const std::vector<std::string> &_tokens)
 {
     // format: mesh <name> <path>
@@ -275,7 +275,7 @@ void asset_manager_t::parse_mesh(const std::vector<std::string> &_tokens)
 
 }
 
-// 
+//
 void asset_manager_t::parse_material(const std::vector<std::string> &_tokens)
 {
     // format: material <name> <shader_name> <tex0> <tex1> ... <texN>
@@ -283,12 +283,12 @@ void asset_manager_t::parse_material(const std::vector<std::string> &_tokens)
         SYN_ERROR("invalid material entry: expected 'material <name> <shader_name> <tex0> <tex1> ... <texN>'\n");
         return;
     }
-    
+
     const std::string& mat_name = _tokens[1];
     const std::string& shader_name = _tokens[2];
 
     update_load_progress("material", mat_name);
-    
+
     // check shader
     auto shader_it = m_shader_map.find(shader_name);
     if (shader_it == m_shader_map.end()) {
@@ -325,10 +325,10 @@ void asset_manager_t::parse_material(const std::vector<std::string> &_tokens)
 
     m_material_map[mat_name] = mat_handle;
     SYN_INFO("created material '%s' with shader '%s'.\n", mat_name.c_str(), shader_name.c_str());
-    
+
 }
 
-// 
+//
 void asset_manager_t::parse_material_block(const std::string &_block, const std::string &_mat_name)
 {
     material_descriptor_t desc;
@@ -336,14 +336,14 @@ void asset_manager_t::parse_material_block(const std::string &_block, const std:
     std::string line;
 
     update_load_progress("shader", _mat_name);
-    
+
     // skip first line (material name)
     std::getline(block_stream, line);
 
     while (std::getline(block_stream, line)) {
         // trim whitespace
         line = trim(line);
-        
+
         // skip empty lines
         if (line.empty() || line[0] == '#' || line[0] == '{' || line[0] == '}') continue;
 
@@ -369,26 +369,26 @@ void asset_manager_t::parse_material_block(const std::string &_block, const std:
         }
 
         parse_material_property(desc, key, value, _mat_name);
-        
+
     }
 
     apply_smart_defaults(desc);
-    
+
     create_material_from_descriptor(_mat_name, desc);
-    
+
 }
 
-// 
-void asset_manager_t::parse_material_property(material_descriptor_t &_desc, 
-                                              const std::string &_key, 
-                                              const std::string &_value, 
+//
+void asset_manager_t::parse_material_property(material_descriptor_t &_desc,
+                                              const std::string &_key,
+                                              const std::string &_value,
                                               const std::string &_mat_name)
 {
     // Shader reference
     if (_key == "shader") {
         _desc.shader_name = _value;
     }
-    
+
     // texture slots
     else if (_key == "albedo_texture")    _desc.albedo_texture = _value;
     else if (_key == "normal_texture")    _desc.normal_texture = _value;
@@ -396,7 +396,7 @@ void asset_manager_t::parse_material_property(material_descriptor_t &_desc,
     else if (_key == "roughness_texture") _desc.roughness_texture = _value;
     else if (_key == "ao_texture")        _desc.ao_texture = _value;
     else if (_key == "emissive_texture")  _desc.emissive_texture = _value;
-    
+
     // flags
     else if (_key == "use_albedo_map")    _desc.use_albedo_map = parse_bool(_value);
     else if (_key == "use_normal_map")    _desc.use_normal_map = parse_bool(_value);
@@ -404,20 +404,20 @@ void asset_manager_t::parse_material_property(material_descriptor_t &_desc,
     else if (_key == "use_roughness_map") _desc.use_roughness_map = parse_bool(_value);
     else if (_key == "use_ao_map")        _desc.use_ao_map = parse_bool(_value);
     else if (_key == "use_emissive_map")  _desc.use_emissive_map = parse_bool(_value);
-    
+
     // material properties
     else if (_key == "albedo_color")   _desc.albedo_color = parse_vec4(_value);
     else if (_key == "metallic")       _desc.metallic = parse_float(_value);
     else if (_key == "roughness")      _desc.roughness = parse_float(_value);
     else if (_key == "ao")             _desc.ao = parse_float(_value);
     else if (_key == "tiling_factor")  _desc.tiling_factor = parse_float(_value);
-    
+
     else {
         SYN_WARNING("material '%s': unknown property '%s'.\n", _mat_name.c_str(), _key.c_str());
     }
 }
 
-// 
+//
 void asset_manager_t::apply_smart_defaults(material_descriptor_t &_desc)
 {
     if (!_desc.albedo_texture.empty()       && !_desc.use_albedo_map)       _desc.use_albedo_map = 1.0f;
@@ -426,10 +426,10 @@ void asset_manager_t::apply_smart_defaults(material_descriptor_t &_desc)
     if (!_desc.roughness_texture.empty()    && !_desc.use_roughness_map)    _desc.use_roughness_map = 1.0f;
     if (!_desc.ao_texture.empty()           && !_desc.use_ao_map)           _desc.use_ao_map = 1.0f;
     if (!_desc.emissive_texture.empty()     && !_desc.use_emissive_map)     _desc.use_emissive_map = 1.0f;
-    
+
 }
 
-// 
+//
 void asset_manager_t::create_material_from_descriptor(const std::string &_mat_name, material_descriptor_t &_desc)
 {
     auto shader_it = m_shader_map.find(_desc.shader_name);
@@ -475,10 +475,10 @@ void asset_manager_t::create_material_from_descriptor(const std::string &_mat_na
     m_material_map[_mat_name] = mat_handle;
 
     SYN_INFO("created material '%s' with shader '%s'.\n", _mat_name.c_str(), _desc.shader_name.c_str());
-    
+
 }
 
-// 
+//
 void asset_manager_t::assign_texture_slot(material_internal_t *_mat, size_t _slot, const std::string &_tex_name)
 {
     if (_tex_name.empty()) {
@@ -495,7 +495,7 @@ void asset_manager_t::assign_texture_slot(material_internal_t *_mat, size_t _slo
     }
 }
 
-// 
+//
 void asset_manager_t::parse_skybox(const std::vector<std::string> &_tokens)
 {
     // format: skybox <name> <+x> <-x> <+y> <-y> <+z> <-z>
@@ -503,7 +503,7 @@ void asset_manager_t::parse_skybox(const std::vector<std::string> &_tokens)
         SYN_ERROR("Invalid skybox entry: expected 'skybox <name> <+x> <-x> <+y> <-y> <+z> <-z>'.\n");
         return;
     }
-    
+
     const std::string& name = _tokens[1];
     std::vector<std::string> faces = {
         _tokens[2], // +x
@@ -515,61 +515,61 @@ void asset_manager_t::parse_skybox(const std::vector<std::string> &_tokens)
     };
 
     update_load_progress("cubemap", name);
-    
+
     cubemap_handle_t handle = cubemap_lib.load_cubemap(faces);
     m_cubemap_map[name] = handle;
 
     renderer.set_skybox(handle);
-    
+
     SYN_INFO("loaded skybox '%s'.\n", name.c_str());
 }
 
-// 
+//
 void asset_manager_t::parse_entity(const std::string &_block, const std::string &_entity_name)
 {
     entity_descriptor_t desc;
-    
+
     std::istringstream block_stream(_block);
     std::string line;
 
     update_load_progress("entity", _entity_name);
-    
+
     // Skip first line (entity name {)
     std::getline(block_stream, line);
-    
+
     while (std::getline(block_stream, line)) {
         //
         line = trim(line);
-                
+
         if (line.empty() || line[0] == '#' || line[0] == '{' || line[0] == '}') continue;
-        
+
         // Parse "key: value"
         size_t colon_pos = line.find(':');
         if (colon_pos == std::string::npos) {
             SYN_WARNING("invalid material property line (colon missing): '%s'.\n", line.c_str());
             continue;
         }
-        
-        
+
+
         std::string key = line.substr(0, colon_pos);
         std::string value = line.substr(colon_pos + 1);
-        
+
         key.erase(0, key.find_first_not_of(" \t"));
         key.erase(key.find_last_not_of(" \t") + 1);
         value.erase(0, value.find_first_not_of(" \t"));
         value.erase(value.find_last_not_of(" \t\r\n") + 1);
-        
+
         if (!value.empty() && value.back() == ',') {
             value.pop_back();
         }
-        
+
         parse_entity_property(desc, key, value, _entity_name);
     }
-    
+
     create_entity_from_descriptor(_entity_name, desc);
 }
 
-// 
+//
 void asset_manager_t::parse_entity_property(entity_descriptor_t &_desc,
                                             const std::string &_key,
                                             const std::string &_value,
@@ -585,13 +585,13 @@ void asset_manager_t::parse_entity_property(entity_descriptor_t &_desc,
     }
 }
 
-// 
-void asset_manager_t::create_entity_from_descriptor(const std::string &_name, 
+//
+void asset_manager_t::create_entity_from_descriptor(const std::string &_name,
                                                     const entity_descriptor_t &_desc)
 {
     entity_t entity;
     entity.name = _name;
-    
+
     // resolve mesh
     auto mesh_it = m_mesh_map.find(_desc.mesh_name);
     if (mesh_it != m_mesh_map.end()) {
@@ -600,7 +600,7 @@ void asset_manager_t::create_entity_from_descriptor(const std::string &_name,
         SYN_ERROR("entity '%s' references unknown mesh '%s'.\n", _name.c_str(), _desc.mesh_name.c_str());
         return;
     }
-    
+
     // resolve material
     auto mat_it = m_material_map.find(_desc.material_name);
     if (mat_it != m_material_map.end()) {
@@ -609,19 +609,19 @@ void asset_manager_t::create_entity_from_descriptor(const std::string &_name,
         SYN_ERROR("entity '%s' references unknown material '%s'.\n", _name.c_str(), _desc.material_name.c_str());
         return;
     }
-    
+
     // build transform
     entity.transform = entity_t::make_transform(_desc.position, _desc.rotation_degrees, _desc.scale);
 
     entity_handle_t handle = entity_lib.add_entity(entity);
-    
+
     m_entity_map[_name] = handle;
-    
-    SYN_INFO("created entity '%s' (mesh='%s', material='%s')\n", 
+
+    SYN_INFO("created entity '%s' (mesh='%s', material='%s')\n",
              _name.c_str(), _desc.mesh_name.c_str(), _desc.material_name.c_str());
 }
 
-// 
+//
 bool asset_manager_t::parse_bool(const std::string &_value)
 {
     if (_value == "true"  || _value == "TRUE"  || _value == "1" || _value == "yes") return true;
@@ -629,10 +629,10 @@ bool asset_manager_t::parse_bool(const std::string &_value)
 
     SYN_WARNING("invalid boolean value '%s', defaulting to false.\n", _value.c_str());
     return false;
-    
+
 }
 
-// 
+//
 float asset_manager_t::parse_float(const std::string &_value)
 {
     try {
@@ -641,10 +641,10 @@ float asset_manager_t::parse_float(const std::string &_value)
         SYN_WARNING("invalid float value '%s', defaulting to 0.0f.\n", _value.c_str());
         return 0.0f;
     }
-    
+
 }
 
-// 
+//
 glm::vec3 asset_manager_t::parse_vec3(const std::string &_value)
 {
     std::istringstream iss(_value);
@@ -659,10 +659,10 @@ glm::vec3 asset_manager_t::parse_vec3(const std::string &_value)
 
     SYN_WARNING("invalid vec3 value '%s', defaulting to vec3(1.0f).\n", _value.c_str());
     return glm::vec3(1.0f);
-    
+
 }
 
-// 
+//
 glm::vec4 asset_manager_t::parse_vec4(const std::string &_value)
 {
     std::istringstream iss(_value);
@@ -677,10 +677,10 @@ glm::vec4 asset_manager_t::parse_vec4(const std::string &_value)
 
     SYN_WARNING("invalid vec3 value '%s', defaulting to vec3(1.0f).\n", _value.c_str());
     return glm::vec4(1.0f);
-    
+
 }
 
-// 
+//
 void asset_manager_t::count_assets_in_manifest(const std::vector<std::string> &_lines)
 {
     m_load_progress.total_assets = 0;
@@ -690,20 +690,20 @@ void asset_manager_t::count_assets_in_manifest(const std::vector<std::string> &_
         std::string type;
         iss >> type;
 
-        if (type == "shader" || type == "texture" || type == "mesh" || 
+        if (type == "shader" || type == "texture" || type == "mesh" ||
             type == "material" || type == "skybox" || type == "entity") {
             m_load_progress.total_assets++;
         }
     }
-    
+
     SYN_INFO("total assets to load: %d\n", m_load_progress.total_assets);
 
     // add one extra to make it 100% at fully loaded, not when loading the last asset
     m_load_progress.total_assets++;
-    
+
 }
 
-// 
+//
 void asset_manager_t::update_load_progress(const std::string _type, const std::string &_name)
 {
     m_load_progress.current_asset = _type + ": " + _name;
@@ -712,10 +712,10 @@ void asset_manager_t::update_load_progress(const std::string _type, const std::s
     if (m_load_progress.enabled) {
         render_loading_assets();
     }
-    
+
 }
 
-// 
+//
 void asset_manager_t::render_loading_assets()
 {
     api.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -725,16 +725,16 @@ void asset_manager_t::render_loading_assets()
         progress = (float)m_load_progress.loaded_assets / (float)m_load_progress.total_assets;
     }
 
-    glm::ivec2 dims = window.m_window_dim;
+    glm::ivec2 dims = root_window.m_window_dim;
     static float bar_width = 600.0f;
     static float bar_height = 20.0f;
     static float bar_x = (dims.x - bar_width) / 2.0f;
     static float bar_y = dims.y / 2.0f;
 
-    renderer_2d.draw_rect_outline(bar_x, bar_y, 
-                                  bar_width, bar_height, 
-                                  2.0f, 
-                                  glm::vec4(0.3f, 0.3f, 0.3f, 1.0f), 
+    renderer_2d.draw_rect_outline(bar_x, bar_y,
+                                  bar_width, bar_height,
+                                  2.0f,
+                                  glm::vec4(0.3f, 0.3f, 0.3f, 1.0f),
                                   glm::vec4(0.8f, 0.8f, 0.8f, 1.0f));
 
     float filled_width = bar_width * progress;
@@ -754,8 +754,8 @@ void asset_manager_t::render_loading_assets()
 
     font.end_render_block();
 
-    window.post_render();
+    root_window.post_render();
     glfwPollEvents();
-    
-    
+
+
 }

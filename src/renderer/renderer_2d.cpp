@@ -20,6 +20,43 @@ void renderer_2d_t::shutdown()
     
 }
 
+// 
+std::array<vertex_data_2d_t, 4> renderer_2d_t::quad_t_to_vertex_2d_t(const quad_2d_t &_q)
+{
+    glm::vec2 v_[4] = {
+        {-0.5f, -0.5f},
+        { 0.5f, -0.5f},
+        { 0.5f,  0.5f},
+        {-0.5f,  0.5f},
+    };
+
+    float c = cosf(_q.transform.rotation);
+    float s = sinf(_q.transform.rotation);
+
+    std::array<vertex_data_2d_t, 4> v;
+    for (size_t i = 0; i < 4; i++) {
+        // scale
+        glm::vec2 p = v_[i] * _q.transform.scale;
+        // rotate
+        p = { 
+            p.x * c - p.y * s, 
+            p.x * s + p.y * c
+        };
+        // translate
+        p += _q.transform.position;
+
+        v[i] = {
+            p,
+            v_[i] + 0.5f,   // uv [0..1]
+            _q.color,
+            _q.tex_index,
+            _q.depth
+        };
+    }
+
+    return v;
+}
+
 //
 void renderer_2d_t::init_ui_quad() {
   // since glm::ortho, we need a different winding order

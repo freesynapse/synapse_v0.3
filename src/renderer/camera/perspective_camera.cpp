@@ -1,5 +1,5 @@
 
-#include "window.h"
+#include "glfw_window.h"
 #include "event/event.h"
 #include "event/key_codes.h"
 #include "event/input_manager.h"
@@ -14,11 +14,11 @@ static void __perspective_camera_window_resize_callback(const event_t &_e) { per
 static void __perspective_camera_frozen_cursor_callback(const event_t &_e) { perspective_camera.on_cursor_freeze(_e); }
 static void __perspective_camera_mouse_scroll_callback(const event_t &_e) { perspective_camera.on_scroll(_e); }
 
-// 
-void perspective_camera_t::init(float _fov_deg, 
-                                float _screen_w, 
-                                float _screen_h, 
-                                float _z_near, 
+//
+void perspective_camera_t::init(float _fov_deg,
+                                float _screen_w,
+                                float _screen_h,
+                                float _z_near,
                                 float _z_far)
 {
 	m_x_angle = 0.0f;
@@ -34,10 +34,10 @@ void perspective_camera_t::init(float _fov_deg,
 
 	m_prev_mouse_position = { 0.0f, 0.0f };
 
-	m_projection_matrix = glm::perspectiveFov(glm::radians(m_fov), 
+	m_projection_matrix = glm::perspectiveFov(glm::radians(m_fov),
 											  _screen_w,
 											  _screen_h,
-											  m_z_near, 
+											  m_z_near,
 											  m_z_far);
 
 	// register for viewport resize events
@@ -48,11 +48,11 @@ void perspective_camera_t::init(float _fov_deg,
 
 }
 
-// 
+//
 void perspective_camera_t::update(float _dt)
 {
     // break if input is disabled (i.e. in engine edit mode).
-	if (!m_do_update_camera || !window.m_is_cursor_frozen)
+	if (!m_do_update_camera || !root_window.m_is_cursor_frozen)
 		return;
 
     // get input to adjust position and look-at
@@ -76,7 +76,7 @@ void perspective_camera_t::update(float _dt)
 	m_forward_vector = glm::cross(m_up_vector, m_right_vector);
 }
 
-// 
+//
 void perspective_camera_t::handle_input(float _dt)
 {
 	// update position
@@ -95,7 +95,7 @@ void perspective_camera_t::handle_input(float _dt)
 
 	// update look-at angles
 	double x, y;
-	glfwGetCursorPos(window.m_window_ptr, &x, &y);
+	glfwGetCursorPos(root_window.m_window_ptr, &x, &y);
 	glm::vec2 mouse_position = { (float)x, (float)y };
 
 	if (m_first_mouse_input) {
@@ -124,7 +124,7 @@ void perspective_camera_t::handle_input(float _dt)
 
 }
 
-// 
+//
 void perspective_camera_t::on_viewport_resize(const event_t &_e)
 {
     glm::vec2 viewport = _e.as.viewport_resize.viewport_f;
@@ -135,22 +135,21 @@ void perspective_camera_t::on_viewport_resize(const event_t &_e)
     m_first_mouse_input = true;
 }
 
-// 
+//
 void perspective_camera_t::on_window_resize(const event_t &_e)
 {
     m_first_mouse_input = true;
 }
 
-// 
+//
 void perspective_camera_t::on_cursor_freeze(const event_t &_e)
 {
     update_view_matrix();
 	m_first_mouse_input = true;
 }
 
-// 
+//
 void perspective_camera_t::on_scroll(const event_t &_e)
 {
     //
 }
-

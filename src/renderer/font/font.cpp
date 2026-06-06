@@ -8,7 +8,7 @@
 #include "utils/log.h"
 #include "event/event_handler.h"
 #include "utils/math_utils.h"
-#include "window.h"
+#include "glfw_window.h"
 
 #include "c_api.h"
 
@@ -16,7 +16,7 @@
 // static event callback wrappers
 static void __font_on_resize_callback(const event_t &_e) { font.on_resize(_e); }
 
-// 
+//
 void font_t::init(const char *_filename, const int &_pixel_size, const glm::vec2 &_vp_sz)
 {
 	m_shader_handle = shader_lib.load_from_file("font_shader", "../assets/shaders/font.glsl");
@@ -26,22 +26,22 @@ void font_t::init(const char *_filename, const int &_pixel_size, const glm::vec2
 	// memset(m_render_buffer, 0, SYN_FONT_MAX_BUFFER_LENGTH);
 	// m_buffer_offsets.reserve(512);
 	// m_render_offsets.reserve(512);
-	
+
 	// register resize events
 	// events.register_callback(event_type_t::VIEWPORT_RESIZE, SYN_EVENT_MEMBER_FNC(font_t::resize_event));
 	events.register_callback(event_type_t::VIEWPORT_RESIZE, __font_on_resize_callback);
-   
+
 	// initialize the text atlas texture
 	init_font_atlas(_filename, _pixel_size, _vp_sz);
-	
+
 	m_viewport_size = _vp_sz;
 
 	// 6 vertices per character
 	m_vertices.reserve(SYN_FONT_MAX_BUFFER_LENGTH * 6);
-	
+
 }
 
-// 
+//
 void font_t::destroy()
 {
     m_vao.destroy();
@@ -49,7 +49,7 @@ void font_t::destroy()
 
 }
 
-// 
+//
 int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const glm::vec2& _vp_sz)
 {
 	// Init the FreeType lib
@@ -58,9 +58,9 @@ int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const
 		SYN_ERROR("FreeType could not be initialized.\n");
 		return (RETURN_FAILURE);
 	}
-	
+
 	SYN_INFO("loading font atlas from '%s'.\n", _filename);
-	
+
 	if (FT_New_Face(m_ft_lib, _filename, 0, &m_ft_face)) {
 		SYN_ERROR("could not font load atlas from '%s'.\n", _filename);
 		return (RETURN_FAILURE);
@@ -70,10 +70,10 @@ int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const
 	FT_Set_Pixel_Sizes(m_ft_face, 0, _pixel_size);
 	FT_GlyphSlot g = m_ft_face->glyph;
 	if (_vp_sz.x <= 1.0f || _vp_sz.y <= 1.0f) {
-	    auto vp = window.m_window_dim;
+	    auto vp = root_window.m_window_dim;
 	    m_sx = 2.0f / (float)vp.x;
 		m_sy = 2.0f / (float)vp.y;
-	} 
+	}
 	else {
 		m_sx = 2.0f / (float)_vp_sz.x;
 		m_sy = 2.0f / (float)_vp_sz.y;
@@ -170,15 +170,15 @@ int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const
 		{ VERTEX_ATTRIB_LOCATION_COLOR, shader_data_type_t::FLOAT4 }
 	});
 	m_vao.create_empty_vertices(sizeof(font_vertex_t) * SYN_FONT_MAX_BUFFER_LENGTH, GL_DYNAMIC_DRAW);
-	
-	
+
+
 	SYN_INFO("generated %dx%d text atlas.\n", m_texture_width, m_texture_height);
 
 	return RETURN_SUCCESS;
 
 }
 
-// 
+//
 void font_t::render_text(const float& _x, const float& _y, const char* _str, ...)
 {
 	if (!_str) return;
@@ -205,17 +205,17 @@ void font_t::render_text(const float& _x, const float& _y, const char* _str, ...
         float y2 = y + c.bt * m_sy;
         float w = c.bw * m_sx;
         float h = c.bh * m_sy;
-        
+
         // advance cursor
         x += c.ax * m_sx;
         y += c.ay * m_sy;
-        
+
         // skip empty m_chars
         if (!w || !h) continue;
-        
+
         float bw_tw = c.bw / (float)m_texture_width;
         float bh_th = c.bh / (float)m_texture_height;
-        
+
         m_vertices.push_back(font_vertex_t({ x2 + w,  y2     }, { c.tx + bw_tw, c.ty         }, m_text_color ));
         m_vertices.push_back(font_vertex_t({ x2,      y2     }, { c.tx,         c.ty         }, m_text_color ));
         m_vertices.push_back(font_vertex_t({ x2,      y2 - h }, { c.tx,         c.ty + bh_th }, m_text_color ));
@@ -226,7 +226,7 @@ void font_t::render_text(const float& _x, const float& _y, const char* _str, ...
 
 }
 
-// 
+//
 void font_t::end_render_block()
 {
     if (m_vertices.empty()) return;
@@ -238,7 +238,7 @@ void font_t::end_render_block()
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, m_atlas_texture_id);
-	
+
 	m_vao.bind();
 	m_vao.update_vertices(&m_vertices[0], sizeof(font_vertex_t) * m_vertices.size(), 0);
 	glDrawArrays(GL_TRIANGLES, 0, m_vertices.size());
@@ -248,10 +248,10 @@ void font_t::end_render_block()
     api.set_depth_testing(true);
 
 	m_vertices.clear();
-	
+
 }
 
-// 
+//
 float font_t::get_string_width(const char* _str, ...)
 {
 	memset(m_tmp_buffer, 0, 256);
@@ -264,20 +264,20 @@ float font_t::get_string_width(const char* _str, ...)
 	return offset * m_chars[(uint32_t)m_tmp_buffer[0]].ax;
 }
 
-// 
+//
 void font_t::on_resize(const event_t &_e)
 {
 	if (!m_update_on_resize)
 		return;
 
 	glm::ivec2 new_viewport = _e.as.viewport_resize.viewport;
-	
+
 	m_sx = 2.0f / (float)new_viewport.x;
 	m_sy = 2.0f / (float)new_viewport.y;
-	
+
 }
 
-// 
+//
 void font_t::resize(const glm::vec2& _vp_sz_px)
 {
 	m_sx = 2.0f / _vp_sz_px.x;
