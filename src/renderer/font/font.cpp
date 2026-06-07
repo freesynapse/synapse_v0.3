@@ -4,7 +4,7 @@
 #include <stdarg.h>
 
 #include "renderer/font/font.h"
-#include "core.h"
+
 #include "utils/log.h"
 #include "event/event_handler.h"
 #include "utils/math_utils.h"
@@ -56,21 +56,21 @@ int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const
 	if (FT_Init_FreeType(&m_ft_lib)) {
 		// Error::raise_error(nullptr, __func__, "FreeType could not be initialized.");
 		SYN_ERROR("FreeType could not be initialized.\n");
-		return (RETURN_FAILURE);
+		return (-1);
 	}
 
 	SYN_INFO("loading font atlas from '%s'.\n", _filename);
 
 	if (FT_New_Face(m_ft_lib, _filename, 0, &m_ft_face)) {
 		SYN_ERROR("could not font load atlas from '%s'.\n", _filename);
-		return (RETURN_FAILURE);
+		return (-1);
 	}
 
 	// Initialize variables before atlas creation
 	FT_Set_Pixel_Sizes(m_ft_face, 0, _pixel_size);
 	FT_GlyphSlot g = m_ft_face->glyph;
 	if (_vp_sz.x <= 1.0f || _vp_sz.y <= 1.0f) {
-	    auto vp = root_window.m_window_dim;
+	    auto vp = root_window.window_dims();
 	    m_sx = 2.0f / (float)vp.x;
 		m_sy = 2.0f / (float)vp.y;
 	}
@@ -167,14 +167,14 @@ int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const
 	m_vao.set_buffer_layout({
 	    { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT2 },
 		{ VERTEX_ATTRIB_LOCATION_UV, shader_data_type_t::FLOAT2 },
-		{ VERTEX_ATTRIB_LOCATION_COLOR, shader_data_type_t::FLOAT4 }
+		{ VERTEX_ATTRIB_LOCATION_COLOR, shader_data_type_t::FLOAT4 },
+		{ VERTEX_ATTRIB_LOCATION_DEPTH, shader_data_type_t::FLOAT },
 	});
 	m_vao.create_empty_vertices(sizeof(font_vertex_t) * SYN_FONT_MAX_BUFFER_LENGTH, GL_DYNAMIC_DRAW);
 
-
 	SYN_INFO("generated %dx%d text atlas.\n", m_texture_width, m_texture_height);
 
-	return RETURN_SUCCESS;
+	return 0;
 
 }
 
@@ -216,22 +216,24 @@ void font_t::render_text(const float& _x, const float& _y, const char* _str, ...
         float bw_tw = c.bw / (float)m_texture_width;
         float bh_th = c.bh / (float)m_texture_height;
 
-        m_vertices.push_back(font_vertex_t({ x2 + w,  y2     }, { c.tx + bw_tw, c.ty         }, m_text_color ));
-        m_vertices.push_back(font_vertex_t({ x2,      y2     }, { c.tx,         c.ty         }, m_text_color ));
-        m_vertices.push_back(font_vertex_t({ x2,      y2 - h }, { c.tx,         c.ty + bh_th }, m_text_color ));
-        m_vertices.push_back(font_vertex_t({ x2 + w,  y2     }, { c.tx + bw_tw, c.ty         }, m_text_color ));
-        m_vertices.push_back(font_vertex_t({ x2,      y2 - h }, { c.tx,         c.ty + bh_th }, m_text_color ));
-        m_vertices.push_back(font_vertex_t({ x2 + w,  y2 - h }, { c.tx + bw_tw, c.ty + bh_th }, m_text_color));
+        m_vertices.push_back(font_vertex_t({ x2 + w,  y2     }, { c.tx + bw_tw, c.ty         }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2,      y2     }, { c.tx,         c.ty         }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2,      y2 - h }, { c.tx,         c.ty + bh_th }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2 + w,  y2     }, { c.tx + bw_tw, c.ty         }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2,      y2 - h }, { c.tx,         c.ty + bh_th }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2 + w,  y2 - h }, { c.tx + bw_tw, c.ty + bh_th }, m_text_color, m_current_depth));
 	}
 
 }
 
 //
-void font_t::end_render_block()
+void font_t::end_render_block(bool _use_depth_test)
 {
     if (m_vertices.empty()) return;
 
-    api.set_depth_testing(false);
+    if (!_use_depth_test) {
+        api.set_depth_testing(false);
+    }
 
 	shader_t *shader = shader_lib.get_shader(m_shader_handle);
 	shader->enable();
@@ -245,7 +247,10 @@ void font_t::end_render_block()
 	m_vao.unbind();
 
     shader->disable();
-    api.set_depth_testing(true);
+
+    if (!_use_depth_test) {
+        api.set_depth_testing(true);
+    }
 
 	m_vertices.clear();
 

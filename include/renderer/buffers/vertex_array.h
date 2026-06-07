@@ -22,7 +22,9 @@
 #define VERTEX_ATTRIB_LOCATION_BITANGENT	3
 #define VERTEX_ATTRIB_LOCATION_UV			4
 #define VERTEX_ATTRIB_LOCATION_COLOR		5
+#define VERTEX_ATTRIB_LOCATION_DEPTH        6
 
+// 
 enum class shader_data_type_t { 
 	NONE = 0,
 	FLOAT,

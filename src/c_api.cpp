@@ -3,7 +3,6 @@
 
 #include "c_api.h"
 
-#include "core.h"
 #include "glfw_window.h"
 #include "event/input_manager.h"
 #include "event/event_handler.h"
@@ -33,6 +32,7 @@ cubemap_library_t           cubemap_lib;
 entity_library_t            entity_lib;
 time_step_t                 time_step;
 asset_manager_t             assets;
+window_manager_t            window_manager;
 
 // rendering
 font_t                      font;
@@ -53,7 +53,7 @@ void syn_init(const char *_name, int _width, int _height, int _mode)
     events.init();
 
     // create GLFW window
-    if (root_window.init(_name, _width, _height) == RETURN_FAILURE) {
+    if (root_window.init(_name, _width, _height) == -1) {
 		SYN_ERROR("GLFW window initialization failed. Terminating.");
 		glfwTerminate();
 	} else {
@@ -84,14 +84,11 @@ void syn_init(const char *_name, int _width, int _height, int _mode)
     switch (_mode) {
         case SYN_MODE_2D: syn_mode_2d(); SYN_INFO("SYN_MODE_2D enabled.\n"); break;
         case SYN_MODE_3D: syn_mode_3d(); SYN_INFO("SYN_MODE_3D enabled.\n"); break;
-        default: SYN_ERROR("unknown rendering mode selected.\n");
+        default: SYN_FATAL_ERROR("unknown rendering mode selected.\n");
     }
 
-    //event_t e;
-    //e.type = event_type_t::WINDOW_TOGGLE_FROZEN_CURSOR;
-    //events.dispatch_event(e);
-
-
+    window_manager.init();
+    
 }
 
 //
@@ -118,14 +115,16 @@ void syn_load_assets(const char *_asset_file)
 //
 void syn_mode_2d()
 {
-    orthographic_camera = orthographic_camera_t((float)root_window.m_window_dim.x / (float)root_window.m_window_dim.y);
+    glm::ivec2 dims = root_window.window_dims();
+    orthographic_camera = orthographic_camera_t((float)dims.x / (float)dims.y);
 }
 
 //
 void syn_mode_3d()
 {
-    orbit_camera.init(60.0f, root_window.m_window_dim.x, root_window.m_window_dim.y, 0.1f, 1000.0f);
-    perspective_camera.init(60.0f, root_window.m_window_dim.x, root_window.m_window_dim.y, 0.1f, 1000.0f);
+    glm::ivec2 dims = root_window.window_dims();
+    orbit_camera.init(60.0f, dims.x, dims.y, 0.1f, 1000.0f);
+    perspective_camera.init(60.0f, dims.x, dims.y, 0.1f, 1000.0f);
 
 }
 
@@ -133,10 +132,15 @@ void syn_mode_3d()
 void syn_shutdown()
 {
     font.destroy();
+
     shader_lib.shutdown();
     mesh_lib.shutdown();
     cubemap_lib.shutdown();
+    window_manager.shutdown();
+    
     renderer.shutdown();
+    renderer_2d.shutdown();
+    
     syn_close_log();
     root_window.destroy();
 }
@@ -150,7 +154,7 @@ void syn_set_window_pos_quadrant(int _quadrant)
     int xoffset, yoffset;
     glfwGetWindowPos(root_window.m_window_ptr, &xoffset, &yoffset);
     glm::ivec2 screen_dim = root_window.m_screen_dim;
-    glm::ivec2 win_dim = root_window.m_window_dim;
+    glm::ivec2 win_dim = root_window.window_dims();
     switch (_quadrant) {
         case UPPER_LEFT:    xoffset =                        0;  yoffset =                        0;    break;
         case UPPER_RIGHT:   xoffset = screen_dim.x - win_dim.x;  yoffset =                        0;    break;
@@ -202,11 +206,21 @@ void syn_render_end_3d()
 void syn_render_end()
 {
     // here we call end_render_block, effectively rendering all text with one call
-    font.end_render_block();
+    font.end_render_block(false);
 
     // everything is drawn, render the screen NDC quad
     renderer.render_scene_fbuffer();
 
+    // ui rendering
+    api.clear_depth_buffer();
+    
+    api.set_depth_testing(true);
+    api.set_depth_func(GL_LEQUAL);
+    api.set_depth_mask(GL_TRUE);
+    
+    window_manager.draw_windows();
+    font.end_render_block(true);
+    
     //
     root_window.post_render();
     events.process_events();

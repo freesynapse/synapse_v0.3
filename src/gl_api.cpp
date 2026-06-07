@@ -1,7 +1,6 @@
 
 #include "gl_api.h"
 
-#include "core.h"
 #include "utils/log.h"
 
 #include "c_api.h"
@@ -17,7 +16,7 @@ static void __gl_api_on_resize_callback(const event_t &_e)
 //
 void gl_api_t::init()
 {
-    m_viewport = root_window.m_window_dim;
+    m_viewport = root_window.window_dims();
 
     // register function to receive viewport resize events
     events.register_callback(event_type_t::VIEWPORT_RESIZE, __gl_api_on_resize_callback);
@@ -69,6 +68,12 @@ void gl_api_t::set_depth_testing(bool _depth_test)
         return;
     }
     glDisable(GL_DEPTH_TEST);
+}
+
+// 
+void gl_api_t::set_depth_func(GLenum _func)
+{
+    glDepthFunc(_func);
 }
 
 //
@@ -187,10 +192,10 @@ int gl_api_t::gl_error(const char* _calling_func, const char* _gl_call)
     if (error != GL_NO_ERROR)
     {
         SYN_ERROR("%s, %s: %s\n", _calling_func, _gl_call, get_gl_error_string(error).c_str());
-        return RETURN_FAILURE;
+        return -1;
     }
 
-    return RETURN_SUCCESS;
+    return 0;
 }
 
 //

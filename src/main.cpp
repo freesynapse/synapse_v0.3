@@ -119,7 +119,7 @@ int main()
     setup_lights();
 
     mesh_handle_t sphere_mesh = generate_uv_sphere(1.0f, 36, 18);
-    material_handle_t chrome_mat = assets.get_material("chrome");
+    material_handle_t chrome_mat = assets.get_material("gold");
     glm::mat4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -2.0f, 0.0f));
     // glm::mat4 transform(1.0f);
 
@@ -132,6 +132,19 @@ int main()
     orbit_camera.m_x_angle = 23.0f;
     orbit_camera.m_y_angle = 82.0f;
     orbit_camera.m_radius = 3.0f;
+
+    window_t win1;
+    win1.name = "test window 1";
+    win1.position = { 100.0f, 100.0f };
+    win1.size = { 400.0f, 400.0f };
+    window_handle_t win1_handle = window_manager.add_window(win1);
+    
+    window_t win2;
+    win2.name = "test window 2";
+    win2.position = { 150.0f, 150.0f };
+    win2.size = { 400.0f, 400.0f };
+    win2.set_focused(true);
+    window_handle_t win2_handle = window_manager.add_window(win2);
 
     //
     while (!root_window.should_close()) {

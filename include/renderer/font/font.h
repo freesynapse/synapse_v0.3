@@ -17,14 +17,10 @@ struct font_vertex_t
 	glm::vec2 position;
 	glm::vec2 uv;
 	glm::vec4 color;
+	float depth;
 
-	font_vertex_t(const glm::vec2 _pos, const glm::vec2 _uv, const glm::vec4 _color) :
-        position(_pos), uv(_uv), color(_color) {}
-	// font_vertex_t(float _x, float _y, float _u, float _v) : 
-	    // position({ _x, _y }), uv({ _u, _v }), color(glm::vec4(1.0f)) {}
-	// font_vertex_t() : position(glm::vec4(0.0f, 0.0f, 0.0f, 1.0f)), color(glm::vec4(1.0f)) {}
-
-	// glm::vec4 color;
+	font_vertex_t(const glm::vec2 _pos, const glm::vec2 _uv, const glm::vec4 _color, float _depth) :
+        position(_pos), uv(_uv), color(_color), depth(_depth) {}
 
 };
 
@@ -53,11 +49,12 @@ public:
 	void destroy();
 	
 	void begin_render_block();
-	void end_render_block();
+	void end_render_block(bool _use_depth_test);
 	void render_text(const float& _x, const float& _y, const char* _str, ...);
 	// in pixels
 	float get_string_width(const char* _str, ...);
 	void set_color(const glm::vec4& _color) { m_text_color = _color; }
+	void set_depth(float _depth) { m_current_depth = _depth; }
 	const glm::vec4 &get_color() { return m_text_color; }
 	
 	// Accessors
@@ -89,7 +86,8 @@ private:
 	shader_handle_t m_shader_handle = { 0 };
 	vertex_array_t m_vao;
 	glm::vec4 m_text_color = glm::vec4(1.0f);
-
+	float m_current_depth = 0.0f;
+	
 	// rendering parameters
 	glm::vec2 m_viewport_size = { 0.0f, 0.0f };
 	bool m_update_on_resize = true;

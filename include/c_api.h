@@ -20,6 +20,7 @@
 #include "renderer/camera/orthographic_camera.h"
 #include "utils/time_step.h"
 #include "utils/asset_manager.h"
+#include "renderer/UI/window/window_manager.h"
 
 
 /*  This file defines the C API style bindings for synapse, to be used from now on.
@@ -58,13 +59,13 @@ extern cubemap_library_t            cubemap_lib;
 extern entity_library_t             entity_lib;
 extern time_step_t                  time_step;
 extern asset_manager_t              assets;
+extern window_manager_t             window_manager;
 
 // rendering
 extern font_t                       font;
 extern perspective_camera_t         perspective_camera;
 extern orbit_camera_t               orbit_camera;
 extern orthographic_camera_t        orthographic_camera;
-
 
 //---------------------------------------------------------------------------------------
 // high-level control functions
