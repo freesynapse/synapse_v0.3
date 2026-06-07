@@ -50,10 +50,10 @@ private:
 
     glm::mat4 m_projection;
     
-    // 
+    // window focus and depth
     window_handle_t m_focused_window = { 0 };
-    float m_zfar = 100.0f;
-    float m_znear = -100.0f;
+    float m_zfar = -100.0f;
+    float m_znear = 100.0f;
     // assigns 0.05f per layer, leaving room for text rendering
     float m_ddepth_per_layer = 0.05f;
     float m_ddepth_layer_text = 0.01f;

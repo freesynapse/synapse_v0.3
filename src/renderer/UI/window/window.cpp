@@ -8,27 +8,6 @@
 // 
 void window_t::init()
 {
-    // glm::vec2 p = position;
-    // glm::vec2 s = size;
-    // float tb_h = title_bar_height;
-
-    // // setup window outline
-    // ui_render_vertex_t l[] = {
-    //     ui_render_vertex_t({ p.x,       p.y + tb_h }, outline_color, depth - 0.03f),
-    //     ui_render_vertex_t({ p.x + s.x, p.y + tb_h }, outline_color, depth - 0.03f),
-    //     ui_render_vertex_t({ p.x + s.x, p.y + s.y  }, outline_color, depth - 0.03f),
-    //     ui_render_vertex_t({ p.x,       p.y + s.y  }, outline_color, depth - 0.03f),
-    //     ui_render_vertex_t({ p.x,       p.y        }, outline_color, depth - 0.03f),
-    // };
-
-    // m_vao_outline.set_buffer_layout({
-    //     { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT2 },
-    //     { VERTEX_ATTRIB_LOCATION_COLOR, shader_data_type_t::FLOAT4 },
-    //     { VERTEX_ATTRIB_LOCATION_DEPTH, shader_data_type_t::FLOAT },
-    //     { VERTEX_ATTRIB_LOCATION_DEPTH + 1, shader_data_type_t::FLOAT },
-    // });
-    // m_vao_outline.create(l, sizeof(l) / sizeof(l[0]));
-
     // default flags
     m_is_visible = true;
     m_is_active = true;
@@ -38,9 +17,7 @@ void window_t::init()
 // 
 void window_t::destroy()
 {
-    // if (m_is_active) {
-        // m_vao_outline.destroy();
-    // }
+
 }
 
 // 
@@ -58,18 +35,18 @@ void window_t::draw()
     glm::vec2 s = size;
     float tb_h = title_bar_height;
     ui_render_vertex_t line_vertices[] = {
-        ui_render_vertex_t({ p.x,       p.y + tb_h }, outline_color, depth - 0.03f),
-        ui_render_vertex_t({ p.x + s.x, p.y + tb_h }, outline_color, depth - 0.03f),
-        ui_render_vertex_t({ p.x + s.x, p.y + s.y  }, outline_color, depth - 0.03f),
-        ui_render_vertex_t({ p.x,       p.y + s.y  }, outline_color, depth - 0.03f),
-        ui_render_vertex_t({ p.x,       p.y        }, outline_color, depth - 0.03f),
+        ui_render_vertex_t({ p.x,       p.y + tb_h }, outline_color, depth + 0.03f),
+        ui_render_vertex_t({ p.x + s.x, p.y + tb_h }, outline_color, depth + 0.03f),
+        ui_render_vertex_t({ p.x + s.x, p.y + s.y  }, outline_color, depth + 0.03f),
+        ui_render_vertex_t({ p.x,       p.y + s.y  }, outline_color, depth + 0.03f),
+        ui_render_vertex_t({ p.x,       p.y        }, outline_color, depth + 0.03f),
     };
     ui_render_batch.add_line_strip(line_vertices, sizeof(line_vertices) / sizeof(line_vertices[0]));
     
     float tx = position.x + 10.0f;
     float ty = position.y + (title_bar_height - font.get_font_height() * 0.5f);
     font.set_color(fg_color);
-    float font_depth = (depth - window_manager.m_ddepth_layer_text) / window_manager.m_zfar;
+    float font_depth = (depth + window_manager.m_ddepth_layer_text) / window_manager.m_zfar;
     font.set_depth(font_depth);
     font.render_text(tx, ty, "%s", name.c_str());
 
@@ -87,7 +64,7 @@ void window_t::draw_widgets()
 
         glm::vec2 p = position + w->position;
         glm::vec4 c = w->color;
-        float depth_offset = (depth - window_manager.m_ddepth_layer_text) / window_manager.m_zfar;
+        float depth_offset = (depth + window_manager.m_ddepth_layer_text) / window_manager.m_zfar;
 
         switch (w->type) {
             case widget_type_t::BUTTON:

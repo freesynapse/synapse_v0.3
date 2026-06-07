@@ -71,14 +71,13 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
                 m_drag_window_handle = clicked;
                 m_mouse_pos = pos;
                 m_drag_offset = pos - win->position;
-                // init_drag_vao();
             }
             
             if (clicked.id != m_focused_window.id) {
                 set_focused_window(clicked);
             }
         } else {
-            set_focused_window({0});
+            set_focused_window({ 0 });
         }
     
     } else if (action == SYN_MOUSE_BUTTON_RELEASED) {
@@ -122,9 +121,12 @@ window_handle_t window_manager_t::add_window(window_t &_window)
     
     if (win->depth == 0.0f) {
         win->depth = m_next_depth;
-        m_next_depth -= m_ddepth_per_layer;
-    } else if (win->depth <= m_next_depth) {
-        m_next_depth = win->depth - m_ddepth_per_layer;
+        // m_next_depth -= m_ddepth_per_layer;
+        m_next_depth += m_ddepth_per_layer;
+        // } else if (win->depth <= m_next_depth) {
+        //     m_next_depth = win->depth - m_ddepth_per_layer;
+    } else if (win->depth >= m_next_depth) {
+        m_next_depth = win->depth + m_ddepth_per_layer;
     }
     
     win->init();
@@ -168,7 +170,7 @@ window_t *window_manager_t::get_window(const window_handle_t &_handle)
 window_handle_t window_manager_t::get_window_at_pos(const glm::vec2 _pos)
 {
     // serach from highest depth
-    window_handle_t top_window = {0};
+    window_handle_t top_window = { 0 };
     float highest_depth = m_zfar;
     
     for (uint32_t i = 0; i < m_active_count; i++) {
@@ -176,9 +178,9 @@ window_handle_t window_manager_t::get_window_at_pos(const glm::vec2 _pos)
         if (!win->is_active() || !win->is_visible()) continue;
     
         if (win->is_point_in_window(_pos)) {
-            if (win->depth <= highest_depth) {
+            if (win->depth >= highest_depth) {
                 highest_depth = win->depth;
-                top_window = {i + 1};
+                top_window = { i + 1 };
             }
         }
     }
@@ -205,12 +207,12 @@ void window_manager_t::set_focused_window(window_handle_t _handle)
         if (win) {
             win->set_focused(true);
             win->depth = m_next_depth;
-            m_next_depth -= 0.05;
+            m_next_depth += 0.05;
         
             win->destroy();
             win->init();
         
-            if (m_next_depth < -99.0f) {
+            if (m_next_depth > 99.5f) {
                 reorganize_depths();
             }
         }
@@ -301,8 +303,7 @@ void window_manager_t::reorganize_depths()
                 return a.depth < b.depth;
                 });
     
-    // reassign depths starting from zfar
-    float new_depth = m_zfar - 1.0f - m_ddepth_per_layer * m_active_count;
+    float new_depth = m_zfar + 1.0f + m_ddepth_per_layer * m_active_count;
     float closest_depth = new_depth;
     for (auto &pair : active_windows) {
         window_t *win = &m_pool[pair.index];
@@ -311,8 +312,11 @@ void window_manager_t::reorganize_depths()
         if (std::abs(win->depth - new_depth) > 0.01f) {
             win->depth = new_depth;
         }
+        // TODO : invert to -=???
         new_depth += m_ddepth_per_layer;
     }
     
-    m_next_depth = closest_depth - m_ddepth_per_layer;
+    // m_next_depth = closest_depth - m_ddepth_per_layer;
+    m_next_depth = closest_depth + m_ddepth_per_layer;
 }
+
