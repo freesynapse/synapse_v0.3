@@ -100,6 +100,8 @@ void window_t::draw()
     font.set_depth(font_depth);
     font.render_text(tx, ty, "%s", name.c_str());
 
+    draw_widgets();
+
 }
 
 // 
@@ -115,3 +117,42 @@ bool window_t::is_point_in_title_bar(const glm::vec2 &_p)
     return (_p.x >= position.x && _p.x <= position.x + size.x &&
             _p.y >= position.y && _p.y <= position.y + title_bar_height);
 }
+
+// 
+void window_t::add_widget(const widget_t &_widget)
+{
+    if (m_widget_count >= SYN_WINDOW_MAX_WIDGET_COUNT) {
+        SYN_ERROR("window '%s' widget pool full.\n", name.c_str());
+        return;
+    }
+
+    m_widgets[m_widget_count++] = _widget;
+}
+
+// 
+widget_t *window_t::get_widget(uint32_t _index)
+{
+    if (_index >= m_widget_count) return nullptr;
+    return &m_widgets[_index];
+}
+
+// 
+widget_t *window_t::get_widget_at_pos(const glm::vec2 &_pos)
+{
+    for (int i = m_widget_count - 1; i >= 0; i--) {
+        widget_t *w = &m_widgets[i];
+        if (w->is_visible && w->is_enabled && w->contains_point(position, _pos)) {
+            return w;
+        }
+    }
+    
+    return nullptr;
+}
+
+// 
+void window_t::draw_widgets()
+{
+    HÄRÄRÄRÄRÄR!
+}
+
+

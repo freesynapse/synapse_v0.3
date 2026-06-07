@@ -4,6 +4,7 @@
 #include "renderer/UI/window/window_types.h"
 #include "renderer/buffers/vertex_array.h"
 #include "renderer/buffers/framebuffer.h"
+#include "renderer/UI/window/widget_types.h"
 
 // 
 
@@ -33,6 +34,12 @@ public:
     void set_focused(bool _focused) { m_is_focused = _focused; }
     const bool &has_frambuffer() { return m_has_framebuffer; }
 
+    // widgets
+    void add_widget(const widget_t &_widget);
+    widget_t *get_widget(uint32_t _index);
+    widget_t *get_widget_at_pos(const glm::vec2 &_pos);
+    void draw_widgets();
+    
 public:
     // window params
     glm::vec2 position = glm::vec2(0.0f);
@@ -55,6 +62,9 @@ public:
     std::string name = "";
 
 private:
+    widget_t m_widgets[SYN_WINDOW_MAX_WIDGET_COUNT];
+    uint32_t m_widget_count = 0;
+
     vertex_array_t m_vao_body;
     vertex_array_t m_vao_outline;
 

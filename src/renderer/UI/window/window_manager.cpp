@@ -260,7 +260,7 @@ void window_manager_t::draw_windows()
 
     if (m_drag_vao.m_array_id != 0) {
         m_drag_vao.bind();
-        glDrawArrays(GL_LINE_STRIP, 0, 5);
+        glDrawArrays(GL_LINE_STRIP, 0, 8);
         m_drag_vao.unbind();
     }
     
@@ -324,15 +324,19 @@ void window_manager_t::init_drag_vao()
     // set up the body and the title of the window
     glm::vec2 p = win->position;
     glm::vec2 s = win->size;
+    float tb_h = win->title_bar_height;
     glm::vec4 color = glm::vec4(0.6f, 0.6f, 0.6f, 1.0f);
     float d = m_znear;
     
     vertex v[] = {
+        { { p.x,       p.y + tb_h }, color, d, 0.0f },
         { { p.x,       p.y        }, color, d, 0.0f },
         { { p.x + s.x, p.y        }, color, d, 0.0f },
-        { { p.x + s.x, p.y + s.y  }, color, d, 0.0f },
+        { { p.x + s.x, p.y + tb_h }, color, d, 0.0f },
+        { { p.x,       p.y + tb_h }, color, d, 0.0f },
         { { p.x,       p.y + s.y  }, color, d, 0.0f },
-        { { p.x,       p.y        }, color, d, 0.0f },
+        { { p.x + s.x, p.y + s.y  }, color, d, 0.0f },
+        { { p.x + s.x, p.y + tb_h }, color, d, 0.0f },
     };
 
     m_drag_vao.set_buffer_layout({
@@ -363,15 +367,19 @@ void window_manager_t::update_drag_vao(const glm::vec2 &_pos)
 
     glm::vec2 p = _pos - m_drag_offset;
     glm::vec2 s = win->size;
+    float tb_h = win->title_bar_height;
     glm::vec4 color = glm::vec4(0.6f, 0.6f, 0.6f, 1.0f);
     float d = m_znear;
-    
+
     vertex v[] = {
+        { { p.x,       p.y + tb_h }, color, d, 0.0f },
         { { p.x,       p.y        }, color, d, 0.0f },
         { { p.x + s.x, p.y        }, color, d, 0.0f },
-        { { p.x + s.x, p.y + s.y  }, color, d, 0.0f },
+        { { p.x + s.x, p.y + tb_h }, color, d, 0.0f },
+        { { p.x,       p.y + tb_h }, color, d, 0.0f },
         { { p.x,       p.y + s.y  }, color, d, 0.0f },
-        { { p.x,       p.y        }, color, d, 0.0f },
+        { { p.x + s.x, p.y + s.y  }, color, d, 0.0f },
+        { { p.x + s.x, p.y + tb_h }, color, d, 0.0f },
     };
 
     m_drag_vao.update_vertices(v, sizeof(v), 0);
