@@ -14,7 +14,7 @@
 void __input_key_callback(GLFWwindow *_window_ptr, int _key, int _scancode, int _action, int _mods) { input.key_callback(_window_ptr, _key, _scancode, _action, _mods); }
 void __input_mouse_button_callback(GLFWwindow *_window_ptr, int _button, int _action, int _mods) { input.mouse_button_callback(_window_ptr, _button, _action, _mods); } 
 void __input_mouse_scroll_callback(GLFWwindow *_window_ptr, double _offset_x, double _offset_y) { input.mouse_scroll_callback(_window_ptr, _offset_x, _offset_y); } 
-void __input_cursor_position_callback(GLFWwindow *_window_ptr, double _x, double _y) { input.cursor_position_callback(_window_ptr, _x, _y); } 
+void __input_mouse_move_callback(GLFWwindow *_window_ptr, double _x, double _y) { input.mouse_move_callback(_window_ptr, _x, _y); } 
 
 // 
 void input_handler_t::init()
@@ -27,20 +27,6 @@ void input_handler_t::init()
 	mouse_scroll_position = glm::vec2(0.0, 0.0);
 
 	SYN_INFO("listening.\n");
-}
-
-// 
-void input_handler_t::process_input()
-{
-	/*
-	if (is_key_pressed(SYN_KEY_ESCAPE))
-		events.push_event(new event_window_close_t());
-	*/
-
-	/*
-	if (is_key_pressed(SYN_KEY_F))
-		events.push_event(new event_toggle_fullscreen_t());
-	*/
 }
 
 // 
@@ -99,14 +85,14 @@ void input_handler_t::mouse_button_callback(GLFWwindow *_window_ptr, int _button
 {
     (void)_window_ptr;
 
-    mouse_buttons_state[_button] = _action != SYN_MOUSE_RELEASED;
+    mouse_buttons_state[_button] = _action != SYN_MOUSE_BUTTON_RELEASED;
 
     event_t e;
     e.type = event_type_t::INPUT_MOUSE_BUTTON;
     e.as.mouse_button.button = _button;
     e.as.mouse_button.action = _action;
     e.as.mouse_button.mods = _mods;
-	
+    e.as.mouse_button.pos = mouse_position;
     events.dispatch_event(e);
     
 	#ifdef DEBUG_KEYS_BUTTONS
@@ -125,8 +111,7 @@ void input_handler_t::mouse_scroll_callback(GLFWwindow *_window_ptr, double _off
 	event_t e;
 	e.type = event_type_t::INPUT_MOUSE_SCROLL;
 	e.as.mouse_scroll.xoffset = mouse_scroll_position.x;
-	e.as.mouse_scroll.yoffset = mouse_scroll_position.y;
-	
+	e.as.mouse_scroll.yoffset = mouse_scroll_position.y;	
 	events.dispatch_event(e);
 	
 	#ifdef DEBUG_KEYS_BUTTONS
@@ -135,13 +120,18 @@ void input_handler_t::mouse_scroll_callback(GLFWwindow *_window_ptr, double _off
 }
 
 // 
-void input_handler_t::cursor_position_callback(GLFWwindow *_window_ptr, double _x, double _y)
+void input_handler_t::mouse_move_callback(GLFWwindow *_window_ptr, double _x, double _y)
 {
     (void)_window_ptr;
  
 	mouse_position.x = (float)_x;
 	mouse_position.y = (float)_y;
 
+	event_t e;
+	e.type = event_type_t::INPUT_MOUSE_MOVE;
+	e.as.mouse_move.pos = mouse_position;
+	events.dispatch_event(e);
+	
 	#ifdef DEBUG_CURSOR_MOVE
 	SYN_INFO("%.2f, %.2f\n", (float)_x, (float)_y);
 	#endif

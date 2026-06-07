@@ -84,7 +84,7 @@ int glfw_window_t::init(const char *_name, int _width, int _height)
 	// callbacks for keyboard and mouse input reside in the InputManager static class
 	glfwSetKeyCallback(m_window_ptr, __input_key_callback);
 	glfwSetMouseButtonCallback(m_window_ptr, __input_mouse_button_callback);
-	glfwSetCursorPosCallback(m_window_ptr, __input_cursor_position_callback);
+	glfwSetCursorPosCallback(m_window_ptr, __input_mouse_move_callback);
 	glfwSetScrollCallback(m_window_ptr, __input_mouse_scroll_callback);
 
 

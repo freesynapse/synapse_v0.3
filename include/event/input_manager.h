@@ -16,12 +16,11 @@
 struct input_handler_t
 {
 	void init();
-	void process_input();
 
 	void key_callback(GLFWwindow *_window_ptr, int _key, int _scancode, int _action, int _mods);
 	void mouse_button_callback(GLFWwindow *_window_ptr, int _button, int _action, int _mods);
 	void mouse_scroll_callback(GLFWwindow *_window_ptr, double _offset_x, double _offset_y);
-	void cursor_position_callback(GLFWwindow *_window_ptr, double _x, double _y);
+	void mouse_move_callback(GLFWwindow *_window_ptr, double _x, double _y);
 
 	// accessors
 	bool is_key_down(unsigned int _key);
@@ -40,6 +39,6 @@ struct input_handler_t
 void __input_key_callback(GLFWwindow *_window_ptr, int _key, int _scancode, int _action, int _mods);
 void __input_mouse_button_callback(GLFWwindow *_window_ptr, int _button, int _action, int _mods);
 void __input_mouse_scroll_callback(GLFWwindow *_window_ptr, double _offset_x, double _offset_y);
-void __input_cursor_position_callback(GLFWwindow *_window_ptr, double _x, double _y);
+void __input_mouse_move_callback(GLFWwindow *_window_ptr, double _x, double _y);
 
 #endif // __INPUT_MANAGER_H

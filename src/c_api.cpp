@@ -214,12 +214,9 @@ void syn_render_end()
     // ui rendering
     api.clear_depth_buffer();
     
-    api.set_depth_testing(true);
-    api.set_depth_func(GL_LEQUAL);
-    api.set_depth_mask(GL_TRUE);
-    
     window_manager.draw_windows();
-    font.end_render_block(true);
+    // reset font rendring depth
+    font.set_depth(-1.0f);
     
     //
     root_window.post_render();

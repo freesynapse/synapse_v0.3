@@ -1,8 +1,6 @@
 #ifndef __FONT_H
 #define __FONT_H
 
-// #pragma warning(disable : 4005)
-
 #include <vector>
 #include <freetype2/ft2build.h>
 #include FT_FREETYPE_H
@@ -12,8 +10,7 @@
 #include "event/event.h"
 
 // 
-struct font_vertex_t
-{
+struct font_vertex_t {
 	glm::vec2 position;
 	glm::vec2 uv;
 	glm::vec4 color;
@@ -21,12 +18,10 @@ struct font_vertex_t
 
 	font_vertex_t(const glm::vec2 _pos, const glm::vec2 _uv, const glm::vec4 _color, float _depth) :
         position(_pos), uv(_uv), color(_color), depth(_depth) {}
-
 };
 
 // 
-struct character_info_s
-{
+struct character_info_s {
 	float ax, ay;
 	float bw, bh;
 	float bl, bt;
@@ -55,6 +50,7 @@ public:
 	float get_string_width(const char* _str, ...);
 	void set_color(const glm::vec4& _color) { m_text_color = _color; }
 	void set_depth(float _depth) { m_current_depth = _depth; }
+	float get_current_depth() { return m_current_depth; }
 	const glm::vec4 &get_color() { return m_text_color; }
 	
 	// Accessors
@@ -93,6 +89,7 @@ private:
 	bool m_update_on_resize = true;
 	float m_sx = 0.0f;
 	float m_sy = 0.0f;
+
 };
 
 

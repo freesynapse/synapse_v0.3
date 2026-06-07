@@ -35,6 +35,8 @@ public:
     
     void set_wireframe(bool _wireframe);
     void set_depth_testing(bool _depth_test);
+    void enable_depth_test();
+    void disable_depth_test();
     void set_depth_func(GLenum _func);
     void set_depth_mask(bool _depth_mask);
     void set_culling(bool _cull);

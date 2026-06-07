@@ -45,6 +45,8 @@ struct glfw_window_t
     void set_window_dim(const glm::ivec2 &_dims) { m_window_dim = _dims; glfwSetWindowSize(m_window_ptr, _dims.x, _dims.y); glfwPollEvents(); }
     void set_window_dim(int _w, int _h) { m_window_dim = { _w, _h }; glfwSetWindowSize(m_window_ptr, _w, _h); glfwPollEvents(); }
     const glm::ivec2 &window_dims() { return (m_is_fullscreen ? m_screen_dim : m_window_dim); }
+    float get_fwidth() { return (m_is_fullscreen ? m_screen_dim.x : m_window_dim.x); }
+    float get_fheight() { return (m_is_fullscreen ? m_screen_dim.y : m_window_dim.y); }
     void set_fullscreen(const bool& _fullscreen);
     void toggle_fullscreen() { set_fullscreen(!m_is_fullscreen); }
     float get_width() { return (float)m_window_dim.x; }

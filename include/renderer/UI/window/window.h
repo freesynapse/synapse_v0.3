@@ -23,7 +23,8 @@ public:
     void draw();
 
     // interaction
-    bool contains_point(float _x, float _y);
+    bool is_point_in_window(const glm::vec2 &_p);
+    bool is_point_in_title_bar(const glm::vec2 &_p);
     
     // accessors
     const bool &is_active() { return m_is_active; }
@@ -41,6 +42,7 @@ public:
 
     glm::vec4 bg_color = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
     glm::vec4 fg_color = glm::vec4(1.0f);
+    glm::vec4 outline_color = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
 
     float title_bar_height = 26.0f;
     glm::vec4 title_bar_color = glm::vec4(0.15f, 0.15f, 0.15f, 1.0f);
@@ -53,7 +55,8 @@ public:
     std::string name = "";
 
 private:
-    vertex_array_t m_vao;
+    vertex_array_t m_vao_body;
+    vertex_array_t m_vao_outline;
 
     bool m_has_framebuffer = false;
     framebuffer_handle_t m_fbuffer = { 0 };

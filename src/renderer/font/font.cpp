@@ -21,14 +21,7 @@ void font_t::init(const char *_filename, const int &_pixel_size, const glm::vec2
 {
 	m_shader_handle = shader_lib.load_from_file("font_shader", "../assets/shaders/font.glsl");
 
-	// TODO : remove
-	// prepare rendering objects
-	// memset(m_render_buffer, 0, SYN_FONT_MAX_BUFFER_LENGTH);
-	// m_buffer_offsets.reserve(512);
-	// m_render_offsets.reserve(512);
-
 	// register resize events
-	// events.register_callback(event_type_t::VIEWPORT_RESIZE, SYN_EVENT_MEMBER_FNC(font_t::resize_event));
 	events.register_callback(event_type_t::VIEWPORT_RESIZE, __font_on_resize_callback);
 
 	// initialize the text atlas texture
@@ -54,7 +47,6 @@ int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const
 {
 	// Init the FreeType lib
 	if (FT_Init_FreeType(&m_ft_lib)) {
-		// Error::raise_error(nullptr, __func__, "FreeType could not be initialized.");
 		SYN_ERROR("FreeType could not be initialized.\n");
 		return (-1);
 	}
@@ -221,9 +213,8 @@ void font_t::render_text(const float& _x, const float& _y, const char* _str, ...
         m_vertices.push_back(font_vertex_t({ x2,      y2 - h }, { c.tx,         c.ty + bh_th }, m_text_color, m_current_depth));
         m_vertices.push_back(font_vertex_t({ x2 + w,  y2     }, { c.tx + bw_tw, c.ty         }, m_text_color, m_current_depth));
         m_vertices.push_back(font_vertex_t({ x2,      y2 - h }, { c.tx,         c.ty + bh_th }, m_text_color, m_current_depth));
-        m_vertices.push_back(font_vertex_t({ x2 + w,  y2 - h }, { c.tx + bw_tw, c.ty + bh_th }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2 + w,  y2 - h }, { c.tx + bw_tw, c.ty + bh_th }, m_text_color, m_current_depth));        
 	}
-
 }
 
 //
@@ -232,7 +223,7 @@ void font_t::end_render_block(bool _use_depth_test)
     if (m_vertices.empty()) return;
 
     if (!_use_depth_test) {
-        api.set_depth_testing(false);
+        api.disable_depth_test();
     }
 
 	shader_t *shader = shader_lib.get_shader(m_shader_handle);
@@ -249,7 +240,7 @@ void font_t::end_render_block(bool _use_depth_test)
     shader->disable();
 
     if (!_use_depth_test) {
-        api.set_depth_testing(true);
+        api.enable_depth_test();
     }
 
 	m_vertices.clear();

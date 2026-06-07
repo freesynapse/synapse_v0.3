@@ -71,6 +71,18 @@ void gl_api_t::set_depth_testing(bool _depth_test)
 }
 
 // 
+void gl_api_t::enable_depth_test()
+{
+    glEnable(GL_DEPTH_TEST);
+}
+
+// 
+void gl_api_t::disable_depth_test()
+{
+    glDisable(GL_DEPTH_TEST);
+}
+
+// 
 void gl_api_t::set_depth_func(GLenum _func)
 {
     glDepthFunc(_func);
@@ -172,6 +184,7 @@ std::string &gl_api_t::get_gl_error_string(GLenum _error_code)
 {
     switch (_error_code)
     {
+        case GL_NO_ERROR:                       m_last_gl_error = "GL_NO_ERROR";                        break;
         case GL_INVALID_ENUM: 					m_last_gl_error = "GL_INVALID_ENUM"; 				    break;
         case GL_INVALID_VALUE: 					m_last_gl_error = "GL_INVALID_VALUE"; 				    break;
         case GL_INVALID_OPERATION: 				m_last_gl_error = "GL_INVALID_OPERATION"; 			    break;

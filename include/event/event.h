@@ -17,6 +17,7 @@ enum class event_type_t : uint8_t {
     INPUT_KEYDOWN, 
     INPUT_MOUSE_BUTTON, 
     INPUT_MOUSE_SCROLL,
+    INPUT_MOUSE_MOVE,
     SHADER_RELOAD, 
     VIEWPORT_RESIZE,
 };
@@ -35,6 +36,7 @@ inline static const char *str_event_type(event_type_t e)
     case event_type_t::INPUT_KEYDOWN:               return "event_type_t::INPUT_KEYDOWN";
     case event_type_t::INPUT_MOUSE_BUTTON:          return "event_type_t::INPUT_MOUSE_BUTTON";
     case event_type_t::INPUT_MOUSE_SCROLL:          return "event_type_t::INPUT_MOUSE_SCROLL";
+    case event_type_t::INPUT_MOUSE_MOVE:            return "event_type_t::INPUT_MOUSE_MOVE";
     case event_type_t::SHADER_RELOAD:               return "event_type_t::SHADER_RELOAD";
     case event_type_t::VIEWPORT_RESIZE:             return "event_type_t::VIEWPORT_RESIZE";
     default: return "Unknown event_type_t.";
@@ -56,12 +58,18 @@ struct mouse_button_event_t {
     int button;
     int action;
     int mods;
+    glm::vec2 pos;
 };
 
 //
 struct mouse_scroll_event_t {
     float xoffset;
     float yoffset;
+};
+
+//
+struct mouse_move_event_t {
+    glm::vec2 pos;
 };
 
 //
@@ -106,6 +114,7 @@ struct event_t {
         keydown_t keydown;
         mouse_button_event_t mouse_button;
         mouse_scroll_event_t mouse_scroll;
+        mouse_move_event_t mouse_move;
         viewport_resize_event_t viewport_resize;
         shader_reload_event_t shader_reload;
         window_close_event_t window_close;

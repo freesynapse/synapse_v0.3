@@ -9,11 +9,12 @@ layout(location=6) in float a_depth;
 out vec2 v_uv;
 out vec4 v_color;
 
+// 
 void main()
 {
 	gl_Position = vec4(a_position, a_depth, 1.0f);
 	v_uv = a_uv;
-	v_color = a_color;
+	v_color = a_color;	
 }
 
 
@@ -27,9 +28,9 @@ out vec4 frag_color;
 
 layout(binding=0) uniform sampler2D u_font_atlas;
 
+// 
 void main() 
 {
 	float a = texture(u_font_atlas, v_uv).r;
-	frag_color = vec4(vec3(v_color.rgb), a * v_color.a);
-	
+	frag_color = vec4(vec3(v_color.rgb), a * v_color.a);	
 }
