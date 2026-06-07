@@ -8,61 +8,26 @@
 // 
 void window_t::init()
 {
-    struct vertex {
-        glm::vec2 pos;
-        glm::vec4 color;
-        float depth;
-        float pad;
-    };
+    // glm::vec2 p = position;
+    // glm::vec2 s = size;
+    // float tb_h = title_bar_height;
 
-    // set up the body and the title of the window
-    glm::vec2 p = position;
-    glm::vec2 s = size;
-    float tb_h = title_bar_height;
+    // // setup window outline
+    // ui_render_vertex_t l[] = {
+    //     ui_render_vertex_t({ p.x,       p.y + tb_h }, outline_color, depth - 0.03f),
+    //     ui_render_vertex_t({ p.x + s.x, p.y + tb_h }, outline_color, depth - 0.03f),
+    //     ui_render_vertex_t({ p.x + s.x, p.y + s.y  }, outline_color, depth - 0.03f),
+    //     ui_render_vertex_t({ p.x,       p.y + s.y  }, outline_color, depth - 0.03f),
+    //     ui_render_vertex_t({ p.x,       p.y        }, outline_color, depth - 0.03f),
+    // };
 
-    glm::vec4 tb_color = m_is_focused ? title_bar_color_focused : title_bar_color;
-    
-    vertex v[] = {
-        { { p.x,       p.y         }, tb_color, depth - 0.005f, 0.0f },
-        { { p.x + s.x, p.y         }, tb_color, depth - 0.005f, 0.0f },
-        { { p.x + s.x, p.y + tb_h  }, tb_color, depth - 0.005f, 0.0f },
-        { { p.x,       p.y + tb_h  }, tb_color, depth - 0.005f, 0.0f },
-        
-        { { p.x,       p.y + tb_h }, bg_color, depth, 0.0f },
-        { { p.x + s.x, p.y + tb_h }, bg_color, depth, 0.0f },
-        { { p.x + s.x, p.y + s.y  }, bg_color, depth, 0.0f },
-        { { p.x,       p.y + s.y  }, bg_color, depth, 0.0f },
-    };
-
-    uint32_t indices[] = { 
-        0, 2, 1, 0, 3, 2,
-        4, 6, 5, 4, 7, 6,
-    };
-
-    m_vao_body.set_buffer_layout({
-        { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT2 },
-        { VERTEX_ATTRIB_LOCATION_COLOR, shader_data_type_t::FLOAT4 },
-        { VERTEX_ATTRIB_LOCATION_DEPTH, shader_data_type_t::FLOAT },
-        { VERTEX_ATTRIB_LOCATION_DEPTH + 1, shader_data_type_t::FLOAT },
-    });
-    m_vao_body.create(v, sizeof(v) / sizeof(v[0]), indices, sizeof(indices) / sizeof(uint32_t));
-
-    // setup window outline
-    vertex l[] = {
-        { { p.x,       p.y + tb_h }, outline_color, depth - 0.03f, 0.0f },
-        { { p.x + s.x, p.y + tb_h }, outline_color, depth - 0.03f, 0.0f },
-        { { p.x + s.x, p.y + s.y  }, outline_color, depth - 0.03f, 0.0f },
-        { { p.x,       p.y + s.y  }, outline_color, depth - 0.03f, 0.0f },
-        { { p.x,       p.y        }, outline_color, depth - 0.03f, 0.0f },
-    };
-
-    m_vao_outline.set_buffer_layout({
-        { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT2 },
-        { VERTEX_ATTRIB_LOCATION_COLOR, shader_data_type_t::FLOAT4 },
-        { VERTEX_ATTRIB_LOCATION_DEPTH, shader_data_type_t::FLOAT },
-        { VERTEX_ATTRIB_LOCATION_DEPTH + 1, shader_data_type_t::FLOAT },
-    });
-    m_vao_outline.create(l, sizeof(l) / sizeof(l[0]));
+    // m_vao_outline.set_buffer_layout({
+    //     { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT2 },
+    //     { VERTEX_ATTRIB_LOCATION_COLOR, shader_data_type_t::FLOAT4 },
+    //     { VERTEX_ATTRIB_LOCATION_DEPTH, shader_data_type_t::FLOAT },
+    //     { VERTEX_ATTRIB_LOCATION_DEPTH + 1, shader_data_type_t::FLOAT },
+    // });
+    // m_vao_outline.create(l, sizeof(l) / sizeof(l[0]));
 
     // default flags
     m_is_visible = true;
@@ -73,21 +38,33 @@ void window_t::init()
 // 
 void window_t::destroy()
 {
-    if (m_is_active) {
-        m_vao_body.destroy();
-        m_vao_outline.destroy();
-    }
+    // if (m_is_active) {
+        // m_vao_outline.destroy();
+    // }
 }
 
 // 
 void window_t::draw()
 {
     glm::vec4 tb_color = m_is_focused ? title_bar_color_focused : title_bar_color;
-    ui_quad_batch.add_quad(position, { size.x, title_bar_height }, tb_color, depth);
+    ui_render_batch.add_quad(position, { size.x, title_bar_height }, tb_color, depth);
 
-    ui_quad_batch.add_quad({ position.x, position.y + title_bar_height }, 
-                           { size.x, size.y - title_bar_height }, 
-                           bg_color, depth);
+    ui_render_batch.add_quad({ position.x, position.y + title_bar_height }, 
+                             { size.x, size.y - title_bar_height }, 
+                             bg_color, depth);
+
+    // lines
+    glm::vec2 p = position;
+    glm::vec2 s = size;
+    float tb_h = title_bar_height;
+    ui_render_vertex_t line_vertices[] = {
+        ui_render_vertex_t({ p.x,       p.y + tb_h }, outline_color, depth - 0.03f),
+        ui_render_vertex_t({ p.x + s.x, p.y + tb_h }, outline_color, depth - 0.03f),
+        ui_render_vertex_t({ p.x + s.x, p.y + s.y  }, outline_color, depth - 0.03f),
+        ui_render_vertex_t({ p.x,       p.y + s.y  }, outline_color, depth - 0.03f),
+        ui_render_vertex_t({ p.x,       p.y        }, outline_color, depth - 0.03f),
+    };
+    ui_render_batch.add_line_strip(line_vertices, sizeof(line_vertices) / sizeof(line_vertices[0]));
     
     float tx = position.x + 10.0f;
     float ty = position.y + (title_bar_height - font.get_font_height() * 0.5f);

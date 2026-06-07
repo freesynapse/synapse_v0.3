@@ -41,6 +41,11 @@ void renderer_t::init()
     glPolygonOffset(1.0f, -1.0f);
     glEnable(GL_PROGRAM_POINT_SIZE);
     glEnable(GL_POINT_SPRITE);
+
+    // enable ability to split batched GL_LINE_STRIP element draw calls
+    // [ 0, 1, 2, 3,  0xFFFFFFFF,  4, 5, 6,  0xFFFFFFFF,  7, 8, 9, 10 ]
+    glEnable(GL_PRIMITIVE_RESTART);
+    glPrimitiveRestartIndex(0xFFFFFFFF);
     
     // textures
     glEnable(GL_TEXTURE_2D);

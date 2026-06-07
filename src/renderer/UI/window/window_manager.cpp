@@ -25,8 +25,8 @@ void window_manager_t::init()
     events.register_callback(event_type_t::INPUT_MOUSE_BUTTON, __window_on_mouse_button_callback);
     events.register_callback(event_type_t::INPUT_MOUSE_MOVE, __window_on_mouse_move_callback);
 
-    if (!ui_quad_batch.is_initalized()) {
-        ui_quad_batch.init();
+    if (!ui_render_batch.is_initalized()) {
+        ui_render_batch.init();
     }
 }
 
@@ -69,8 +69,9 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
             {
                 m_is_dragging = true;
                 m_drag_window_handle = clicked;
+                m_mouse_pos = pos;
                 m_drag_offset = pos - win->position;
-                init_drag_vao();
+                // init_drag_vao();
             }
             
             if (clicked.id != m_focused_window.id) {
@@ -84,12 +85,8 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
         if (m_is_dragging) {
             window_t *win = get_window(m_drag_window_handle);
             win->position = pos - m_drag_offset;
-            win->destroy();
-            win->init();
-        
             m_is_dragging = false;
-            m_drag_window_handle = {0};
-            m_drag_vao.destroy();
+            m_drag_window_handle = { 0 };
         }
     }
 }
@@ -98,27 +95,9 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
 void window_manager_t::on_mouse_move_event(const event_t &_e)
 {
     if (!m_is_dragging || m_drag_window_handle.id == 0) return;
-
-    if (m_drag_vao.m_array_id != 0) {
-        update_drag_vao(_e.as.mouse_move.pos);
-    }
-
-    // moving the window, destroy()ing and init()ing it every mouse move
-    // 
-    // glm::vec2 pos = _e.as.mouse_move.pos;
-    
-    // window_t *win = get_window(m_drag_window_handle);
-    // if (!win) return;
-    
-    // glm::vec2 new_pos = pos - m_drag_offset;
-    // glm::clamp(new_pos.x, 0.0f, root_window.get_fwidth() - win->size.x);
-    // glm::clamp(new_pos.y, 0.0f, root_window.get_fheight() - win->size.y);
-    
-    // win->position = new_pos;
-    
-    // win->destroy();
-    // win->init();
+    m_mouse_pos = _e.as.mouse_move.pos;
 }
+
 //
 window_handle_t window_manager_t::add_window(window_t &_window)
 {
@@ -243,23 +222,11 @@ void window_manager_t::set_focused_window(window_handle_t _handle)
 //
 void window_manager_t::draw_windows()
 {
-    // glm::ivec2 dims = root_window.window_dims();
-    // m_projection = glm::ortho(0.0f, (float)dims.x, (float)dims.y, 0.0f, m_zfar, m_znear);
-    
-    // shader_t *shader = shader_lib.get_shader(m_window_shader_handle);
-    // if (!shader) {
-            // SYN_FATAL_ERROR("invalid window manager shader handle.\n");
-            // return;
-    // }
-    
-    // shader->enable();
-    // shader->set_matrix_4fv("u_projection", m_projection);
-    
     api.set_depth_testing(true);
     api.set_depth_func(GL_LEQUAL);
     api.set_depth_mask(GL_TRUE);
 
-    ui_quad_batch.begin_batch();
+    ui_render_batch.begin_batch();
     
     //
     for (uint32_t i = 0; i < m_active_count; i++) {
@@ -270,7 +237,7 @@ void window_manager_t::draw_windows()
     }
 
     bool ui_shader_bound = false;
-    if (m_drag_vao.m_array_id != 0) {
+    if (m_is_dragging) {
         glm::ivec2 dims = root_window.window_dims();
         m_projection = glm::ortho(0.0f, (float)dims.x, (float)dims.y, 0.0f, m_zfar, m_znear);
         
@@ -283,15 +250,31 @@ void window_manager_t::draw_windows()
         shader->enable();
         shader->set_matrix_4fv("u_projection", m_projection);
         
-        m_drag_vao.bind();
-        glDrawArrays(GL_LINE_STRIP, 0, 8);
-        m_drag_vao.unbind();
+        window_t *win = get_window(m_drag_window_handle);
+        if (!win) return;
+        glm::vec2 p = m_mouse_pos - m_drag_offset;
+        glm::vec2 s = win->size;
+        float tb_h = win->title_bar_height;
+        glm::vec4 color = glm::vec4(0.6f, 0.6f, 0.6f, 1.0f);
+        float d = m_znear;
+        ui_render_vertex_t line_vertices[] = {
+            ui_render_vertex_t({ p.x,       p.y + tb_h }, color, d),
+            ui_render_vertex_t({ p.x,       p.y        }, color, d),
+            ui_render_vertex_t({ p.x + s.x, p.y        }, color, d),
+            ui_render_vertex_t({ p.x + s.x, p.y + tb_h }, color, d),
+            ui_render_vertex_t({ p.x,       p.y + tb_h }, color, d),
+            ui_render_vertex_t({ p.x,       p.y + s.y  }, color, d),
+            ui_render_vertex_t({ p.x + s.x, p.y + s.y  }, color, d),
+            ui_render_vertex_t({ p.x + s.x, p.y + tb_h }, color, d),
+        };
 
-        // shader enabling and projection matrix preset, skip on batch flushing
+        // 
+        ui_render_batch.add_line_strip(line_vertices, sizeof(line_vertices) / sizeof(line_vertices[0]));
+
         ui_shader_bound = true;
     }
 
-    ui_quad_batch.end_batch(ui_shader_bound);
+    ui_render_batch.end_batch(ui_shader_bound);
     font.end_render_block(true);
     
 }
@@ -327,88 +310,9 @@ void window_manager_t::reorganize_depths()
         // only update if depth change
         if (std::abs(win->depth - new_depth) > 0.01f) {
             win->depth = new_depth;
-            win->destroy();
-            win->init();
         }
         new_depth += m_ddepth_per_layer;
     }
     
     m_next_depth = closest_depth - m_ddepth_per_layer;
-}
-
-//
-void window_manager_t::init_drag_vao()
-{
-    if (m_drag_window_handle.id == 0) return;
-    window_t *win = get_window(m_drag_window_handle);
-    if (!win) return;
-    
-    struct vertex {
-        glm::vec2 pos;
-        glm::vec4 color;
-        float depth;
-        float pad;
-    };
-
-    // set up the body and the title of the window
-    glm::vec2 p = win->position;
-    glm::vec2 s = win->size;
-    float tb_h = win->title_bar_height;
-    glm::vec4 color = glm::vec4(0.6f, 0.6f, 0.6f, 1.0f);
-    float d = m_znear;
-    
-    vertex v[] = {
-        { { p.x,       p.y + tb_h }, color, d, 0.0f },
-        { { p.x,       p.y        }, color, d, 0.0f },
-        { { p.x + s.x, p.y        }, color, d, 0.0f },
-        { { p.x + s.x, p.y + tb_h }, color, d, 0.0f },
-        { { p.x,       p.y + tb_h }, color, d, 0.0f },
-        { { p.x,       p.y + s.y  }, color, d, 0.0f },
-        { { p.x + s.x, p.y + s.y  }, color, d, 0.0f },
-        { { p.x + s.x, p.y + tb_h }, color, d, 0.0f },
-    };
-
-    m_drag_vao.set_buffer_layout({
-        { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT2 },
-        { VERTEX_ATTRIB_LOCATION_COLOR, shader_data_type_t::FLOAT4 },
-        { VERTEX_ATTRIB_LOCATION_DEPTH, shader_data_type_t::FLOAT },
-        { VERTEX_ATTRIB_LOCATION_DEPTH + 1, shader_data_type_t::FLOAT },
-    });
-    m_drag_vao.create(v, sizeof(v) / sizeof(v[0]));
-
-}
-
-//
-void window_manager_t::update_drag_vao(const glm::vec2 &_pos)
-{
-    window_t *win = get_window(m_drag_window_handle);
-    if (!win) return;
-
-    // update vertices
-    struct vertex {
-        glm::vec2 pos;
-        glm::vec4 color;
-        float depth;
-        float pad;
-    };
-
-    glm::vec2 p = _pos - m_drag_offset;
-    glm::vec2 s = win->size;
-    float tb_h = win->title_bar_height;
-    glm::vec4 color = glm::vec4(0.6f, 0.6f, 0.6f, 1.0f);
-    float d = m_znear;
-
-    vertex v[] = {
-        { { p.x,       p.y + tb_h }, color, d, 0.0f },
-        { { p.x,       p.y        }, color, d, 0.0f },
-        { { p.x + s.x, p.y        }, color, d, 0.0f },
-        { { p.x + s.x, p.y + tb_h }, color, d, 0.0f },
-        { { p.x,       p.y + tb_h }, color, d, 0.0f },
-        { { p.x,       p.y + s.y  }, color, d, 0.0f },
-        { { p.x + s.x, p.y + s.y  }, color, d, 0.0f },
-        { { p.x + s.x, p.y + tb_h }, color, d, 0.0f },
-    };
-
-    m_drag_vao.update_vertices(v, sizeof(v), 0);
-    
 }

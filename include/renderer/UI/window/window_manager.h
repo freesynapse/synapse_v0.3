@@ -13,7 +13,7 @@ class window_manager_t
 {
 public:
     friend class window_t;
-    friend class ui_quad_batch_t;
+    friend class ui_render_batch_t;
     
 public:
     window_manager_t() = default;
@@ -39,8 +39,8 @@ public:
 
 // private:
     void reorganize_depths();
-    void init_drag_vao();
-    void update_drag_vao(const glm::vec2 &_pos);
+    // void init_drag_vao();
+    // void update_drag_vao(const glm::vec2 &_pos);
     
 private:
     window_t m_pool[SYN_MAX_WINDOW_COUNT];
@@ -54,7 +54,7 @@ private:
     window_handle_t m_focused_window = { 0 };
     float m_zfar = 100.0f;
     float m_znear = -100.0f;
-    // assigns 0.05f per layer, leaving room for title (-0.02f) and font (-0.03f)
+    // assigns 0.05f per layer, leaving room for text rendering
     float m_ddepth_per_layer = 0.05f;
     float m_ddepth_layer_text = 0.01f;
     float m_next_depth = m_zfar;
@@ -62,8 +62,8 @@ private:
     // moving windows
     bool m_is_dragging = false;
     window_handle_t m_drag_window_handle = { 0 };
+    glm::vec2 m_mouse_pos;
     glm::vec2 m_drag_offset;
-    vertex_array_t m_drag_vao;
     
 };
 
