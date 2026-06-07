@@ -13,6 +13,7 @@ class window_manager_t
 {
 public:
     friend class window_t;
+    friend class ui_quad_batch_t;
     
 public:
     window_manager_t() = default;
@@ -55,6 +56,7 @@ private:
     float m_znear = -100.0f;
     // assigns 0.05f per layer, leaving room for title (-0.02f) and font (-0.03f)
     float m_ddepth_per_layer = 0.05f;
+    float m_ddepth_layer_text = 0.01f;
     float m_next_depth = m_zfar;
 
     // moving windows

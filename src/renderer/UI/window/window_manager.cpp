@@ -7,14 +7,8 @@
 #include "c_api.h"
 
 //
-static void __window_on_mouse_button_callback(const event_t &_e)
-{
-    window_manager.on_mouse_button_event(_e);
-}
-static void __window_on_mouse_move_callback(const event_t &_e)
-{
-    window_manager.on_mouse_move_event(_e);
-}
+static void __window_on_mouse_button_callback(const event_t &_e) { window_manager.on_mouse_button_event(_e); }
+static void __window_on_mouse_move_callback(const event_t &_e) { window_manager.on_mouse_move_event(_e); }
 
 //
 void window_manager_t::init()
@@ -30,6 +24,10 @@ void window_manager_t::init()
     //
     events.register_callback(event_type_t::INPUT_MOUSE_BUTTON, __window_on_mouse_button_callback);
     events.register_callback(event_type_t::INPUT_MOUSE_MOVE, __window_on_mouse_move_callback);
+
+    if (!ui_quad_batch.is_initalized()) {
+        ui_quad_batch.init();
+    }
 }
 
 //
@@ -56,8 +54,19 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
     
         if (clicked.id != 0) {
             window_t *win = get_window(clicked);
+
+            // first check for widget
+            widget_t *clicked_widget = win->get_widget_at_pos(pos);
+            if (clicked_widget) {
+                clicked_widget->on_click();
+                return;
+            }
+            
             //
-            if (pos.y >= win->position.y && pos.y <= win->position.y + win->title_bar_height) {
+            if (win->m_is_movable &&
+                pos.y >= win->position.y && 
+                pos.y <= win->position.y + win->title_bar_height) 
+            {
                 m_is_dragging = true;
                 m_drag_window_handle = clicked;
                 m_drag_offset = pos - win->position;
@@ -93,6 +102,9 @@ void window_manager_t::on_mouse_move_event(const event_t &_e)
     if (m_drag_vao.m_array_id != 0) {
         update_drag_vao(_e.as.mouse_move.pos);
     }
+
+    // moving the window, destroy()ing and init()ing it every mouse move
+    // 
     // glm::vec2 pos = _e.as.mouse_move.pos;
     
     // window_t *win = get_window(m_drag_window_handle);
@@ -131,7 +143,6 @@ window_handle_t window_manager_t::add_window(window_t &_window)
     
     if (win->depth == 0.0f) {
         win->depth = m_next_depth;
-        printf("depth of '%s'=%f\n", win->name.c_str(), win->depth);
         m_next_depth -= m_ddepth_per_layer;
     } else if (win->depth <= m_next_depth) {
         m_next_depth = win->depth - m_ddepth_per_layer;
@@ -232,23 +243,23 @@ void window_manager_t::set_focused_window(window_handle_t _handle)
 //
 void window_manager_t::draw_windows()
 {
-    glm::ivec2 dims = root_window.window_dims();
-    // glm::mat4 proj = glm::ortho(0.0f, (float)dims.x, (float)dims.y, 0.0f,
-    // -1.0f, 1.0f);
-    m_projection = glm::ortho(0.0f, (float)dims.x, (float)dims.y, 0.0f, m_zfar, m_znear);
+    // glm::ivec2 dims = root_window.window_dims();
+    // m_projection = glm::ortho(0.0f, (float)dims.x, (float)dims.y, 0.0f, m_zfar, m_znear);
     
-    shader_t *shader = shader_lib.get_shader(m_window_shader_handle);
-    if (!shader) {
-            SYN_FATAL_ERROR("invalid window manager shader handle.\n");
-            return;
-    }
+    // shader_t *shader = shader_lib.get_shader(m_window_shader_handle);
+    // if (!shader) {
+            // SYN_FATAL_ERROR("invalid window manager shader handle.\n");
+            // return;
+    // }
     
-    shader->enable();
-    shader->set_matrix_4fv("u_projection", m_projection);
+    // shader->enable();
+    // shader->set_matrix_4fv("u_projection", m_projection);
     
     api.set_depth_testing(true);
     api.set_depth_func(GL_LEQUAL);
     api.set_depth_mask(GL_TRUE);
+
+    ui_quad_batch.begin_batch();
     
     //
     for (uint32_t i = 0; i < m_active_count; i++) {
@@ -258,13 +269,31 @@ void window_manager_t::draw_windows()
         }
     }
 
+    bool ui_shader_bound = false;
     if (m_drag_vao.m_array_id != 0) {
+        glm::ivec2 dims = root_window.window_dims();
+        m_projection = glm::ortho(0.0f, (float)dims.x, (float)dims.y, 0.0f, m_zfar, m_znear);
+        
+        shader_t *shader = shader_lib.get_shader(m_window_shader_handle);
+        if (!shader) {
+            SYN_FATAL_ERROR("invalid window manager shader handle.\n");
+            return;
+        }
+        
+        shader->enable();
+        shader->set_matrix_4fv("u_projection", m_projection);
+        
         m_drag_vao.bind();
         glDrawArrays(GL_LINE_STRIP, 0, 8);
         m_drag_vao.unbind();
+
+        // shader enabling and projection matrix preset, skip on batch flushing
+        ui_shader_bound = true;
     }
-    
+
+    ui_quad_batch.end_batch(ui_shader_bound);
     font.end_render_block(true);
+    
 }
 
 //
@@ -346,8 +375,6 @@ void window_manager_t::init_drag_vao()
         { VERTEX_ATTRIB_LOCATION_DEPTH + 1, shader_data_type_t::FLOAT },
     });
     m_drag_vao.create(v, sizeof(v) / sizeof(v[0]));
-
-    printf("drag vao created. %d vertices\n", m_drag_vao.get_vertex_count());
 
 }
 

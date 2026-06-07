@@ -100,7 +100,7 @@ public:
     
     void create(const void *_vertex_data, uint32_t _vertex_count, const uint32_t *_indices=NULL, size_t _index_count=0);
     void create_empty_vertices(size_t _vertices_max_size_bytes, GLuint _mode=GL_DYNAMIC_DRAW);
-    void create_empty_indices(size_t _indices_max_size_bytesm, GLuint _mode=GL_DYNAMIC_DRAW);
+    void create_empty_indices(size_t _indices_max_size_bytes, GLuint _mode=GL_DYNAMIC_DRAW);
     void destroy();
     void update_vertices(const void *_vertex_data, uint32_t _size_in_bytes, uint32_t _offset=0);
     void update_indices(const void *_index_data, uint32_t _size_in_bytes, uint32_t _offset=0);

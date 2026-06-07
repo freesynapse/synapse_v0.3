@@ -64,8 +64,6 @@ void window_t::init()
     });
     m_vao_outline.create(l, sizeof(l) / sizeof(l[0]));
 
-    
-    
     // default flags
     m_is_visible = true;
     m_is_active = true;
@@ -84,24 +82,47 @@ void window_t::destroy()
 // 
 void window_t::draw()
 {
-    m_vao_body.bind();
-    glDrawElements(GL_TRIANGLES, 12, GL_UNSIGNED_INT, 0);
-    m_vao_body.unbind();
+    glm::vec4 tb_color = m_is_focused ? title_bar_color_focused : title_bar_color;
+    ui_quad_batch.add_quad(position, { size.x, title_bar_height }, tb_color, depth);
 
-    m_vao_outline.bind();
-    api.set_line_width(1.0f);
-    glDrawArrays(GL_LINE_STRIP, 0, 5);
-    m_vao_outline.unbind();
+    ui_quad_batch.add_quad({ position.x, position.y + title_bar_height }, 
+                           { size.x, size.y - title_bar_height }, 
+                           bg_color, depth);
     
     float tx = position.x + 10.0f;
-    float ty = position.y + (title_bar_height - font.get_font_height()  * 0.5f);
+    float ty = position.y + (title_bar_height - font.get_font_height() * 0.5f);
     font.set_color(fg_color);
-    float font_depth = (depth - 0.01f) / window_manager.m_zfar;
+    float font_depth = (depth - window_manager.m_ddepth_layer_text) / window_manager.m_zfar;
     font.set_depth(font_depth);
     font.render_text(tx, ty, "%s", name.c_str());
 
     draw_widgets();
 
+}
+
+// 
+void window_t::draw_widgets()
+{
+    for (uint32_t i = 0; i < m_widget_count; i++) {
+        // 
+        widget_t *w = &m_widgets[i];
+        if (!w->is_visible) return;
+
+        glm::vec2 p = position + w->position;
+        glm::vec4 c = w->color;
+        float depth_offset = (depth - window_manager.m_ddepth_layer_text) / window_manager.m_zfar;
+
+        switch (w->type) {
+            case widget_type_t::BUTTON:
+                break;
+
+            case widget_type_t::LABEL:
+                break;
+
+            default:
+                break;
+        }
+    }
 }
 
 // 
@@ -148,11 +169,4 @@ widget_t *window_t::get_widget_at_pos(const glm::vec2 &_pos)
     
     return nullptr;
 }
-
-// 
-void window_t::draw_widgets()
-{
-    HÄRÄRÄRÄRÄR!
-}
-
 

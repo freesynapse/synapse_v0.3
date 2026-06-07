@@ -21,6 +21,7 @@
 #include "utils/time_step.h"
 #include "utils/asset_manager.h"
 #include "renderer/UI/window/window_manager.h"
+#include "renderer/UI/window/ui_quad_batch.h"
 
 
 /*  This file defines the C API style bindings for synapse, to be used from now on.
@@ -60,6 +61,7 @@ extern entity_library_t             entity_lib;
 extern time_step_t                  time_step;
 extern asset_manager_t              assets;
 extern window_manager_t             window_manager;
+extern ui_quad_batch_t              ui_quad_batch;
 
 // rendering
 extern font_t                       font;

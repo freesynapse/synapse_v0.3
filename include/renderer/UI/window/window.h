@@ -22,6 +22,7 @@ public:
     void destroy();
 
     void draw();
+    void draw_widgets();
 
     // interaction
     bool is_point_in_window(const glm::vec2 &_p);
@@ -38,7 +39,6 @@ public:
     void add_widget(const widget_t &_widget);
     widget_t *get_widget(uint32_t _index);
     widget_t *get_widget_at_pos(const glm::vec2 &_pos);
-    void draw_widgets();
     
 public:
     // window params
@@ -65,7 +65,6 @@ private:
     widget_t m_widgets[SYN_WINDOW_MAX_WIDGET_COUNT];
     uint32_t m_widget_count = 0;
 
-    vertex_array_t m_vao_body;
     vertex_array_t m_vao_outline;
 
     bool m_has_framebuffer = false;
@@ -74,6 +73,7 @@ private:
     bool m_is_active = false;
     bool m_is_visible = false;
     bool m_is_focused = false;
+    bool m_is_movable = true;
     
 };
 

@@ -169,7 +169,7 @@ void vertex_array_t::create_empty_vertices(size_t _vertices_max_size_bytes, GLui
 }
 
 // 
-void vertex_array_t::create_empty_indices(size_t _indices_max_size_bytesm, GLuint _mode/*=GL_DYNAMIC_DRAW*/)
+void vertex_array_t::create_empty_indices(size_t _indices_max_size_bytes, GLuint _mode/*=GL_DYNAMIC_DRAW*/)
 {
     if (!m_array_id) {
         glGenVertexArrays(1, &m_array_id);
@@ -179,7 +179,7 @@ void vertex_array_t::create_empty_indices(size_t _indices_max_size_bytesm, GLuin
     
     glGenBuffers(1, &m_ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, _indices_max_size_bytesm, NULL, _mode);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, _indices_max_size_bytes, NULL, _mode);
     
     glBindVertexArray(0);
     
