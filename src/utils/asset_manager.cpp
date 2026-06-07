@@ -725,7 +725,7 @@ void asset_manager_t::render_loading_assets()
         progress = (float)m_load_progress.loaded_assets / (float)m_load_progress.total_assets;
     }
 
-    glm::ivec2 dims = root_window.m_window_dim;
+    glm::ivec2 dims = root_window.window_dims();
     static float bar_width = 600.0f;
     static float bar_height = 20.0f;
     static float bar_x = (dims.x - bar_width) / 2.0f;
@@ -738,7 +738,7 @@ void asset_manager_t::render_loading_assets()
                                   glm::vec4(0.8f, 0.8f, 0.8f, 1.0f));
 
     float filled_width = bar_width * progress;
-    renderer_2d.draw_rect(bar_x, bar_y, filled_width, bar_height, glm::vec4(1.0f, 0.56f, 0.0f, 1.0f));
+    renderer_2d.draw_rect(bar_x, bar_y, filled_width, bar_height, glm::vec4(0.65f, 0.30f, 0.04f, 1.0f));
 
     //
 
@@ -752,7 +752,7 @@ void asset_manager_t::render_loading_assets()
 
     font.render_text(bar_x, asset_text_y, "Loading assets... %s", m_load_progress.current_asset.c_str());
 
-    font.end_render_block();
+    font.end_render_block(false);
 
     root_window.post_render();
     glfwPollEvents();

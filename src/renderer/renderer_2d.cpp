@@ -58,18 +58,20 @@ std::array<vertex_data_2d_t, 4> renderer_2d_t::quad_t_to_vertex_2d_t(const quad_
 }
 
 //
-void renderer_2d_t::init_ui_quad() {
+void renderer_2d_t::init_ui_quad()
+{
   // since glm::ortho, we need a different winding order
   glm::vec2 vertices[] = {
-      {1.0f, 1.0f},
-      {1.0f, 0.0f},
-      {0.0f, 0.0f},
-      {0.0f, 1.0f},
+      { 1.0f, 1.0f },
+      { 1.0f, 0.0f },
+      { 0.0f, 0.0f },
+      { 0.0f, 1.0f },
   };
 
   vertex_array_t vao;
-  vao.set_buffer_layout(
-      {{VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT2}});
+  vao.set_buffer_layout({ 
+      { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT2 }
+  });
 
   // uint32_t indices[] = { 0, 1, 2, 2, 3, 0 };
 

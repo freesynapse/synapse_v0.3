@@ -1,5 +1,5 @@
-#ifndef __WINDOW_H
-#define __WINDOW_H
+#ifndef __GLFW_WINDOW_H
+#define __GLFW_WINDOW_H
 
 #ifndef GLAD_INCLUDED
 #include "gl_api.h"
@@ -33,7 +33,7 @@ struct glfw_window_t
     void on_toggle_cursor_event(const event_t &_e);
     void on_toggle_frozen_cursor_event(const event_t &_e);
     void on_keydown_event(const event_t &_e);
-
+    
     // accessors
     bool should_close() const { return (glfwWindowShouldClose(m_window_ptr) || m_to_close_window); }
     void set_exit_key(unsigned int _key) { m_to_close_key = _key; }
@@ -44,6 +44,7 @@ struct glfw_window_t
     void set_window_position(const glm::ivec2 &_pos) { m_window_position = _pos; glfwSetWindowPos(m_window_ptr, _pos.x, _pos.y); glfwPollEvents(); }
     void set_window_dim(const glm::ivec2 &_dims) { m_window_dim = _dims; glfwSetWindowSize(m_window_ptr, _dims.x, _dims.y); glfwPollEvents(); }
     void set_window_dim(int _w, int _h) { m_window_dim = { _w, _h }; glfwSetWindowSize(m_window_ptr, _w, _h); glfwPollEvents(); }
+    const glm::ivec2 &window_dims() { return (m_is_fullscreen ? m_screen_dim : m_window_dim); }
     void set_fullscreen(const bool& _fullscreen);
     void toggle_fullscreen() { set_fullscreen(!m_is_fullscreen); }
     float get_width() { return (float)m_window_dim.x; }
@@ -51,8 +52,10 @@ struct glfw_window_t
     
     //int width = 0;
     //int height = 0;
+    private:
     glm::ivec2 m_window_dim = { 0, 0 };
 
+    public:
     //int m_screen_width = 0;
     //int m_screen_height = 0;
     glm::ivec2 m_screen_dim = { 0, 0 };
@@ -85,4 +88,4 @@ struct glfw_window_t
 };
 
 
-#endif // __WINDOW_H
+#endif // __GLFW_WINDOW_H

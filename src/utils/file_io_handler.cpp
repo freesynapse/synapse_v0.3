@@ -10,9 +10,7 @@
 #include <string.h>
 
 #include "utils/file_io_handler.h"
-#include "core.h"
 #include "utils/log.h"
-
 
 // global instance
 file_io_handler_t file_io_handler;
@@ -76,7 +74,7 @@ int file_io_handler_t::write_buffer_to_file(const std::string& _file_path, const
 
 	if (file.fail() || !file.is_open()) {
 		SYN_ERROR("file '%s' could not be opened/created.\n", _file_path.c_str());
-		return RETURN_FAILURE;
+		return -1;
 	}
 
 	file << _buffer;
@@ -89,7 +87,7 @@ int file_io_handler_t::write_buffer_to_file(const std::string& _file_path, const
 		created_files.push_back(_file_path);
 	}
 
-	return RETURN_SUCCESS;
+	return 0;
 
 }
 
@@ -103,7 +101,7 @@ int file_io_handler_t::read_file_to_buffer(const std::string &_file_path, std::v
 	{
 		//events.push_event(new FileIOErrorevent_t(_file_path));
 		SYN_ERROR("file '%s' could not be opened.\n", _file_path.c_str());
-		return RETURN_FAILURE;
+		return -1;
 	}
 
 	// seek to end of file
@@ -121,7 +119,7 @@ int file_io_handler_t::read_file_to_buffer(const std::string &_file_path, std::v
 	file.read((char *)&(_buffer[0]), fileSize);
 	file.close();
 
-	return RETURN_SUCCESS;
+	return 0;
 
 }
 
@@ -134,7 +132,7 @@ int file_io_handler_t::read_file_to_buffer(const std::string &_file_path, std::s
 	if (file.fail())
 	{
 	    SYN_ERROR("file '%s' could not be opened.\n", _file_path.c_str());
-		return RETURN_FAILURE;
+		return -1;
 	}
 
 	// seek to end of file
@@ -152,7 +150,7 @@ int file_io_handler_t::read_file_to_buffer(const std::string &_file_path, std::s
 	file.read((char *)&(_buffer[0]), fileSize);
 	file.close();
 
-	return RETURN_SUCCESS;
+	return 0;
 
 }
 

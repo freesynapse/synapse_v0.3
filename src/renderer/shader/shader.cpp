@@ -3,8 +3,8 @@
 #include <sstream>
 #include <string.h>
 
-#include "core.h"
 #include "external/glad/glad.h"
+
 #include "renderer/shader/shader.h"
 #include "utils/log.h"
 #include "utils/file_io_handler.h"
@@ -176,7 +176,7 @@ void shader_t::destroy()
 void shader_t::load_from_file()
 {
 	int result = file_io_handler.read_file_to_buffer(m_asset_path, m_raw_src);
-	if (result != RETURN_SUCCESS) {
+	if (result != 0) {
 	    SYN_INFO("shader not loaded, could not open file '%s'.\n", m_asset_path.c_str());
 		return;
 	}
@@ -214,7 +214,7 @@ void shader_t::reload()
 
 	// compile the shader program
 	int res = compile_shader();
-	if (res != RETURN_SUCCESS) {
+	if (res != 0) {
 		SYN_WARNING("%s: couldn't compile shader.\n", m_shader_name.c_str());
 		return;
 	}
@@ -362,7 +362,7 @@ int shader_t::compile_shader()
 			// prevent mem leak
 			glDeleteShader(shaderID);
 
-			return RETURN_FAILURE;
+			return -1;
 		}
 
 		shaderIDs[index++] = shaderID;
@@ -398,7 +398,7 @@ int shader_t::compile_shader()
 		for (auto id : shaderIDs)
 			glDeleteShader(id);
 
-		return RETURN_FAILURE;
+		return -1;
 	}
 
 	// detach and delete shaders after linking
@@ -408,7 +408,7 @@ int shader_t::compile_shader()
 
 	m_opengl_id = program;
 
-	return RETURN_SUCCESS;
+	return 0;
 
 }
  

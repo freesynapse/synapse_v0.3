@@ -2,7 +2,6 @@
 #include <string.h>
 
 #include "utils/log.h"
-#include "core.h"
 
 // globals
 FILE *__log_fp = NULL;
@@ -50,10 +49,10 @@ int syn_open_log()
     __log_fp = fopen(file, "w");
     if (__log_fp == NULL) {
         SYN_WARNING("cannot open file '%s'.\n", file);
-        return RETURN_FAILURE;
+        return -1;
     }
     SYN_INFO("opened log file '%s'.\n", file);
-    return RETURN_SUCCESS;
+    return 0;
 }
 
 // 

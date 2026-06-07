@@ -60,6 +60,7 @@ public:
 	framebuffer_t *get_framebuffer(const framebuffer_handle_t &_handle);
 	void create_scene_framebuffer();
 	void bind_scene_fbuffer();
+	void unbind_scene_fbuffer();
 	void render_scene_fbuffer();
 
 	// render commands

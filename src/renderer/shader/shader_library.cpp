@@ -1,7 +1,6 @@
 
 #include "renderer/shader/shader_library.h"
 
-#include "core.h"
 #include "utils/log.h"
 #include "utils/file_io_handler.h"
 #include "utils/scope_timer.h"
@@ -34,7 +33,7 @@ shader_handle_t shader_library_t::load_from_file(const std::string &_name,
     }
 
     std::string src;
-    if (file_io_handler.read_file_to_buffer(_shader_file_path, src) != RETURN_SUCCESS) {
+    if (file_io_handler.read_file_to_buffer(_shader_file_path, src) != 0) {
         SYN_WARNING("could not read shader file '%s'\n", _shader_file_path.c_str());
         return (shader_handle_t){ 0 };
     }

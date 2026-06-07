@@ -1,6 +1,6 @@
 
 #include "glfw_window.h"
-#include "core.h"
+
 #include "utils/log.h"
 #include "event/event.h"
 #include "event/input_manager.h"
@@ -8,11 +8,11 @@
 #include "c_api.h"
 
 // static event callback wrappers
-static void __window_window_close_callback(const event_t &_e) { root_window.on_window_close_event(_e); }
-static void __window_toggle_fullscreen_callback(const event_t &_e) { root_window.on_toggle_fullscreen_event(_e); }
-static void __window_toggle_cursor_callback(const event_t &_e) { root_window.on_toggle_cursor_event(_e); }
-static void __window_toggle_frozen_cursor_callback(const event_t &_e) { root_window.on_toggle_frozen_cursor_event(_e); }
-static void __window_keydown_callback(const event_t &_e) { root_window.on_keydown_event(_e); }
+static void __glfw_window_window_close_callback(const event_t &_e) { root_window.on_window_close_event(_e); }
+static void __glfw_window_toggle_fullscreen_callback(const event_t &_e) { root_window.on_toggle_fullscreen_event(_e); }
+static void __glfw_window_toggle_cursor_callback(const event_t &_e) { root_window.on_toggle_cursor_event(_e); }
+static void __glfw_window_toggle_frozen_cursor_callback(const event_t &_e) { root_window.on_toggle_frozen_cursor_event(_e); }
+static void __glfw_window_keydown_callback(const event_t &_e) { root_window.on_keydown_event(_e); }
 
 // glfw callbacks
 void __glfw_window_resize_callback(GLFWwindow *_window, int _width, int _height) { root_window.glfw_window_resize_callback(root_window.m_window_ptr, _width, _height); }
@@ -30,7 +30,7 @@ int glfw_window_t::init(const char *_name, int _width, int _height)
 	glfwInitHint(GLFW_PLATFORM, GLFW_PLATFORM_X11);
 	if (!glfwInit()) {
 		SYN_ERROR("glfwInit() failed.\n");
-		return RETURN_FAILURE;
+		return -1;
 	}
 
 	// desktop resolution (for positioning and size)
@@ -54,7 +54,7 @@ int glfw_window_t::init(const char *_name, int _width, int _height)
 		SYN_INFO("GLFW window [%dx%d] created.\n", m_window_dim.x, m_window_dim.y);
 	} else {
 		SYN_ERROR("GLFW window could not be created.\n");
-		return RETURN_FAILURE;
+		return -1;
 	}
 
 	// pointer storage
@@ -93,7 +93,7 @@ int glfw_window_t::init(const char *_name, int _width, int _height)
 	#ifdef _WIN64
     if (glewInit() != GLEW_OK) {
     	SYN_ERROR("failed to initialize GLEW.");
-    	return RETURN_FAILURE;
+    	return -1;
     } else {
     	SYN_CORE_TRACE("GLEW initialized.");
     	SYN_CORE_TRACE("OpenGL vendor: ", glGetString(GL_VENDOR));
@@ -103,7 +103,7 @@ int glfw_window_t::init(const char *_name, int _width, int _height)
 	#else
 	if (!gladLoadGL(glfwGetProcAddress)) {
 		SYN_ERROR("[glad] could not load glfw proc address.\n");
-		return RETURN_FAILURE;
+		return -1;
 	} else {
 		SYN_INFO("GLAD initialized.\n");
 		SYN_INFO("OpenGL vendor: %s.\n", glGetString(GL_VENDOR));
@@ -114,17 +114,17 @@ int glfw_window_t::init(const char *_name, int _width, int _height)
 
 	// register callback for events
 	//
-	events.register_callback(event_type_t::WINDOW_CLOSE, __window_window_close_callback);
-	events.register_callback(event_type_t::WINDOW_TOGGLE_FULLSCREEN, __window_toggle_fullscreen_callback);
-	events.register_callback(event_type_t::WINDOW_TOGGLE_CURSOR, __window_toggle_cursor_callback);
-	events.register_callback(event_type_t::WINDOW_TOGGLE_FROZEN_CURSOR, __window_toggle_frozen_cursor_callback);
-	events.register_callback(event_type_t::INPUT_KEYDOWN, __window_keydown_callback);
+	events.register_callback(event_type_t::WINDOW_CLOSE, __glfw_window_window_close_callback);
+	events.register_callback(event_type_t::WINDOW_TOGGLE_FULLSCREEN, __glfw_window_toggle_fullscreen_callback);
+	events.register_callback(event_type_t::WINDOW_TOGGLE_CURSOR, __glfw_window_toggle_cursor_callback);
+	events.register_callback(event_type_t::WINDOW_TOGGLE_FROZEN_CURSOR, __glfw_window_toggle_frozen_cursor_callback);
+	events.register_callback(event_type_t::INPUT_KEYDOWN, __glfw_window_keydown_callback);
 	// set cursor to middle of window
 	glfwPollEvents();
 	glfwSetCursorPos(m_window_ptr, m_window_dim.x * 0.5f, m_window_dim.y * 0.5f);
 
 	//
-	return RETURN_SUCCESS;
+	return 0;
 }
 
 //
@@ -198,6 +198,7 @@ void glfw_window_t::glfw_window_resize_callback(GLFWwindow* _window, int _width,
     e.as.viewport_resize.viewport = glm::ivec2(_width, _height);
     e.as.viewport_resize.viewport_f = glm::vec2(_width, _height);
     events.dispatch_event(e);
+    
 }
 
 //
@@ -249,3 +250,4 @@ void glfw_window_t::on_keydown_event(const event_t &_e)
         events.dispatch_event(e);
     }
 }
+

@@ -525,12 +525,14 @@ void renderer_t::create_scene_framebuffer()
 
 //
 void renderer_t::bind_scene_fbuffer() { m_scene_fbuffer->bind(); }
+void renderer_t::unbind_scene_fbuffer() { m_scene_fbuffer->bindDefaultFramebuffer(); }
 
 //
 void renderer_t::render_scene_fbuffer()
 {
     // unbind framebuffer, i.e. bind default buffer
-    m_scene_fbuffer->unbind();
+    // m_scene_fbuffer->unbind();
+    m_scene_fbuffer->bindDefaultFramebuffer();
     
     // clear default buffer and disable depth test
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -541,7 +543,6 @@ void renderer_t::render_scene_fbuffer()
     // fbuffer
     shader_t *shader = shader_lib.get_shader(m_scene_fbuffer_shader_handle);
     shader->enable();
-    shader->set_uniform_1i("u_texture_sampler", 0);
     m_scene_fbuffer->bindTexture(0, 0);
     
     // bind vao and draw
