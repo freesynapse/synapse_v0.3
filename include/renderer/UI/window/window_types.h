@@ -1,7 +1,6 @@
 #ifndef __WINDOW_TYPES_H
 #define __WINDOW_TYPES_H
 
-#include <string>
 #include <glm/glm.hpp>
 
 // 

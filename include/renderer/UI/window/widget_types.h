@@ -17,15 +17,12 @@ enum class widget_type_t {
 // 
 struct widget_t {
     widget_type_t type;
-
     glm::vec2 position; // relative to window->position
     glm::vec2 size;
-
     glm::vec4 color;
     glm::vec4 hover_color;
-    std::string text;
-
-    // 
+    glm::vec4 outline_color;
+    std::string text = "";
     bool is_enabled = true;
     bool is_hovered = false;
     bool is_visible = true;

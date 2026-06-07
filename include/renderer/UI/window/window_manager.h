@@ -6,7 +6,7 @@
 #include "event/event.h"
 
 // 
-#define SYN_MAX_WINDOW_COUNT    64
+#define SYN_MAX_WINDOW_COUNT    32
 
 // 
 class window_manager_t
@@ -24,9 +24,11 @@ public:
 
     void on_mouse_button_event(const event_t &_e);
     void on_mouse_move_event(const event_t &_e);
+    void on_ui_window_close_event(const event_t &_e);
 
     window_handle_t add_window(window_t &_window);
     window_handle_t add_window(const window_desc_t &_desc);
+    void release_window(window_handle_t _handle);
     
     window_t *get_window(const window_handle_t &_handle);
 

@@ -8,6 +8,21 @@
 // 
 void window_t::init()
 {
+    widget_t close_btn;
+    close_btn.type          = widget_type_t::BUTTON;
+    close_btn.position      = glm::vec2(size.x - 25.0f, 3.0f);
+    close_btn.size          = glm::vec2(20.0f, 20.0f);
+    close_btn.color         = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
+    close_btn.hover_color   = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+    close_btn.outline_color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
+    close_btn.on_click = [this]() {
+        event_t e;
+        e.type = event_type_t::UI_WINDOW_CLOSE;
+        e.as.ui_window_close.handle = this->this_handle;
+        events.dispatch_event(e);
+    };
+    add_widget(close_btn);
+    
     // default flags
     m_is_visible = true;
     m_is_active = true;
@@ -24,11 +39,11 @@ void window_t::destroy()
 void window_t::draw()
 {
     glm::vec4 tb_color = m_is_focused ? title_bar_color_focused : title_bar_color;
-    ui_render_batch.add_quad(position, { size.x, title_bar_height }, tb_color, depth);
+    ui_batch_renderer.add_quad(position, { size.x, title_bar_height }, tb_color, depth);
 
-    ui_render_batch.add_quad({ position.x, position.y + title_bar_height }, 
-                             { size.x, size.y - title_bar_height }, 
-                             bg_color, depth);
+    ui_batch_renderer.add_quad({ position.x, position.y + title_bar_height }, 
+                               { size.x, size.y - title_bar_height }, 
+                               bg_color, depth);
 
     // lines
     glm::vec2 p = position;
@@ -41,7 +56,7 @@ void window_t::draw()
         ui_render_vertex_t({ p.x,       p.y + s.y  }, outline_color, depth + 0.03f),
         ui_render_vertex_t({ p.x,       p.y        }, outline_color, depth + 0.03f),
     };
-    ui_render_batch.add_line_strip(line_vertices, sizeof(line_vertices) / sizeof(line_vertices[0]));
+    ui_batch_renderer.add_line_strip(line_vertices, sizeof(line_vertices) / sizeof(line_vertices[0]));
     
     float tx = position.x + 10.0f;
     float ty = position.y + (title_bar_height - font.get_font_height() * 0.5f);
@@ -63,12 +78,33 @@ void window_t::draw_widgets()
         if (!w->is_visible) return;
 
         glm::vec2 p = position + w->position;
-        glm::vec4 c = w->color;
-        float depth_offset = (depth + window_manager.m_ddepth_layer_text) / window_manager.m_zfar;
+        glm::vec2 s = w->size;
+        glm::vec4 fg_c = w->is_hovered ? w->hover_color : w->color;
+        glm::vec4 ol_c = w->outline_color;
+        float depth_offset = (depth + 0.01f);
 
         switch (w->type) {
-            case widget_type_t::BUTTON:
+            case widget_type_t::BUTTON: {
+                ui_batch_renderer.add_quad(p, w->size, fg_c, depth_offset);
+
+                ui_render_vertex_t line_vertices[] = {
+                    ui_render_vertex_t({ p.x,       p.y       }, ol_c, depth_offset + 0.01f),
+                    ui_render_vertex_t({ p.x + s.x, p.y       }, ol_c, depth_offset + 0.01f),
+                    ui_render_vertex_t({ p.x + s.x, p.y + s.y }, ol_c, depth_offset + 0.01f),
+                    ui_render_vertex_t({ p.x,       p.y + s.y }, ol_c, depth_offset + 0.01f),
+                    ui_render_vertex_t({ p.x,       p.y       }, ol_c, depth_offset + 0.01f),
+                };
+                ui_batch_renderer.add_line_strip(line_vertices, sizeof(line_vertices) / sizeof(line_vertices[0]));
+
+                if (!w->text.empty()) {
+                    float x = p.x + 0.5f * w->size.x - 0.5f * font.get_string_width("%s", w->text.c_str());
+                    float y = p.y + w->size.y - 0.5f * font.get_font_height();
+                    font.set_depth(depth_offset + 0.02f);
+                    font.render_text(x, y, "%s", w->text.c_str());
+                }
+                
                 break;
+            }
 
             case widget_type_t::LABEL:
                 break;

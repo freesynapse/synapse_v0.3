@@ -33,7 +33,7 @@ entity_library_t            entity_lib;
 time_step_t                 time_step;
 asset_manager_t             assets;
 window_manager_t            window_manager;
-ui_render_batch_t           ui_render_batch;
+ui_render_batch_t           ui_batch_renderer;
 
 // rendering
 font_t                      font;

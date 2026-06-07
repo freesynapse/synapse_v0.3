@@ -41,6 +41,8 @@ public:
     widget_t *get_widget_at_pos(const glm::vec2 &_pos);
     
 public:
+    window_handle_t this_handle;
+    
     // window params
     glm::vec2 position = glm::vec2(0.0f);
     glm::vec2 size = glm::vec2(0.0f);     // vec2(width, height)

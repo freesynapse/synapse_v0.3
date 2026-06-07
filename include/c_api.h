@@ -9,6 +9,7 @@
 #include "event/event_handler.h"
 #include "renderer/renderer.h"
 #include "renderer/renderer_2d.h"
+#include "renderer/shader/shader_library.h"
 #include "renderer/material/texture_library.h"
 #include "renderer/material/material_library.h"
 #include "renderer/material/cubemap_library.h"
@@ -61,7 +62,7 @@ extern entity_library_t             entity_lib;
 extern time_step_t                  time_step;
 extern asset_manager_t              assets;
 extern window_manager_t             window_manager;
-extern ui_render_batch_t            ui_render_batch;
+extern ui_render_batch_t            ui_batch_renderer;
 
 // rendering
 extern font_t                       font;

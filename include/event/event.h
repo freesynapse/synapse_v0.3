@@ -3,7 +3,8 @@
 
 #include <stdint.h>
 #include <glm/glm.hpp>
-#include "renderer/shader/shader_library.h"
+#include "renderer/shader/shader_types.h"
+#include "renderer/UI/window/window_types.h"
 
 //
 enum class event_type_t : uint8_t {
@@ -14,6 +15,7 @@ enum class event_type_t : uint8_t {
     WINDOW_TOGGLE_FULLSCREEN, 
     WINDOW_TOGGLE_CURSOR, 
     WINDOW_TOGGLE_FROZEN_CURSOR, 
+    UI_WINDOW_CLOSE, 
     INPUT_KEYDOWN, 
     INPUT_MOUSE_BUTTON, 
     INPUT_MOUSE_SCROLL,
@@ -33,6 +35,7 @@ inline static const char *str_event_type(event_type_t e)
     case event_type_t::WINDOW_TOGGLE_FULLSCREEN:    return "event_type_t::WINDOW_TOGGLE_FULLSCREEN";
     case event_type_t::WINDOW_TOGGLE_CURSOR:        return "event_type_t::WINDOW_TOGGLE_CURSOR";
     case event_type_t::WINDOW_TOGGLE_FROZEN_CURSOR: return "event_type_t::WINDOW_TOGGLE_FROZEN_CURSOR";
+    case event_type_t::UI_WINDOW_CLOSE:             return "event_type_t::UI_WINDOW_CLOSE";
     case event_type_t::INPUT_KEYDOWN:               return "event_type_t::INPUT_KEYDOWN";
     case event_type_t::INPUT_MOUSE_BUTTON:          return "event_type_t::INPUT_MOUSE_BUTTON";
     case event_type_t::INPUT_MOUSE_SCROLL:          return "event_type_t::INPUT_MOUSE_SCROLL";
@@ -88,6 +91,11 @@ struct window_close_event_t {
 };
 
 //
+struct ui_window_close_event_t {
+    window_handle_t handle;
+};
+
+//
 struct window_resize_event_t {
     uint32_t width;
     uint32_t height;
@@ -122,7 +130,7 @@ struct event_t {
         toggle_fullscreen_event_t toggle_fullscreen;
         toggle_frozencursor_event_t toggle_frozencursor;
         toggle_cursor_event_t toggle_cursor;
-        
+        ui_window_close_event_t ui_window_close;
     } as;
 
     event_t() : type(event_type_t::NONE) {}
