@@ -109,7 +109,7 @@ int main()
     syn_init("synapse v0.3", 1280, 800, SYN_MODE_3D);
     root_window.set_exit_key(SYN_KEY_ESCAPE);
     syn_set_window_pos_quadrant(UPPER_RIGHT);
-    // syn_toggle_fullscreen();
+    // root_window.toggle_fullscreen();
 
     syn_load_assets("../assets/manifests/helmet_test.syn");
     helmet = assets.get_entity("helmet");

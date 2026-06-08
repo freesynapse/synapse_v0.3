@@ -116,10 +116,16 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
     
     } else if (action == SYN_MOUSE_BUTTON_RELEASED) {
         if (m_is_dragging) {
-            window_t *win = get_window(m_drag_window_handle);
-            win->position = pos - m_drag_offset;
+
+            if (m_enable_docking && m_hovered_dock_zone != dock_zone_t::NONE) {
+                apply_docking(m_drag_window_handle, m_hovered_dock_zone, m_dock_target_window);
+            }
+            
             m_is_dragging = false;
             m_drag_window_handle = { 0 };
+            m_show_dock_zones = false;
+            m_hovered_dock_zone = dock_zone_t::NONE;
+            m_dock_target_window = { 0 };
         }
 
         if (m_is_resizing) {
@@ -241,8 +247,12 @@ void window_manager_t::on_mouse_move_event(const event_t &_e)
 
     // moving windows -- the ui_batch_renderer takes care of the rendering
     if (m_is_dragging && m_drag_window_handle.id > 0) {
+        update_dock_zones(m_mouse_pos, m_drag_window_handle);
+
         window_t *win = &m_pool[m_drag_window_handle.id - 1];
         win->position = m_mouse_pos - m_drag_offset;
+
+        return;
     }
     
     // widgets
@@ -427,8 +437,6 @@ void window_manager_t::set_focused_window(window_handle_t _handle)
         window_t *prev = &m_pool[m_focused_window.id - 1];
         if (prev) {
             prev->set_focused(false);
-            // prev->destroy();
-            // prev->init();
         }
     }
 
@@ -450,8 +458,119 @@ void window_manager_t::set_focused_window(window_handle_t _handle)
 }
 
 //
-void update_dock_zones(const glm::vec2 &_mouse_pos, const window_handle_t &_dragged_window_handle)
+void window_manager_t::update_dock_zones(const glm::vec2 &_mouse_pos, const window_handle_t &_dragged_window_handle)
 {
+    m_show_dock_zones = true;
+    m_hovered_dock_zone = dock_zone_t::NONE;
+    m_dock_target_window = { 0 };
+
+    float screen_w = root_window.get_fwidth();
+    float screen_h = root_window.get_fheight();
+    float margin = m_dock_zone_margin;
+    glm::vec2 mpos = _mouse_pos;
+
+    // clear all zones
+    for (uint32_t i = 0; i < 5; i++) {
+        m_dock_zones[i].is_hovered = false;
+    }
+
+    m_dock_zones[0].zone = dock_zone_t::LEFT;
+    m_dock_zones[0].bounds = glm::vec4(0, 0, margin * 2, screen_h);
+    
+    m_dock_zones[1].zone = dock_zone_t::RIGHT;
+    m_dock_zones[1].bounds = glm::vec4(screen_w - margin * 2, 0, margin * 2, screen_h);
+    
+    m_dock_zones[2].zone = dock_zone_t::TOP;
+    m_dock_zones[2].bounds = glm::vec4(0, 0, screen_w, margin * 2);
+
+    m_dock_zones[3].zone = dock_zone_t::BOTTOM;
+    m_dock_zones[3].bounds = glm::vec4(0, screen_h - margin * 2, screen_w, margin * 2);
+
+    // check screen margins
+    for (uint32_t i = 0; i < 4; i++) {
+        glm::vec4 b = m_dock_zones[i].bounds;
+        if (mpos.x >= b.x && mpos.x <= b.x + b.z &&
+            mpos.y >= b.y && mpos.y <= b.y + b.w) {
+            m_dock_zones[i].is_hovered = true;
+            m_hovered_dock_zone = m_dock_zones[i].zone;
+            return;
+        }
+    }
+
+    // check center zone
+    window_handle_t hovered = get_window_at_pos(mpos);
+    if (hovered.id != 0 && hovered.id != _dragged_window_handle.id) {
+        window_t *target = get_window(hovered);
+        if (target) {
+            m_dock_zones[4].zone = dock_zone_t::CENTER;
+            m_dock_zones[4].bounds = glm::vec4(
+                target->position.x + margin,
+                target->position.y + margin,
+                target->size.x - margin * 2,
+                target->size.y - margin * 2
+            );
+
+            glm::vec4 b = m_dock_zones[4].bounds;
+            if (mpos.x >= b.x && mpos.x <= b.x + b.z &&
+                mpos.y >= b.y && mpos.y <= b.y + b.w) {
+                m_dock_zones[4].is_hovered = true;
+                m_hovered_dock_zone = dock_zone_t::CENTER;
+                m_dock_target_window = hovered;
+                return;
+            }
+        }
+    }
+}
+
+// 
+void window_manager_t::apply_docking(window_handle_t _handle, dock_zone_t _zone, window_handle_t _target_handle)
+{
+    window_t *win = get_window(_handle);
+    if (!win) return;
+
+    float screen_w = root_window.get_fwidth();
+    float screen_h = root_window.get_fheight();
+    float padding = 0.0f;
+
+    switch (_zone) {
+        case dock_zone_t::LEFT:
+            win->position = glm::vec2(padding, padding);
+            win->size = glm::vec2(screen_w * 0.5f - padding * 1.5f, screen_h - padding * 2);
+            break;
+            
+        case dock_zone_t::RIGHT:
+            win->position = glm::vec2(screen_w * 0.5f + padding * 0.5f, padding);
+            win->size = glm::vec2(screen_w * 0.5f - padding * 1.5f, screen_h - padding * 2);
+            break;
+            
+        case dock_zone_t::TOP:
+            win->position = glm::vec2(padding, padding);
+            win->size = glm::vec2(screen_w - padding * 2, screen_h * 0.5f - padding * 1.5f);
+            break;
+            
+        case dock_zone_t::BOTTOM:
+            win->position = glm::vec2(padding, screen_h * 0.5f + padding * 0.5f);
+            win->size = glm::vec2(screen_w - padding * 2, screen_h * 0.5f - padding * 1.5f);
+            break;
+            
+        case dock_zone_t::CENTER:
+            if (_target_handle.id != 0) {
+                window_t *target_win = get_window(_target_handle);
+                if (target_win) {
+                    // Match target window position/size
+                    win->position = target_win->position;
+                    win->size = target_win->size;
+                    win->depth = target_win->depth + m_ddepth_per_layer;  // Stack on top
+                }
+            }
+            break;
+            
+        default: break;
+    }
+
+    if (win->has_frambuffer()) {
+        win->resize_framebuffer();
+    }
     
 }
 
@@ -476,6 +595,10 @@ void window_manager_t::draw_windows()
         }
     }
 
+    // 
+    draw_dock_zone_overlays();
+
+    // draw all quads / line_strips
     ui_batch_renderer.end_batch();
 
     // 2. draw all textured content.
@@ -494,17 +617,9 @@ void window_manager_t::draw_windows()
 // 
 void window_manager_t::draw_framebuffer(window_t *_win)
 {
-    printf("Content pos: (%.1f, %.1f), size: (%.1f, %.1f), depth: %.3f\n", 
-        _win->get_content_position().x, _win->get_content_position().y,
-        _win->get_content_size().x, _win->get_content_size().y,
-        _win->depth + m_ddepth_layer_texture);
-
     framebuffer_t *fbo = api.fbo_handler.get_framebuffer(_win->m_framebuffer_handle);
     if (!fbo) return;
-    printf("FBO size: (%d, %d), Window content size: (%.0f, %.0f)\n",
-        fbo->get_width(), fbo->get_height(),
-        _win->get_content_size().x, _win->get_content_size().y);
-    
+ 
     shader_t *shader = shader_lib.get_shader(m_tex_quad_shader_handle);
     if (!shader) return;
     
@@ -522,6 +637,37 @@ void window_manager_t::draw_framebuffer(window_t *_win)
         
     shader->disable();
     
+}
+
+void window_manager_t::draw_dock_zone_overlays()
+{
+    if (!m_show_dock_zones) return;
+    
+    for (int i = 0; i < 5; i++) {
+        if (!m_dock_zones[i].is_hovered) continue;
+        
+        glm::vec4 b = m_dock_zones[i].bounds;
+        glm::vec4 color = glm::vec4(0.65f, 0.30f, 0.04f, m_dock_preview_alpha);
+        
+        // Draw preview overlay
+        ui_batch_renderer.add_quad(
+            glm::vec2(b.x, b.y),
+            glm::vec2(b.z, b.w),
+            color,
+            m_znear - 0.1f  // Draw on top
+        );
+        
+        // Draw outline
+        glm::vec4 outline_color = glm::vec4(1.0f, 0.55f, 0.05f, 0.8f);
+        ui_render_vertex_t outline[] = {
+            ui_render_vertex_t({ b.x,       b.y       }, outline_color, m_znear - 0.05f),
+            ui_render_vertex_t({ b.x + b.z, b.y       }, outline_color, m_znear - 0.05f),
+            ui_render_vertex_t({ b.x + b.z, b.y + b.w }, outline_color, m_znear - 0.05f),
+            ui_render_vertex_t({ b.x,       b.y + b.w }, outline_color, m_znear - 0.05f),
+            ui_render_vertex_t({ b.x,       b.y       }, outline_color, m_znear - 0.05f),
+        };
+        ui_batch_renderer.add_line_strip(outline, 5);
+    }
 }
 
 //

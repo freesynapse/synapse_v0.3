@@ -46,10 +46,12 @@ public:
 
     // docking
     void update_dock_zones(const glm::vec2 &_mouse_pos, const window_handle_t &_dragged_window_handle);
+    void apply_docking(window_handle_t _handle, dock_zone_t _zone, window_handle_t _target_handle);
     
     // drawing
     void draw_windows();
     void draw_framebuffer(window_t *_window);
+    void draw_dock_zone_overlays();
 
 // private:
     void reorganize_depths();
@@ -96,7 +98,7 @@ private:
     float m_dock_preview_alpha = 0.3f;
     float m_dock_zone_margin = 50.0f;
     bool m_show_dock_zones = false;
-    dock_zone_visual_t m_dock_zone[5];
+    dock_zone_visual_t m_dock_zones[5];
     dock_zone_t m_hovered_dock_zone = dock_zone_t::NONE;
     window_handle_t m_dock_target_window = { 0 };
     

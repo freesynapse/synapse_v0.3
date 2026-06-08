@@ -57,6 +57,8 @@ void window_t::create_framebuffer()
         color_format_t::RGBA16F, 
         glm::ivec2(content_size.x, content_size.y), 
         1, true, id);
+    orbit_camera.set_aspect_ratio(content_size.x / content_size.y);
+    orbit_camera.update_projection_matrix();
 
     m_has_framebuffer = (m_framebuffer_handle.id != 0);
 
@@ -74,6 +76,8 @@ void window_t::resize_framebuffer()
 
     if (fbo) {
         fbo->resize(glm::vec2((int)content_size.x, (int)content_size.y));
+        orbit_camera.set_aspect_ratio(content_size.x / content_size.y);
+        orbit_camera.update_projection_matrix();
     }
 }
 

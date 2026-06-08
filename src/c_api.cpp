@@ -68,12 +68,6 @@ void syn_init(const char *_name, int _width, int _height, int _mode)
     api.init();
     api.set_clear_color({ 0.2f, 0.2f, 0.2f, 1.0f });
 
-    // TODO : remove
-    // create framebuffers
-    // __fbo_main_handle = api.fbo_handler.create_framebuffer(color_format_t::RGBA16F, glm::ivec2(0), 1, true, "main_fbuffer");
-    // framebuffer_t *fbo = api.fbo_handler.get_framebuffer(__fbo_main_handle);
-    // SYN_INFO("created framebuffer '%s' (%dx%d).\n", fbo->get_name().c_str(), fbo->get_width(), fbo->get_height());
-    
     //
     renderer.init();
     // renderer.create_scene_framebuffer();
@@ -203,11 +197,6 @@ void syn_render_begin_3d()
             
             // set viewport to drawable area
             glm::vec2 content_size = viewport->get_content_size();
-
-            float ar = content_size.x / content_size.y;
-            orbit_camera.set_aspect_ratio(ar);
-            orbit_camera.update_projection_matrix();
-
             glViewport(0, 0, (size_t)content_size.x, (size_t)content_size.y);
 
             api.set_clear_color({ 0.2f, 0.2f, 0.2f, 1.0f });
