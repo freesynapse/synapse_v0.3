@@ -19,7 +19,34 @@ struct window_desc_t {
     
 };
 
+// 
+enum class resize_handle_t {
+    NONE,
+    TOP,
+    BOTTOM,
+    LEFT,
+    RIGHT,
+    TOP_LEFT,
+    TOP_RIGHT,
+    BOTTOM_LEFT,
+    BOTTOM_RIGHT,
+};
 
+// 
+enum class dock_zone_t {
+    NONE,
+    LEFT,
+    RIGHT,
+    TOP,
+    BOTTOM,
+    CENTER
+};
+
+struct dock_zone_visual_t {
+    glm::vec4 bounds;
+    dock_zone_t zone;
+    bool is_hovered;
+};
 
 
 

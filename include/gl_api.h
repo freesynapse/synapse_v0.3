@@ -9,6 +9,8 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 
+#include "renderer/buffers/framebuffer_types.h"
+#include "renderer/buffers/frambuffer_handler.h"
 #include "event/event.h"
 
 
@@ -66,7 +68,10 @@ public:
 								 const GLchar *_msg, 
 								 const void *_params);
     
-
+public:
+    framebuffer_handler_t fbo_handler;
+    
+    
 private:
     // renderer variables
 	glm::ivec2 m_viewport = { 0, 0 };

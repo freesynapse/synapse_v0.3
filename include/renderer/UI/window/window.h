@@ -2,13 +2,11 @@
 #define __WINDOW_H
 
 #include "renderer/UI/window/window_types.h"
-#include "renderer/buffers/vertex_array.h"
-#include "renderer/buffers/framebuffer.h"
+#include "renderer/buffers/framebuffer_types.h"
 #include "renderer/UI/window/widget_types.h"
 
-// 
 
-// The window class, rendered onto the renderer.m_scene_fbuffer
+// 
 class window_t
 {
 public:
@@ -21,12 +19,18 @@ public:
     void init();
     void destroy();
 
+    void create_framebuffer();
+    void resize_framebuffer();
+    void destroy_framebuffer();
+    
     void draw();
     void draw_widgets();
 
     // interaction
     bool is_point_in_window(const glm::vec2 &_p);
     bool is_point_in_title_bar(const glm::vec2 &_p);
+
+    resize_handle_t get_resize_handle_at_pos(const glm::vec2 &_pos);
     
     // accessors
     const bool &is_active() { return m_is_active; }
@@ -34,13 +38,16 @@ public:
     const bool &is_focused() { return m_is_focused; }
     void set_focused(bool _focused) { m_is_focused = _focused; }
     const bool &has_frambuffer() { return m_has_framebuffer; }
-
+    const framebuffer_handle_t &get_framebuffer_handle() { return m_framebuffer_handle; }
+    glm::vec2 get_content_size() { return glm::vec2(size.x, size.y - title_bar_height); }
+    glm::vec2 get_content_position() { return glm::vec2(position.x, position.y + title_bar_height); }
     // widgets
     void add_widget(const widget_t &_widget);
     widget_t *get_widget(uint32_t _index);
     widget_t *get_widget_at_pos(const glm::vec2 &_pos);
     
 public:
+    // for events affecting this window dispatched from this window
     window_handle_t this_handle;
     
     // window params
@@ -67,15 +74,18 @@ private:
     widget_t m_widgets[SYN_WINDOW_MAX_WIDGET_COUNT];
     uint32_t m_widget_count = 0;
 
-    vertex_array_t m_vao_outline;
-
+    float m_resize_border_width = 5.0f;
+    glm::vec2 min_size = glm::vec2(100.0f, 100.0f);
+    glm::vec2 max_size = glm::vec2(2560.0f, 1600.0f);
+    
     bool m_has_framebuffer = false;
-    framebuffer_handle_t m_fbuffer = { 0 };
+    framebuffer_handle_t m_framebuffer_handle = { 0 };
 
     bool m_is_active = false;
     bool m_is_visible = false;
     bool m_is_focused = false;
     bool m_is_movable = true;
+    bool m_is_resizable = true;
     
 };
 

@@ -3,6 +3,7 @@
 
 #include "renderer/UI/window/window.h"
 #include "renderer/shader/shader_types.h"
+#include "renderer/buffers/vertex_array.h"
 #include "event/event.h"
 
 // 
@@ -26,23 +27,32 @@ public:
     void on_mouse_move_event(const event_t &_e);
     void on_ui_window_close_event(const event_t &_e);
 
+    // window creation/access
     window_handle_t add_window(window_t &_window);
     window_handle_t add_window(const window_desc_t &_desc);
-    void release_window(window_handle_t _handle);
-    
+    void release_window(window_handle_t _handle);    
     window_t *get_window(const window_handle_t &_handle);
+
+    // viewports
+    void set_viewport_window(const window_handle_t &_handle);
+    window_t *get_viewport_window();
+    window_handle_t get_viewport_window_handle() { return m_viewport_window_handle; }
+    bool has_viewport_window() { return m_viewport_window_handle.id != 0; }
 
     // interaction
     window_handle_t get_window_at_pos(const glm::vec2 _pos);
     void set_focused_window(window_handle_t _handle);
     const window_handle_t &get_focused_window() { return m_focused_window; }
 
+    // docking
+    void update_dock_zones(const glm::vec2 &_mouse_pos, const window_handle_t &_dragged_window_handle);
+    
+    // drawing
     void draw_windows();
+    void draw_framebuffer(window_t *_window);
 
 // private:
     void reorganize_depths();
-    // void init_drag_vao();
-    // void update_drag_vao(const glm::vec2 &_pos);
     
 private:
     window_t m_pool[SYN_MAX_WINDOW_COUNT];
@@ -50,15 +60,21 @@ private:
 
     shader_handle_t m_window_shader_handle;
 
+    window_handle_t m_viewport_window_handle = { 0 };
+    shader_handle_t m_tex_quad_shader_handle;
+    vertex_array_t m_tex_quad_vao;
+    
     glm::mat4 m_projection;
     
     // window focus and depth
+    window_handle_t m_hovered_window = { 0 };
     window_handle_t m_focused_window = { 0 };
     float m_zfar = -100.0f;
     float m_znear = 100.0f;
-    // assigns 0.05f per layer, leaving room for text rendering
-    float m_ddepth_per_layer = 0.05f;
-    float m_ddepth_layer_text = 0.01f;
+    
+    float m_ddepth_per_layer = 0.05f;       // assign 0.05f per layer, leaving room for text and frambuffer rendering
+    float m_ddepth_layer_text = 0.02f;
+    float m_ddepth_layer_texture = 0.01f;
     float m_next_depth = m_zfar;
 
     // moving windows
@@ -66,6 +82,23 @@ private:
     window_handle_t m_drag_window_handle = { 0 };
     glm::vec2 m_mouse_pos;
     glm::vec2 m_drag_offset;
+
+    // resizing windows
+    bool m_is_resizing = false;
+    window_handle_t m_resize_window_handle = { 0 };
+    resize_handle_t m_resize_handle = resize_handle_t::NONE;
+    glm::vec2 m_resize_start_pos = glm::vec2(0.0f);
+    glm::vec2 m_resize_start_size = glm::vec2(0.0f);
+    glm::vec2 m_resize_start_window_pos = glm::vec2(0.0f);
+
+    // docking
+    bool m_enable_docking = true;
+    float m_dock_preview_alpha = 0.3f;
+    float m_dock_zone_margin = 50.0f;
+    bool m_show_dock_zones = false;
+    dock_zone_visual_t m_dock_zone[5];
+    dock_zone_t m_hovered_dock_zone = dock_zone_t::NONE;
+    window_handle_t m_dock_target_window = { 0 };
     
 };
 

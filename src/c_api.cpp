@@ -68,9 +68,15 @@ void syn_init(const char *_name, int _width, int _height, int _mode)
     api.init();
     api.set_clear_color({ 0.2f, 0.2f, 0.2f, 1.0f });
 
+    // TODO : remove
+    // create framebuffers
+    // __fbo_main_handle = api.fbo_handler.create_framebuffer(color_format_t::RGBA16F, glm::ivec2(0), 1, true, "main_fbuffer");
+    // framebuffer_t *fbo = api.fbo_handler.get_framebuffer(__fbo_main_handle);
+    // SYN_INFO("created framebuffer '%s' (%dx%d).\n", fbo->get_name().c_str(), fbo->get_width(), fbo->get_height());
+    
     //
     renderer.init();
-    renderer.create_scene_framebuffer();
+    // renderer.create_scene_framebuffer();
     renderer_2d.init();
 
     //
@@ -89,7 +95,7 @@ void syn_init(const char *_name, int _width, int _height, int _mode)
     }
 
     window_manager.init();
-    
+
 }
 
 //
@@ -141,9 +147,10 @@ void syn_shutdown()
     
     renderer.shutdown();
     renderer_2d.shutdown();
-    
+
     syn_close_log();
     root_window.destroy();
+
 }
 
 
@@ -167,23 +174,54 @@ void syn_set_window_pos_quadrant(int _quadrant)
 
 }
 
-
 //---------------------------------------------------------------------------------------
 // rendering loop functions
 //
-void syn_render_begin_3d()
+bool __was_prerender_called = false; 
+void syn_prerender()
 {
+    if (__was_prerender_called) return;
+
     root_window.pre_render();
     renderer.reset_perf_counters();
+    
+    __was_prerender_called = false;
+    
+}
+
+// 
+void syn_render_begin_3d()
+{
+    syn_prerender();
+    
+    // 
+    window_t *viewport = window_manager.get_viewport_window();
+    if (viewport && viewport->has_frambuffer()) {
+        framebuffer_t *fbo = api.fbo_handler.get_framebuffer(viewport->get_framebuffer_handle());
+        if (fbo) {
+            fbo->bind();
+            
+            // set viewport to drawable area
+            glm::vec2 content_size = viewport->get_content_size();
+
+            float ar = content_size.x / content_size.y;
+            orbit_camera.set_aspect_ratio(ar);
+            orbit_camera.update_projection_matrix();
+
+            glViewport(0, 0, (size_t)content_size.x, (size_t)content_size.y);
+
+            api.set_clear_color({ 0.2f, 0.2f, 0.2f, 1.0f });
+            api.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        }
+    }
 
     // perspective_camera.update(time_step.dt);
     orbit_camera.update(time_step.dt);
 
     // bind the scene framebuffer, everything is rendered to this buffer
-    renderer.bind_scene_fbuffer();
+    // renderer.bind_scene_fbuffer();
 
-    api.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    renderer.render_skybox();
+    // api.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 }
 
@@ -191,8 +229,16 @@ void syn_render_begin_3d()
 void syn_render_end_3d()
 {
     //
-    renderer.draw_debug_orientation_obj();
+    renderer.render_debug_orientation_obj();
 
+    // the 3d fbo is now complete but needs to be rendered (elsewhere)
+    // TODO : move this to somewhere, for now just render on screen ndc
+    // renderer.render_scene_fbuffer();
+    window_t *viewport = window_manager.get_viewport_window();
+    if (viewport && viewport->has_frambuffer()) {
+        api.fbo_handler.unbind();
+    }
+    
     // draw_perf_overlay does NOT contain font.start_/.end_render_block()
     renderer.record_frame_time(time_step.dt * 1000.0f);
     renderer.draw_perf_stats();
@@ -206,18 +252,18 @@ void syn_render_end_3d()
 //
 void syn_render_end()
 {
-    // here we call end_render_block, effectively rendering all text with one call
+    // render all scene text
     font.end_render_block(false);
 
     // everything is drawn, render the screen NDC quad
-    renderer.render_scene_fbuffer();
+    // renderer.render_scene_fbuffer();
+    api.set_clear_color({ 0.0f, 0.0f, 0.0f, 1.0f });
+    api.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+    
     // ui rendering
     api.clear_depth_buffer();
-    
     window_manager.draw_windows();
-    // reset font rendring depth
-    font.set_depth(-1.0f);
     
     //
     root_window.post_render();
@@ -225,4 +271,6 @@ void syn_render_end()
     time_step.update();
     time_step.calculate_fps();
 
+    __was_prerender_called = false;
+    
 }

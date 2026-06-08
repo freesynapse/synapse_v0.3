@@ -82,10 +82,10 @@ void ui_render_batch_t::add_quad(const glm::vec2 &_position,
     m_quad_vertices[vertex_offset + 3] = ui_render_vertex_t({ _position.x,           _position.y + _size.y }, _color, _depth);
 
     m_quad_indices[index_offset + 0] = vertex_offset + 0;
-    m_quad_indices[index_offset + 1] = vertex_offset + 1;
+    m_quad_indices[index_offset + 1] = vertex_offset + 3;
     m_quad_indices[index_offset + 2] = vertex_offset + 2;
     m_quad_indices[index_offset + 3] = vertex_offset + 2;
-    m_quad_indices[index_offset + 4] = vertex_offset + 3;
+    m_quad_indices[index_offset + 4] = vertex_offset + 1;
     m_quad_indices[index_offset + 5] = vertex_offset + 0;
 
     m_quad_vertex_count += 4;
@@ -110,24 +110,21 @@ void ui_render_batch_t::add_line_strip(ui_render_vertex_t *_vertices, size_t _ve
 }
 
 // 
-void ui_render_batch_t::end_batch(bool _ui_shader_already_bound)
+void ui_render_batch_t::end_batch()
 {
     if (!m_quad_vertex_count && !m_line_vertex_count &&
         !m_quad_index_count && m_line_index_count) return;
     
     shader_t *shader;
-    if (!_ui_shader_already_bound) {
-        shader = shader_lib.get_shader(m_shader_handle);
-        if (!shader) return;
-    
-        glm::mat4 proj = glm::ortho(0.0f, root_window.get_fwidth(), 
-                                    root_window.get_fheight(), 0.0f, 
-                                    window_manager.m_zfar, window_manager.m_znear);
-        shader->enable();
-        shader->set_matrix_4fv("u_projection", proj);
-    }
+    shader = shader_lib.get_shader(m_shader_handle);
+    if (!shader) return;
 
-    // 
+    glm::mat4 proj = glm::ortho(0.0f, root_window.get_fwidth(), 
+                                root_window.get_fheight(), 0.0f, 
+                                window_manager.m_zfar, window_manager.m_znear);
+    shader->enable();
+    shader->set_matrix_4fv("u_projection", proj);
+
     if (m_quad_vertex_count > 0 && m_quad_index_count > 0)
     {
         m_vao_quads.bind();
@@ -146,6 +143,6 @@ void ui_render_batch_t::end_batch(bool _ui_shader_already_bound)
         m_vao_lines.unbind();
     }
 
-    if (!_ui_shader_already_bound) shader->disable();
+    shader->disable();
     
 }

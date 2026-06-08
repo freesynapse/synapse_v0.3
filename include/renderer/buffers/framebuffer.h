@@ -13,17 +13,20 @@
 class framebuffer_base_t
 {
 public:
+    friend class framebuffer_handler_t;
+    
+public:
 	framebuffer_base_t() {};
 	virtual ~framebuffer_base_t();
 
 	/* Binds the Framebuffer as the current GL_FRAMEBUFFER. */
-	virtual void bind(bool _set_viewport=true, bool _restore_prev_framebuffer=false);
-	/* Unbinds, through binding GL_FRAMEBUFFER to 0 or the previously bound, depending on flag when bind():ing. */
+	virtual void bind(bool _set_viewport=true);
+	/* Unbinds, through binding GL_FRAMEBUFFER to 0. */
 	virtual void unbind();
 	/* Unbinds, through binding GL_FRAMEBUFFER to 0. */
-	virtual inline void bindDefaultFramebuffer() { m_prevFramebufferID = 0; unbind(); }
+	virtual inline void bind_default_framebuffer() { unbind(); }
 
-	virtual void saveAsPNG(const std::string &_file_path="");
+	virtual void save_as_png(const std::string &_file_path="");
 
 protected:
 	/* Called on Syn::event_viewport_resize_t and also upon instantiation of this
@@ -46,11 +49,11 @@ public:
 	/* Binds specified COLOR_ATTACHMENT_N (_color_attachment_slot) to the specified
 	 * slot GL_TEXTURE0+_tex_slot as a GL_TEXTURE_2D.
 	 */
-	virtual void bindTexture(uint32_t _tex_slot=0, GLuint _color_attachment_slot=0) const;
+	virtual void bind_texture(uint32_t _tex_slot=0, GLuint _color_attachment_slot=0) const;
 	/* Same as above, but with the added option of changing the interpolation
 	 * parameters.
 	 */
-	virtual void bindTexture(uint32_t _tex_slot, GLuint _color_attachment_slot, GLint _interpolation) const;
+	virtual void bind_texture(uint32_t _tex_slot, GLuint _color_attachment_slot, GLint _interpolation) const;
 
 	/* Clears buffer using Syn::Renderer::getClearColor(). */
 	virtual void clear(uint32_t _buffer_mask=GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT) const;
@@ -59,35 +62,33 @@ public:
 					   uint32_t _buffer_mask=GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT) const;
 
 	/* Accessors */
-	GLuint  getFramebufferID() 				 { 	return m_framebufferID; 		}
-	GLuint* getColorAttachmentIDs() 		 { 	return m_colorAttachmentID; 	}
-	GLuint  getColorAttachmentIDn(size_t _n) { 	return m_colorAttachmentID[_n]; }
-	GLuint  getDepthAttachmentID() 			 { 	return m_depthAttachmentID; 	}
+	GLuint  get_framebuffer_id()                { 	return m_framebuffer_id; 		    }  
+	GLuint* get_color_attachment_ids() 		    { 	return m_color_attachment_ids; 	    }
+	GLuint  get_color_attachment_id(size_t _id) { 	return m_color_attachment_ids[_id]; }
+	GLuint  get_depth_attachment_id() 			{ 	return m_depth_attachment_id; 	    }
 
-	const glm::ivec2       &getSize() 	{ return m_size; 	}
-	uint32_t 			    getWidth() 	{ return m_size.x; 	}
-	uint32_t 			    getHeight() { return m_size.y; 	}
-	const color_format_t& 	getFormat() { return m_format; 	}
-	const std::string      &getName() 	{ return m_name; 	}
+	const glm::ivec2       &get_size() 	 { return m_size; 	}
+	uint32_t 			    get_width()  { return m_size.x; }
+	uint32_t 			    get_height() { return m_size.y; }
+	const color_format_t& 	get_format() { return m_format; }
+	const std::string      &get_name() 	 { return m_name; 	}
 
 protected:
-	GLuint 	m_framebufferID 			= 0;			// ID of Framebuffer
-	bool 	m_restorePrevFramebuffer	= true;			// restore previously bound framebuffer on unbind?
-	GLuint  m_prevFramebufferID			= 0; 
-	GLuint *m_colorAttachmentID 		= nullptr;		// Multiple attachments allowed, ie. when 
+	GLuint 	m_framebuffer_id 			= 0;			// ID of Framebuffer
+	GLuint *m_color_attachment_ids 		= nullptr;		// Multiple attachments allowed, ie. when 
 														// multiple draw targets are needed.
-	size_t  m_colorAttachmentCount 		= 1;			// Number of color attachments.
-	GLuint  m_depthAttachmentID 		= 0;			// ID of depth buffer.
-	bool	m_hasDepthAttachment		= true;			// Flag used in resize() to determine depth
+	size_t  m_color_attachment_count	= 1;			// Number of color attachments.
+	GLuint  m_depth_attachment_id 		= 0;			// ID of depth buffer.
+	bool	m_has_depth_attachment		= true;			// Flag used in resize() to determine depth
 														// buffer creation.
-	GLuint m_colorChannel = GL_COLOR_ATTACHMENT0;
+	GLuint m_color_channel = GL_COLOR_ATTACHMENT0;
 
 	glm::ivec2 m_size = glm::ivec2(-1);				    // Size (in px), if not set through during
 													    // construction defaults to Syn::Renderer
 													    // viewport size.
 
 	color_format_t m_format = color_format_t::NONE;		// Pixel format and precision (eg RGBA16F).
-	opengl_pixel_format_t m_pxFmt;						// OpenGL internal px format.
+	opengl_pixel_format_t m_pixel_format;		        // OpenGL internal px format.
 
 	std::string m_name = "";						    // String ID, used for debug.
 	

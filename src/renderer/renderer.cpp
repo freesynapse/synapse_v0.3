@@ -104,11 +104,12 @@ void renderer_t::on_resize(const event_t &_e)
 {
     glm::ivec2 new_viewport = _e.as.viewport_resize.viewport;
 
-    if (new_viewport.x > 0 && new_viewport.y > 0 && m_scene_fbuffer) {
+    if (new_viewport.x > 0 && new_viewport.y > 0 && m_scene_fbuffer_handle.id > 0) {
         // this should work, since the api is initialized before the renderer,
         // meaning that api.onresize have already updated the api.m_viewport when
         // this gets called.
-        m_scene_fbuffer->resize(api.m_viewport);
+        framebuffer_t *fbo = api.fbo_handler.get_framebuffer(m_scene_fbuffer_handle);
+        fbo->resize(api.m_viewport);
     }
 }
 
@@ -478,66 +479,57 @@ cubemap_handle_t renderer_t::convert_equirect_to_cubemap(const texture_handle_t 
 
 }
 
+
 //
-framebuffer_handle_t renderer_t::create_framebuffer(const color_format_t &_format, 
-                                                    const glm::ivec2 &_size,
-                                                    size_t _n_drawbuffers,
-                                                    bool _use_depthbuffer,
-                                                    const std::string &_name)
+// void renderer_t::create_scene_framebuffer() 
+// {
+//     m_scene_fbuffer_handle = api.fbo_handler.create_framebuffer(color_format_t::RGBA16F, glm::ivec2(0), 1, true, "scene_fbuffer");
+//     framebuffer_t *fbo = api.fbo_handler.get_framebuffer(m_scene_fbuffer_handle);
+
+//     SYN_INFO("created framebuffer '%s' (%dx%d).\n", fbo->get_name().c_str(), fbo->get_width(), fbo->get_height());
+    
+//     // create the shader
+//     m_scene_fbuffer_shader_handle = shader_lib.load_from_file("scene_buffer_shader", 
+//         "../assets/shaders/scene_fbuffer.glsl");
+
+//     // create the vertex array, no vertex data needed
+//     glCreateVertexArrays(1, &m_scene_fbuffer_vao);
+    
+// }
+
+//
+void renderer_t::bind_scene_fbuffer()
 {
-    if (m_frambuffer_count >= SYN_MAX_FRAMEBUFFERS) {
-        SYN_WARNING("max framebuffers reached.\n");
-        return { 0 };
+    if (m_scene_fbuffer_handle.id == 0) {
+        SYN_WARNING("invalid m_scene_fbuffer_handle: was the 3d scene bufffer created?\n"); 
+        return;
     }
-    
-    uint32_t slot = m_frambuffer_count;
-    m_framebuffers[slot].create(_format, _size, _n_drawbuffers, _use_depthbuffer, _name);
-    m_frambuffer_count++;
+    framebuffer_t *fbo = api.fbo_handler.get_framebuffer(m_scene_fbuffer_handle);
+    fbo->bind(); 
 
-    return { slot + 1 };
-    
 }
 
-//
-framebuffer_t *renderer_t::get_framebuffer(const framebuffer_handle_t &_handle) 
+// 
+void renderer_t::unbind_scene_fbuffer()
 {
-    if (!_handle.is_active() || _handle.id > m_frambuffer_count) {
-        return nullptr;
-    }
-    
-    return &m_framebuffers[_handle.id - 1];
-    
+    // assumes that the buffer was bound, warning message already logged, so 
+    // here we just use the !fbo guard (handle would be 0 -> nullptr).
+    framebuffer_t *fbo = api.fbo_handler.get_framebuffer(m_scene_fbuffer_handle);
+    if (fbo) fbo->unbind(); 
+
 }
-
-//
-void renderer_t::create_scene_framebuffer() 
-{
-    m_scene_fbuffer_handle = create_framebuffer(color_format_t::RGBA16F, glm::ivec2(0), 1, true, "scene_fbuffer");
-    m_scene_fbuffer = get_framebuffer(m_scene_fbuffer_handle);
-    
-    SYN_INFO("created framebuffer '%s' (%dx%d).\n",
-             m_scene_fbuffer->getName().c_str(), m_scene_fbuffer->getWidth(),
-             m_scene_fbuffer->getHeight());
-    
-    // create the shader
-    m_scene_fbuffer_shader_handle = shader_lib.load_from_file("scene_buffer_shader", 
-        "../assets/shaders/scene_fbuffer.glsl");
-
-    // create the vertex array, no vertex data needed
-    glCreateVertexArrays(1, &m_scene_fbuffer_vao);
-    
-}
-
-//
-void renderer_t::bind_scene_fbuffer() { m_scene_fbuffer->bind(); }
-void renderer_t::unbind_scene_fbuffer() { m_scene_fbuffer->bindDefaultFramebuffer(); }
 
 //
 void renderer_t::render_scene_fbuffer()
 {
     // unbind framebuffer, i.e. bind default buffer
-    // m_scene_fbuffer->unbind();
-    m_scene_fbuffer->bindDefaultFramebuffer();
+    framebuffer_t *fbo = api.fbo_handler.get_framebuffer(m_scene_fbuffer_handle);
+    if (!fbo) {
+        
+        return;
+    }
+    
+    fbo->unbind(); 
     
     // clear default buffer and disable depth test
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -548,7 +540,7 @@ void renderer_t::render_scene_fbuffer()
     // fbuffer
     shader_t *shader = shader_lib.get_shader(m_scene_fbuffer_shader_handle);
     shader->enable();
-    m_scene_fbuffer->bindTexture(0, 0);
+    fbo->bind_texture(0, 0);
     
     // bind vao and draw
     glBindVertexArray(m_scene_fbuffer_vao);
@@ -629,8 +621,7 @@ void renderer_t::cmd_flush()
         if (i == 0 || m_command_queue[i - 1].material.id != cmd.material.id) {
             // glNamedBufferSubData(renderer.m_material_ubo.opengl_id, 0,
             // sizeof(material_payload_t), &mat->payload);
-            glNamedBufferSubData(renderer.m_material_ubo.opengl_id, 0, mat->data_size,
-                                mat->data);
+            glNamedBufferSubData(renderer.m_material_ubo.opengl_id, 0, mat->data_size, mat->data);
         
             // bind the different textures
             for (uint32_t slot = 0; slot < (uint32_t)texture_map_type_t::COUNT; slot++) {
@@ -962,7 +953,7 @@ void renderer_t::toggle_tangents()       { m_debug.show_tangents       = !m_debu
 void renderer_t::toggle_bounding_boxes() { m_debug.show_bounding_boxes = !m_debug.show_bounding_boxes;  }
 void renderer_t::toggle_grid()           { m_debug.show_grid           = !m_debug.show_grid;            }
 //
-void renderer_t::draw_debug_normals(mesh_handle_t _mesh_handle, const glm::mat4 &_transform)
+void renderer_t::render_debug_normals(mesh_handle_t _mesh_handle, const glm::mat4 &_transform)
 {
     if (!m_debug.show_normals && !m_debug.show_tangents) return;
     if (!m_debug_initialized) return;
@@ -991,26 +982,26 @@ void renderer_t::draw_debug_normals(mesh_handle_t _mesh_handle, const glm::mat4 
 }
 
 //
-void renderer_t::draw_debug_bounding_box_entities(entity_t *_entity)
+void renderer_t::render_debug_bounding_box_entities(entity_t *_entity)
 {
     if (!_entity) {
         for (uint32_t i = 0; i < entity_lib.m_active_count; i++) {
             entity_t *e = &entity_lib.m_pool[i];
             mesh_internal_t *mesh = mesh_lib.get_mesh(e->mesh_handle);
             if (mesh) {
-                renderer.draw_debug_bounding_boxes(mesh->aabb_min, mesh->aabb_max, e->transform);
+                renderer.render_debug_bounding_boxes(mesh->aabb_min, mesh->aabb_max, e->transform);
             }
         }
     } else {
         mesh_internal_t *mesh = mesh_lib.get_mesh(_entity->mesh_handle);
         if (mesh) {
-            renderer.draw_debug_bounding_boxes(mesh->aabb_min, mesh->aabb_max, _entity->transform);
+            renderer.render_debug_bounding_boxes(mesh->aabb_min, mesh->aabb_max, _entity->transform);
         }
     }
 }
 
 //
-void renderer_t::draw_debug_bounding_boxes(const glm::vec3 &_min,
+void renderer_t::render_debug_bounding_boxes(const glm::vec3 &_min,
                                            const glm::vec3 &_max,
                                            const glm::mat4 &_transform)
 {
@@ -1072,7 +1063,7 @@ void renderer_t::draw_debug_bounding_boxes(const glm::vec3 &_min,
 }
 
 //
-void renderer_t::draw_debug_grid(float _y_level)
+void renderer_t::render_debug_grid(float _y_level)
 {
     if (!m_debug.show_grid) return;
     
@@ -1097,7 +1088,7 @@ void renderer_t::draw_debug_grid(float _y_level)
 }
 
 //
-void renderer_t::draw_debug_orientation_obj()
+void renderer_t::render_debug_orientation_obj()
 {
     api.set_viewport({0, 0}, {m_orientation_obj_size, m_orientation_obj_size});
     

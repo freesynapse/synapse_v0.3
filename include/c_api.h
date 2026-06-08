@@ -70,6 +70,7 @@ extern perspective_camera_t         perspective_camera;
 extern orbit_camera_t               orbit_camera;
 extern orthographic_camera_t        orthographic_camera;
 
+
 //---------------------------------------------------------------------------------------
 // high-level control functions
 //
@@ -95,10 +96,12 @@ void syn_set_window_pos_quadrant(int _quadrant);
 //---------------------------------------------------------------------------------------
 // rendering loop functions
 //
+void syn_prerender();
 void syn_render_begin_3d();
 void syn_render_end_3d();
 void syn_render_end();
 
+extern bool __was_prerender_called; 
 
 //---------------------------------------------------------------------------------------
 // rendering functions

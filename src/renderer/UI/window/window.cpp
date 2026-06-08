@@ -8,9 +8,11 @@
 // 
 void window_t::init()
 {
+    
     widget_t close_btn;
     close_btn.type          = widget_type_t::BUTTON;
-    close_btn.position      = glm::vec2(size.x - 25.0f, 3.0f);
+    close_btn.anchor        = widget_anchor_t::TOP_RIGHT;
+    close_btn.position      = glm::vec2(5.0f, 3.0f);
     close_btn.size          = glm::vec2(20.0f, 20.0f);
     close_btn.color         = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
     close_btn.hover_color   = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
@@ -21,6 +23,8 @@ void window_t::init()
         e.as.ui_window_close.handle = this->this_handle;
         events.dispatch_event(e);
     };
+
+    m_widget_count = 0;
     add_widget(close_btn);
     
     // default flags
@@ -32,19 +36,70 @@ void window_t::init()
 // 
 void window_t::destroy()
 {
+    destroy_framebuffer();
+    
+}
 
+// 
+void window_t::create_framebuffer()
+{
+    if (m_has_framebuffer) {
+        destroy_framebuffer();
+    }
+
+    glm::vec2 content_size = get_content_size();
+    if (content_size.x <= 0 || content_size.y <= 0) {
+        SYN_WARNING("invalid framebuffer size for window '%s'.\n", name.c_str());
+        return;
+    }
+    std::string id = name + "_framebuffer";
+    m_framebuffer_handle = api.fbo_handler.create_framebuffer(
+        color_format_t::RGBA16F, 
+        glm::ivec2(content_size.x, content_size.y), 
+        1, true, id);
+
+    m_has_framebuffer = (m_framebuffer_handle.id != 0);
+
+    SYN_INFO("created framebuffer for window '%s' (%dx%d).\n", 
+        name.c_str(), (int)content_size.x, (int)content_size.y);
+}
+
+// 
+void window_t::resize_framebuffer()
+{
+    if (!m_has_framebuffer) return;
+
+    glm::vec2 content_size = get_content_size();
+    framebuffer_t *fbo = api.fbo_handler.get_framebuffer(m_framebuffer_handle);
+
+    if (fbo) {
+        fbo->resize(glm::vec2((int)content_size.x, (int)content_size.y));
+    }
+}
+
+// 
+void window_t::destroy_framebuffer()
+{
+    if (m_has_framebuffer && m_framebuffer_handle.id == 0) {
+        // TODO : implement this?
+        // api.fbo_handler.release_framebuffer(m_framebuffer_handle);
+    }
+    m_framebuffer_handle = { 0 };
+    m_has_framebuffer = false;
 }
 
 // 
 void window_t::draw()
 {
     glm::vec4 tb_color = m_is_focused ? title_bar_color_focused : title_bar_color;
+
+    // title bar
     ui_batch_renderer.add_quad(position, { size.x, title_bar_height }, tb_color, depth);
 
+    // content area
     ui_batch_renderer.add_quad({ position.x, position.y + title_bar_height }, 
-                               { size.x, size.y - title_bar_height }, 
-                               bg_color, depth);
-
+                                { size.x, size.y - title_bar_height }, 
+                                bg_color, depth);
     // lines
     glm::vec2 p = position;
     glm::vec2 s = size;
@@ -77,8 +132,7 @@ void window_t::draw_widgets()
         widget_t *w = &m_widgets[i];
         if (!w->is_visible) return;
 
-        glm::vec2 p = position + w->position;
-        glm::vec2 s = w->size;
+        glm::vec2 p = w->get_absolute_position(position, size);
         glm::vec4 fg_c = w->is_hovered ? w->hover_color : w->color;
         glm::vec4 ol_c = w->outline_color;
         float depth_offset = (depth + 0.01f);
@@ -87,6 +141,7 @@ void window_t::draw_widgets()
             case widget_type_t::BUTTON: {
                 ui_batch_renderer.add_quad(p, w->size, fg_c, depth_offset);
 
+                glm::vec2 s = w->size;
                 ui_render_vertex_t line_vertices[] = {
                     ui_render_vertex_t({ p.x,       p.y       }, ol_c, depth_offset + 0.01f),
                     ui_render_vertex_t({ p.x + s.x, p.y       }, ol_c, depth_offset + 0.01f),
@@ -130,6 +185,30 @@ bool window_t::is_point_in_title_bar(const glm::vec2 &_p)
 }
 
 // 
+resize_handle_t window_t::get_resize_handle_at_pos(const glm::vec2 &_pos)
+{
+    float border = m_resize_border_width;
+
+    bool on_left   = (_pos.x >= position.x && _pos.x <= position.x + border);
+    bool on_right  = (_pos.x >= position.x + size.x - border && _pos.x <= position.x + size.x);
+    bool on_top    = (_pos.y >= position.y && _pos.y <= position.y + border);
+    bool on_bottom = (_pos.y >= position.y + size.y - border && _pos.y <= position.y + size.y);
+
+    if (on_top && on_left)      return resize_handle_t::TOP_LEFT;
+    if (on_top && on_right)     return resize_handle_t::TOP_RIGHT;
+    if (on_bottom && on_left)   return resize_handle_t::BOTTOM_LEFT;
+    if (on_bottom && on_right)  return resize_handle_t::BOTTOM_RIGHT;
+
+    if (on_top)     return resize_handle_t::TOP;
+    if (on_bottom)  return resize_handle_t::BOTTOM;
+    if (on_left)    return resize_handle_t::LEFT;
+    if (on_right)   return resize_handle_t::RIGHT;
+
+    return resize_handle_t::NONE;
+    
+}
+
+// 
 void window_t::add_widget(const widget_t &_widget)
 {
     if (m_widget_count >= SYN_WINDOW_MAX_WIDGET_COUNT) {
@@ -152,7 +231,7 @@ widget_t *window_t::get_widget_at_pos(const glm::vec2 &_pos)
 {
     for (int i = m_widget_count - 1; i >= 0; i--) {
         widget_t *w = &m_widgets[i];
-        if (w->is_visible && w->is_enabled && w->contains_point(position, _pos)) {
+        if (w->is_visible && w->is_enabled && w->contains_point(position, size, _pos)) {
             return w;
         }
     }

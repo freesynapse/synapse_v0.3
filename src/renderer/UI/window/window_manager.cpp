@@ -18,8 +18,19 @@ void window_manager_t::init()
     }
     m_active_count = 0;
     
-    m_window_shader_handle = shader_lib.load_from_file(
-        "ui_window_base_shader", "../assets/shaders/ui_window_base.glsl");
+    m_window_shader_handle = shader_lib.load_from_file("ui_window_base_shader", "../assets/shaders/ui_window_base.glsl");
+    m_tex_quad_shader_handle = shader_lib.load_from_file("ui_tex_quad_shader", "../assets/shaders/ui_quad_tex.glsl");
+
+    // 
+    glm::vec2 vs[] = { 
+        { 0.0f, 0.0f },
+        { 0.0f, 1.0f }, 
+        { 1.0f, 1.0f },
+        { 1.0f, 0.0f },
+    };
+    uint32_t is[] = { 0, 1, 2, 2, 3, 0 };
+    m_tex_quad_vao.set_buffer_layout({ { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT2 } });
+    m_tex_quad_vao.create(vs, 4, is, 6);
     
     //
     events.register_callback(event_type_t::INPUT_MOUSE_BUTTON, __window_on_mouse_button_callback);
@@ -39,6 +50,9 @@ void window_manager_t::shutdown()
             m_pool[i].destroy();
         }
     }
+
+    m_tex_quad_vao.destroy();
+    
 }
     
 //
@@ -53,8 +67,8 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
     window_handle_t clicked = get_window_at_pos(pos);
     if (action == SYN_MOUSE_BUTTON_PRESSED) {
     
-        if (clicked.id != 0) {
-            window_t *win = get_window(clicked);
+        if (clicked.id > 0) {
+            window_t *win = &m_pool[clicked.id - 1];
 
             // first check for widget
             widget_t *clicked_widget = win->get_widget_at_pos(pos);
@@ -62,8 +76,23 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
                 clicked_widget->on_click();
                 return;
             }
+
+            // check for resize
+            resize_handle_t resize_handle = win->get_resize_handle_at_pos(pos);
+            if (win->m_is_resizable && resize_handle != resize_handle_t::NONE) {
+                m_is_resizing = true;
+                m_resize_window_handle = clicked;
+                m_resize_handle = resize_handle;
+                m_resize_start_pos = pos;
+                m_resize_start_size = win->size;
+                m_resize_start_window_pos = win->position;
+                
+                set_focused_window(clicked);
+                
+                return;
+            }
             
-            //
+            // check for moving
             if (win->m_is_movable &&
                 pos.y >= win->position.y && 
                 pos.y <= win->position.y + win->title_bar_height) 
@@ -72,10 +101,14 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
                 m_drag_window_handle = clicked;
                 m_mouse_pos = pos;
                 m_drag_offset = pos - win->position;
+
+                set_focused_window(clicked);
             }
-            
+
+            // select clicked window
             if (clicked.id != m_focused_window.id) {
                 set_focused_window(clicked);
+                return;
             }
         } else {
             set_focused_window({ 0 });
@@ -88,6 +121,12 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
             m_is_dragging = false;
             m_drag_window_handle = { 0 };
         }
+
+        if (m_is_resizing) {
+            m_is_resizing = false;
+            m_resize_window_handle = { 0 };
+            m_resize_handle = resize_handle_t::NONE;
+        }
     }
 }
 
@@ -96,6 +135,117 @@ void window_manager_t::on_mouse_move_event(const event_t &_e)
 {
     m_mouse_pos = _e.as.mouse_move.pos;
 
+    //  hovering
+    m_hovered_window = get_window_at_pos(m_mouse_pos);
+    if (m_hovered_window.id > 0) {
+        window_t *win = &m_pool[m_hovered_window.id - 1];
+        resize_handle_t handle = win->get_resize_handle_at_pos(m_mouse_pos);
+
+        switch (handle) {
+            case resize_handle_t::LEFT:
+            case resize_handle_t::RIGHT:
+                root_window.set_cursor(GLFW_RESIZE_EW_CURSOR);
+                break;
+
+            case resize_handle_t::TOP:
+            case resize_handle_t::BOTTOM:
+                root_window.set_cursor(GLFW_RESIZE_NS_CURSOR);
+                break;
+
+            case resize_handle_t::TOP_LEFT:
+            case resize_handle_t::BOTTOM_RIGHT:
+                root_window.set_cursor(GLFW_RESIZE_NWSE_CURSOR);
+                break;
+
+            case resize_handle_t::TOP_RIGHT:
+            case resize_handle_t::BOTTOM_LEFT:
+                root_window.set_cursor(GLFW_RESIZE_NESW_CURSOR);
+                break;
+
+            default:
+                root_window.set_cursor(GLFW_ARROW_CURSOR);
+                break;
+        }
+    }
+    else {
+        root_window.set_cursor(GLFW_ARROW_CURSOR);
+    }
+    
+    // resizing window
+    if (m_is_resizing && m_resize_window_handle.id > 0) {
+        window_t *win = &m_pool[m_resize_window_handle.id - 1];
+        if (win->m_is_resizable) {
+            glm::vec2 delta = m_mouse_pos - m_resize_start_pos;
+            glm::vec2 new_size = m_resize_start_size;
+            glm::vec2 new_pos = m_resize_start_window_pos;
+    
+            switch (m_resize_handle) {
+                case resize_handle_t::RIGHT: {
+                    new_size.x = m_resize_start_size.x + delta.x;
+                    break;
+                }
+                case resize_handle_t::BOTTOM: {
+                    new_size.y = m_resize_start_size.y + delta.y;
+                    break;
+                }
+                case resize_handle_t::LEFT: {
+                    new_size.x = m_resize_start_size.x - delta.x;
+                    new_pos.x = m_resize_start_window_pos.x + delta.x;
+                    break;
+                }
+                case resize_handle_t::TOP: {
+                    new_size.y = m_resize_start_size.y - delta.y;
+                    new_pos.y = m_resize_start_window_pos.y + delta.y;
+                    break;
+                }
+                case resize_handle_t::BOTTOM_RIGHT: {
+                    new_size.x = m_resize_start_size.x + delta.x;
+                    new_size.y = m_resize_start_size.y + delta.y;
+                    break;
+                }
+                case resize_handle_t::BOTTOM_LEFT: {
+                    new_size.x = m_resize_start_size.x - delta.x;
+                    new_size.y = m_resize_start_size.y + delta.y;
+                    new_pos.x = m_resize_start_window_pos.x + delta.x;
+                    break;
+                }
+                case resize_handle_t::TOP_RIGHT: {
+                    new_size.x = m_resize_start_size.x + delta.x;
+                    new_size.y = m_resize_start_size.y - delta.y;
+                    new_pos.y = m_resize_start_window_pos.y + delta.y;
+                    break;
+                }
+                case resize_handle_t::TOP_LEFT: {
+                    new_size.x = m_resize_start_size.x - delta.x;
+                    new_size.y = m_resize_start_size.y - delta.y;
+                    new_pos.x = m_resize_start_window_pos.x + delta.x;
+                    new_pos.y = m_resize_start_window_pos.y + delta.y;
+                    break;
+                }
+    
+                default: break;
+            }
+            new_size.x = glm::clamp(new_size.x, win->min_size.x, win->max_size.x);
+            new_size.y = glm::clamp(new_size.y, win->min_size.y, win->max_size.y);
+    
+            win->size = new_size;
+            win->position = new_pos;
+
+            if (win->m_has_framebuffer) {
+                win->resize_framebuffer();
+            }
+            
+            return;
+        }
+    }
+
+    // moving windows -- the ui_batch_renderer takes care of the rendering
+    if (m_is_dragging && m_drag_window_handle.id > 0) {
+        window_t *win = &m_pool[m_drag_window_handle.id - 1];
+        win->position = m_mouse_pos - m_drag_offset;
+    }
+    
+    // widgets
     for (uint32_t i = 0; i < SYN_MAX_WINDOW_COUNT; i++) {
         window_t *win = &m_pool[i];
         if (!win->m_is_active || !win->m_is_visible) continue;
@@ -212,6 +362,41 @@ window_t *window_manager_t::get_window(const window_handle_t &_handle)
     return &m_pool[idx];
 }
 
+// 
+void window_manager_t::set_viewport_window(const window_handle_t &_handle)
+{
+    window_t *win = get_window(_handle);
+    if (!win) {
+        SYN_ERROR("invalid window handle for viewport.\n");
+        m_viewport_window_handle = { 0 };
+        return;
+    }
+
+    if (m_viewport_window_handle.id != 0 && m_viewport_window_handle.id != _handle.id) {
+        SYN_INFO("replacing viewport.\n");
+    }
+
+    m_viewport_window_handle = _handle;
+
+    SYN_INFO("set viewport window to '%s'.\n", win->name.c_str());
+    
+}
+
+// 
+window_t *window_manager_t::get_viewport_window()
+{
+    if (m_viewport_window_handle.id == 0) return nullptr;
+
+    window_t *win = get_window(m_viewport_window_handle);
+
+    if (!win || !win->is_active() || !win->is_visible()) {
+        m_viewport_window_handle = { 0 };
+        return nullptr;
+    }
+
+    return win;
+}
+
 //
 window_handle_t window_manager_t::get_window_at_pos(const glm::vec2 _pos)
 {
@@ -238,25 +423,22 @@ window_handle_t window_manager_t::get_window_at_pos(const glm::vec2 _pos)
 void window_manager_t::set_focused_window(window_handle_t _handle)
 {
     // unfocus previous
-    if (m_focused_window.id != 0) {
-        window_t *prev = get_window(m_focused_window);
+    if (m_focused_window.id > 0) {
+        window_t *prev = &m_pool[m_focused_window.id - 1];
         if (prev) {
             prev->set_focused(false);
-            prev->destroy();
-            prev->init();
+            // prev->destroy();
+            // prev->init();
         }
     }
 
     //  focus new window and bring to front
-    if (_handle.id != 0) {
-        window_t *win = get_window(_handle);
+    if (_handle.id > 0) {
+        window_t *win = &m_pool[_handle.id - 1];
         if (win) {
             win->set_focused(true);
             win->depth = m_next_depth;
             m_next_depth += 0.05;
-        
-            win->destroy();
-            win->init();
         
             if (m_next_depth > 99.5f) {
                 reorganize_depths();
@@ -268,62 +450,77 @@ void window_manager_t::set_focused_window(window_handle_t _handle)
 }
 
 //
+void update_dock_zones(const glm::vec2 &_mouse_pos, const window_handle_t &_dragged_window_handle)
+{
+    
+}
+
+//
 void window_manager_t::draw_windows()
 {
     api.set_depth_testing(true);
     api.set_depth_func(GL_LEQUAL);
     api.set_depth_mask(GL_TRUE);
 
-    ui_batch_renderer.begin_batch();
+    m_projection = glm::ortho(0.0f, root_window.get_fwidth(), 
+                              root_window.get_fheight(), 0.0f, 
+                              m_zfar, m_znear);
     
-    //
-    for (uint32_t i = 0; i < m_active_count; i++) {
+    // 1. draw all colored geometry
+    ui_batch_renderer.begin_batch();
+
+    for (uint32_t i = 0; i < SYN_MAX_WINDOW_COUNT; i++) {
         window_t *win = &m_pool[i];
         if (win->is_active() && win->is_visible()) {
             win->draw();
         }
     }
 
-    bool ui_shader_bound = false;
-    if (m_is_dragging) {
-        glm::ivec2 dims = root_window.window_dims();
-        m_projection = glm::ortho(0.0f, (float)dims.x, (float)dims.y, 0.0f, m_zfar, m_znear);
-        
-        shader_t *shader = shader_lib.get_shader(m_window_shader_handle);
-        if (!shader) {
-            SYN_FATAL_ERROR("invalid window manager shader handle.\n");
-            return;
+    ui_batch_renderer.end_batch();
+
+    // 2. draw all textured content.
+    for (uint32_t i = 0; i < SYN_MAX_WINDOW_COUNT; i++) {
+        window_t *win = &m_pool[i];
+        if (win->is_active() && win->is_visible() && win->has_frambuffer()) {
+            draw_framebuffer(win);
         }
-        
-        shader->enable();
-        shader->set_matrix_4fv("u_projection", m_projection);
-        
-        window_t *win = get_window(m_drag_window_handle);
-        if (!win) return;
-        glm::vec2 p = m_mouse_pos - m_drag_offset;
-        glm::vec2 s = win->size;
-        float tb_h = win->title_bar_height;
-        glm::vec4 color = glm::vec4(0.6f, 0.6f, 0.6f, 1.0f);
-        float d = m_znear;
-        ui_render_vertex_t line_vertices[] = {
-            ui_render_vertex_t({ p.x,       p.y + tb_h }, color, d),
-            ui_render_vertex_t({ p.x,       p.y        }, color, d),
-            ui_render_vertex_t({ p.x + s.x, p.y        }, color, d),
-            ui_render_vertex_t({ p.x + s.x, p.y + tb_h }, color, d),
-            ui_render_vertex_t({ p.x,       p.y + tb_h }, color, d),
-            ui_render_vertex_t({ p.x,       p.y + s.y  }, color, d),
-            ui_render_vertex_t({ p.x + s.x, p.y + s.y  }, color, d),
-            ui_render_vertex_t({ p.x + s.x, p.y + tb_h }, color, d),
-        };
-
-        // 
-        ui_batch_renderer.add_line_strip(line_vertices, sizeof(line_vertices) / sizeof(line_vertices[0]));
-
-        ui_shader_bound = true;
     }
-
-    ui_batch_renderer.end_batch(ui_shader_bound);
+    
+    // 3. draw text
     font.end_render_block(true);
+    
+}
+
+// 
+void window_manager_t::draw_framebuffer(window_t *_win)
+{
+    printf("Content pos: (%.1f, %.1f), size: (%.1f, %.1f), depth: %.3f\n", 
+        _win->get_content_position().x, _win->get_content_position().y,
+        _win->get_content_size().x, _win->get_content_size().y,
+        _win->depth + m_ddepth_layer_texture);
+
+    framebuffer_t *fbo = api.fbo_handler.get_framebuffer(_win->m_framebuffer_handle);
+    if (!fbo) return;
+    printf("FBO size: (%d, %d), Window content size: (%.0f, %.0f)\n",
+        fbo->get_width(), fbo->get_height(),
+        _win->get_content_size().x, _win->get_content_size().y);
+    
+    shader_t *shader = shader_lib.get_shader(m_tex_quad_shader_handle);
+    if (!shader) return;
+    
+    shader->enable();
+    shader->set_matrix_4fv("u_projection", m_projection);
+    shader->set_uniform_2fv("u_position", _win->get_content_position());
+    shader->set_uniform_2fv("u_size", _win->get_content_size());
+    shader->set_uniform_1f("u_depth", _win->depth + m_ddepth_layer_texture);
+
+    fbo->bind_texture(0, 0);
+
+    m_tex_quad_vao.bind();
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    m_tex_quad_vao.unbind();
+        
+    shader->disable();
     
 }
 
@@ -339,7 +536,7 @@ void window_manager_t::reorganize_depths()
     
     for (uint32_t i = 0; i < m_active_count; i++) {
         if (m_pool[i].is_active()) {
-        active_windows.push_back({i, m_pool[i].depth});
+        active_windows.push_back({ i, m_pool[i].depth });
         }
     }
     

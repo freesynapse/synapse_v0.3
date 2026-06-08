@@ -97,15 +97,22 @@ mesh_handle_t generate_skybox_cube()
         {-0.5f,  0.5f, -0.5f}, 
     };
 
+    // uint32_t cube_indices[] = {
+    //     0, 1, 2,    0, 2, 3,    // Front
+    //     4, 5, 6,    4, 6, 7,    // Back
+    //     8, 9, 10,   8, 10, 11,  // Top
+    //     12, 13, 14, 12, 14, 15, // Bottom
+    //     16, 17, 18, 16, 18, 19, // Right
+    //     20, 21, 22, 20, 22, 23  // Left
+    // };
     uint32_t cube_indices[] = {
-        0, 1, 2,    0, 2, 3,    // Front
-        4, 5, 6,    4, 6, 7,    // Back
-        8, 9, 10,   8, 10, 11,  // Top
-        12, 13, 14, 12, 14, 15, // Bottom
-        16, 17, 18, 16, 18, 19, // Right
-        20, 21, 22, 20, 22, 23  // Left
+        2, 1, 0,    3, 2, 0,    // Front
+        6, 5, 4,    7, 6, 4,    // Back
+        10, 9, 8,   11, 10, 8,  // Top
+        14, 13, 12, 15, 14, 12, // Bottom
+        18, 17, 16, 19, 18, 16, // Right
+        22, 21, 20, 23, 22, 20  // Left
     };
-
     vertex_array_t vao;
     vao.set_buffer_layout({ 
         { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT3 },

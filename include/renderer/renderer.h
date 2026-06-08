@@ -1,5 +1,5 @@
-#ifndef __RENDERER_EX_H
-#define __RENDERER_EX_H
+#ifndef __RENDERER_H
+#define __RENDERER_H
 
 #include "event/event.h"
 #include "renderer/buffers/vertex_array.h"
@@ -52,13 +52,8 @@ public:
 	cubemap_handle_t convert_equirect_to_cubemap(const texture_handle_t &_hdr_tex_handle);
 
 	// framebuffer functions
-	framebuffer_handle_t create_framebuffer(const color_format_t& _format=color_format_t::RGBA16F,
-				                            const glm::ivec2& _size=glm::ivec2(0),
-				                            size_t _n_drawbuffers=1,
-				                            bool _use_depthbuffer=true,
-				                            const std::string& _name="");
-	framebuffer_t *get_framebuffer(const framebuffer_handle_t &_handle);
-	void create_scene_framebuffer();
+	// void create_scene_framebuffer();
+	void set_scene_framebuffer(const framebuffer_handle_t &_handle) { m_scene_fbuffer_handle = _handle; }
 	void bind_scene_fbuffer();
 	void unbind_scene_fbuffer();
 	void render_scene_fbuffer();
@@ -89,27 +84,23 @@ public:
 	void toggle_bounding_boxes();
 	void toggle_grid();
 
-	void draw_debug_normals(mesh_handle_t _mesh_handle, const glm::mat4 &_transform);
-	void draw_debug_tangents(mesh_handle_t _mesh_handle, const glm::mat4 &_transform);
+	void render_debug_normals(mesh_handle_t _mesh_handle, const glm::mat4 &_transform);
+	void render_debug_tangents(mesh_handle_t _mesh_handle, const glm::mat4 &_transform);
 	// if _entity is nullptr, AABBs of all entities in the entity library are drawn
-	void draw_debug_bounding_box_entities(entity_t *_entity=nullptr);
-	void draw_debug_bounding_boxes(const glm::vec3 &_min, const glm::vec3 &_max, const glm::mat4 &_transform);
-	void draw_debug_bounding_boxes(entity_t *_entity=nullptr);
-	void draw_debug_grid(float _y_level=0.0f);
-	void draw_debug_orientation_obj();
+	void render_debug_bounding_box_entities(entity_t *_entity=nullptr);
+	void render_debug_bounding_boxes(const glm::vec3 &_min, const glm::vec3 &_max, const glm::mat4 &_transform);
+	void render_debug_bounding_boxes(entity_t *_entity=nullptr);
+	void render_debug_grid(float _y_level=0.0f);
+	void render_debug_orientation_obj();
 
 
 public:
-	// framebuffer storage
 	GLuint m_stored_framebuffer = 0;
-	framebuffer_t m_framebuffers[SYN_MAX_FRAMEBUFFERS];
-	uint32_t m_frambuffer_count = 0;
 
 	// main, final, framebuffer -- everything renders to this
 	uint32_t m_scene_fbuffer_vao;
 	shader_handle_t m_scene_fbuffer_shader_handle;
 	framebuffer_handle_t m_scene_fbuffer_handle;
-	framebuffer_t *m_scene_fbuffer;
 
 	// ubos
 	uniform_buffer_t m_material_ubo;

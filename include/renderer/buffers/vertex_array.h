@@ -24,6 +24,8 @@
 #define VERTEX_ATTRIB_LOCATION_COLOR		5
 #define VERTEX_ATTRIB_LOCATION_DEPTH        6
 
+#define VERTEX_ATTRIB_LOCATION_PADDING     32
+
 // 
 enum class shader_data_type_t { 
 	NONE = 0,

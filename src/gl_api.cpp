@@ -7,17 +7,16 @@
 
 
 // static event callback wrappers
-static void __gl_api_on_resize_callback(const event_t &_e)
-{
-    api.on_resize(_e);
-
-}
+static void __gl_api_on_resize_callback(const event_t &_e) { api.on_resize(_e); }
 
 //
 void gl_api_t::init()
 {
     m_viewport = root_window.window_dims();
 
+    // 
+    fbo_handler.init();
+    
     // register function to receive viewport resize events
     events.register_callback(event_type_t::VIEWPORT_RESIZE, __gl_api_on_resize_callback);
 

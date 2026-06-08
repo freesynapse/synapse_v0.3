@@ -54,6 +54,8 @@ void handle_input()
 // test code
 void render(float _dt)
 {
+    renderer.render_skybox();
+
     // renderer.cmd_submit_mesh(helmet.mesh_handle, helmet.material_handle, helmet.transform);
     renderer.cmd_submit_entity(helmet);
     renderer.cmd_submit_entity(sphere);
@@ -61,15 +63,15 @@ void render(float _dt)
 
     if (renderer.m_debug.show_normals || renderer.m_debug.show_tangents) {
         entity_t *e = entity_lib.get_entity(sphere);
-        renderer.draw_debug_normals(e->mesh_handle, e->transform);
+        renderer.render_debug_normals(e->mesh_handle, e->transform);
     }
 
     if (renderer.m_debug.show_bounding_boxes) {
-        renderer.draw_debug_bounding_box_entities();
+        renderer.render_debug_bounding_box_entities();
     }
 
     if (renderer.m_debug.show_grid) {
-        renderer.draw_debug_grid(-2.0f);
+        renderer.render_debug_grid(-2.0f);
     }
 
 }
@@ -133,19 +135,30 @@ int main()
     orbit_camera.m_y_angle = 82.0f;
     orbit_camera.m_radius = 3.0f;
 
-    window_t win1;
-    win1.name = "test window 1";
-    win1.position = { 100.0f, 100.0f };
-    win1.size = { 400.0f, 400.0f };
-    window_handle_t win1_handle = window_manager.add_window(win1);
+    // window_t win1;
+    // win1.name = "test window 1";
+    // win1.position = { 100.0f, 100.0f };
+    // win1.size = { 400.0f, 400.0f };
+    // window_handle_t win1_handle = window_manager.add_window(win1);
     
-    window_t win2;
-    win2.name = "test window 2";
-    win2.position = { 150.0f, 150.0f };
-    win2.size = { 400.0f, 400.0f };
-    win2.set_focused(true);
-    window_handle_t win2_handle = window_manager.add_window(win2);
+    // window_t win2;
+    // win2.name = "test window 2";
+    // win2.position = { 150.0f, 150.0f };
+    // win2.size = { 400.0f, 400.0f };
+    // win2.set_focused(true);
+    // window_handle_t win2_handle = window_manager.add_window(win2);
 
+    window_t viewport;
+    viewport.name = "Viewport";
+    viewport.position = glm::vec2(100.0f, 100.0f);// glm::vec2(0.0f);
+    viewport.size = glm::vec2(600.0f);//root_window.window_fdims();
+    window_handle_t viewport_handle = window_manager.add_window(viewport);
+
+    window_manager.set_viewport_window(viewport_handle);
+    
+    window_t *vp = window_manager.get_window(viewport_handle);
+    vp->create_framebuffer();
+    
     //
     while (!root_window.should_close()) {
 
@@ -153,9 +166,7 @@ int main()
 
         // RENDERING 3D tests
         syn_render_begin_3d();
-
         render(time_step.dt);
-
         syn_render_end_3d();
     }
 

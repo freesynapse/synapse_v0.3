@@ -24,6 +24,9 @@ struct glfw_window_t
     void update();
     void center_cursor();
 
+    GLFWcursor *get_cursor_handle(int _shape);
+    void set_cursor(int _shape);
+    
     // glfw callback
     void glfw_window_resize_callback(GLFWwindow* _window, int _width, int _height);
 
@@ -45,6 +48,7 @@ struct glfw_window_t
     void set_window_dim(const glm::ivec2 &_dims) { m_window_dim = _dims; glfwSetWindowSize(m_window_ptr, _dims.x, _dims.y); glfwPollEvents(); }
     void set_window_dim(int _w, int _h) { m_window_dim = { _w, _h }; glfwSetWindowSize(m_window_ptr, _w, _h); glfwPollEvents(); }
     const glm::ivec2 &window_dims() { return (m_is_fullscreen ? m_screen_dim : m_window_dim); }
+    const glm::vec2 window_fdims() { return (m_is_fullscreen ? glm::vec2(m_screen_dim.x, m_screen_dim.y) : glm::vec2(m_window_dim.x, m_window_dim.y)); }
     float get_fwidth() { return (m_is_fullscreen ? m_screen_dim.x : m_window_dim.x); }
     float get_fheight() { return (m_is_fullscreen ? m_screen_dim.y : m_window_dim.y); }
     void set_fullscreen(const bool& _fullscreen);
@@ -54,10 +58,10 @@ struct glfw_window_t
     
     //int width = 0;
     //int height = 0;
-    private:
+private:
     glm::ivec2 m_window_dim = { 0, 0 };
 
-    public:
+public:
     //int m_screen_width = 0;
     //int m_screen_height = 0;
     glm::ivec2 m_screen_dim = { 0, 0 };
@@ -87,6 +91,13 @@ struct glfw_window_t
     bool m_is_cursor_visible = true;
     bool m_is_vsync = true;
 
+    // cursors
+    GLFWcursor *m_cursor_arrow;
+    GLFWcursor *m_cursor_resize_ew;
+    GLFWcursor *m_cursor_resize_ns;
+    GLFWcursor *m_cursor_resize_diag_nesw;
+    GLFWcursor *m_cursor_resize_diag_nwse;
+    
 };
 
 

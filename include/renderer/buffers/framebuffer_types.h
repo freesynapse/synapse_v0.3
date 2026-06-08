@@ -2,12 +2,10 @@
 #define __FRAMEBUFFER_TYPES_H
 
 #include <stdint.h>
+#include <stddef.h>
 
 #include "external/glad/glad.h"
 
-
-// 
-#define SYN_MAX_FRAMEBUFFERS    16
 
 // 
 enum class color_format_t : uint8_t {

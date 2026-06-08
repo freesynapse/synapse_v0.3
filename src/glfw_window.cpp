@@ -123,6 +123,13 @@ int glfw_window_t::init(const char *_name, int _width, int _height)
 	glfwPollEvents();
 	glfwSetCursorPos(m_window_ptr, m_window_dim.x * 0.5f, m_window_dim.y * 0.5f);
 
+	// preset cursor handles
+	m_cursor_arrow = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+	m_cursor_resize_ew = glfwCreateStandardCursor(GLFW_RESIZE_EW_CURSOR);
+	m_cursor_resize_ns = glfwCreateStandardCursor(GLFW_RESIZE_NS_CURSOR);
+	m_cursor_resize_diag_nesw = glfwCreateStandardCursor(GLFW_RESIZE_NESW_CURSOR);
+	m_cursor_resize_diag_nwse = glfwCreateStandardCursor(GLFW_RESIZE_NWSE_CURSOR);
+	
 	//
 	return 0;
 }
@@ -169,6 +176,27 @@ void glfw_window_t::center_cursor()
 	// glm::vec2 half_vp = Renderer::getViewportF() * 0.5f;
 	// glfwSetCursorPos(m_window_ptr, floor(half_vp.x), floor(half_vp.y));
 	glfwSetCursorPos(m_window_ptr, m_window_dim.x * 0.5f, m_window_dim.y * 0.5f);
+}
+
+// 
+GLFWcursor *glfw_window_t::get_cursor_handle(int _shape)
+{
+    switch (_shape) {
+        case GLFW_ARROW_CURSOR:         return m_cursor_arrow;
+        case GLFW_RESIZE_EW_CURSOR:     return m_cursor_resize_ew;
+        case GLFW_RESIZE_NS_CURSOR:     return m_cursor_resize_ns;
+        case GLFW_RESIZE_NESW_CURSOR:   return m_cursor_resize_diag_nesw;
+        case GLFW_RESIZE_NWSE_CURSOR:   return m_cursor_resize_diag_nwse;
+        default:                        return m_cursor_arrow;
+    }
+    
+}
+
+// 
+void glfw_window_t::set_cursor(int _shape)
+{
+    glfwSetCursor(m_window_ptr, get_cursor_handle(_shape));
+    
 }
 
 //
