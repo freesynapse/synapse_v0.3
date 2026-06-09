@@ -47,6 +47,7 @@ void orbit_camera_t::init(float _fov_deg,
 	events.register_callback(event_type_t::VIEWPORT_RESIZE, __orbit_camera_viewport_resize_callback);
 	events.register_callback(event_type_t::WINDOW_TOGGLE_FROZEN_CURSOR, __orbit_camera_frozen_cursor_callback);
 	events.register_callback(event_type_t::INPUT_MOUSE_SCROLL, __orbit_camera_mouse_scroll_callback);
+	events.register_callback(event_type_t::WINDOW_RESIZE, __orbit_camera_window_resize_callback);
 }
 
 //
@@ -125,6 +126,8 @@ void orbit_camera_t::handle_input(float _dt)
 //
 void orbit_camera_t::on_viewport_resize(const event_t &_e)
 {
+    if (window_manager.has_viewport_window()) return;
+    
     glm::vec2 viewport = _e.as.viewport_resize.viewport_f;
     if (viewport.x <= 0 || viewport.y <= 0) return;
 

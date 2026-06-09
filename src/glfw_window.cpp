@@ -63,21 +63,25 @@ int glfw_window_t::init(const char *_name, int _width, int _height)
 	glfwSwapInterval(0);
 	glfwSetWindowUserPointer(m_window_ptr, this);
 	m_primary_monitor = glfwGetPrimaryMonitor();
-	video_mode = glfwGetVideoMode(m_primary_monitor);
-	m_screen_dim = { video_mode->width, video_mode->height };
+	m_video_mode = glfwGetVideoMode(m_primary_monitor);
+	m_screen_dim = { m_video_mode->width, m_video_mode->height };
     SYN_INFO("primary monitor size %dx%d.\n", m_screen_dim.x, m_screen_dim.y);
 
     m_render_dim = m_window_dim;
 
 	// set window size
-	if (m_window_dim.x == 0 || m_window_dim.y == 0) {
-	    m_window_dim = m_screen_dim;
-		m_window_position = { 0, 0 };
+	debug_vector("", "m_window_dim", m_window_dim);
+	if (_width == 0 || _height == 0) {
+	    // start in fullscreen
+		glfwSetWindowMonitor(m_window_ptr, m_primary_monitor, 0, 0, m_screen_dim.x, m_screen_dim.y, m_video_mode->refreshRate);
+		m_window_dim = m_screen_dim;
+		m_is_fullscreen = true;
 	}
-
-	glfwSetWindowSize(m_window_ptr, m_window_dim.x, m_window_dim.y);
-	glfwSetWindowPos(m_window_ptr, m_window_position.x, m_window_position.y);
-
+	else {
+        glfwSetWindowSize(m_window_ptr, m_window_dim.x, m_window_dim.y);
+        glfwSetWindowPos(m_window_ptr, m_window_position.x, m_window_position.y);
+	}
+	
 	// window callbacks
 	//
 	glfwSetFramebufferSizeCallback(m_window_ptr, __glfw_window_resize_callback);
@@ -206,7 +210,7 @@ void glfw_window_t::set_fullscreen(const bool& _fullscreen)
 	m_is_fullscreen = _fullscreen;
 
 	if (m_is_fullscreen) {
-		glfwSetWindowMonitor(m_window_ptr, m_primary_monitor, 0, 0, m_screen_dim.x, m_screen_dim.y, video_mode->refreshRate);
+		glfwSetWindowMonitor(m_window_ptr, m_primary_monitor, 0, 0, m_screen_dim.x, m_screen_dim.y, m_video_mode->refreshRate);
 	} else {
 		glfwSetWindowMonitor(m_window_ptr, NULL, m_window_position.x, m_window_position.y, m_window_dim.x, m_window_dim.y, 0);
 	}

@@ -78,7 +78,7 @@ public:
 
     GLFWwindow* m_window_ptr = NULL;
     GLFWmonitor* m_primary_monitor = NULL;
-    const GLFWvidmode* video_mode;
+    const GLFWvidmode* m_video_mode;
 
     uint32_t m_to_close_key = SYN_KEY_ESCAPE;
     

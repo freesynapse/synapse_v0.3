@@ -57,8 +57,14 @@ void window_t::create_framebuffer()
         color_format_t::RGBA16F, 
         glm::ivec2(content_size.x, content_size.y), 
         1, true, id);
+
     orbit_camera.set_aspect_ratio(content_size.x / content_size.y);
     orbit_camera.update_projection_matrix();
+    orbit_camera.init(60.0f, content_size.x, content_size.y, 0.1f, 1000.0f);
+
+    debug_vector(__func__, "content_size", content_size);
+    printf("%s: orbit_camera aspect ratio: %f\n", __func__, orbit_camera.get_aspect_ratio());
+    debug_matrix(__func__, "cam proj", orbit_camera.get_projection_matrix());
 
     m_has_framebuffer = (m_framebuffer_handle.id != 0);
 

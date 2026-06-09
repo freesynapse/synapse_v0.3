@@ -106,10 +106,9 @@ void setup_lights()
 //
 int main()
 {
-    syn_init("synapse v0.3", 1280, 800, SYN_MODE_3D);
+    syn_init("synapse v0.3", 0, 0, SYN_MODE_3D);
     root_window.set_exit_key(SYN_KEY_ESCAPE);
-    syn_set_window_pos_quadrant(UPPER_RIGHT);
-    // root_window.toggle_fullscreen();
+    // syn_set_window_pos_quadrant(UPPER_RIGHT);
 
     syn_load_assets("../assets/manifests/helmet_test.syn");
     helmet = assets.get_entity("helmet");
@@ -141,12 +140,12 @@ int main()
     // win1.size = { 400.0f, 400.0f };
     // window_handle_t win1_handle = window_manager.add_window(win1);
     
-    // window_t win2;
-    // win2.name = "test window 2";
-    // win2.position = { 150.0f, 150.0f };
-    // win2.size = { 400.0f, 400.0f };
-    // win2.set_focused(true);
-    // window_handle_t win2_handle = window_manager.add_window(win2);
+    window_t win2;
+    win2.name = "test window 2";
+    win2.position = { 150.0f, 150.0f };
+    win2.size = { 400.0f, 400.0f };
+    win2.set_focused(true);
+    window_handle_t win2_handle = window_manager.add_window(win2);
 
     window_t viewport;
     viewport.name = "Viewport";

@@ -1,6 +1,7 @@
 .zed/
 .cache/
 build/
+script/
 assets/models/
 assets/textures/
 assets/font/
@@ -14,4 +15,3 @@ cmake_notes.md
 notes.md
 compile_commands.json
 .clangd
-gemini.txt

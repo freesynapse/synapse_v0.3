@@ -126,7 +126,8 @@ void syn_mode_3d()
     glm::ivec2 dims = root_window.window_dims();
     orbit_camera.init(60.0f, dims.x, dims.y, 0.1f, 1000.0f);
     perspective_camera.init(60.0f, dims.x, dims.y, 0.1f, 1000.0f);
-
+    debug_vector(__func__, "root_window.window_dims()", root_window.window_dims());
+    debug_matrix(__func__, "cam proj", orbit_camera.get_projection_matrix());
 }
 
 //
@@ -179,7 +180,7 @@ void syn_prerender()
     root_window.pre_render();
     renderer.reset_perf_counters();
     
-    __was_prerender_called = false;
+    __was_prerender_called = true;
     
 }
 

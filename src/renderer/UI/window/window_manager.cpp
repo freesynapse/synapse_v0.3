@@ -649,23 +649,24 @@ void window_manager_t::draw_dock_zone_overlays()
         glm::vec4 b = m_dock_zones[i].bounds;
         glm::vec4 color = glm::vec4(0.65f, 0.30f, 0.04f, m_dock_preview_alpha);
         
-        // Draw preview overlay
-        ui_batch_renderer.add_quad(
-            glm::vec2(b.x, b.y),
-            glm::vec2(b.z, b.w),
-            color,
-            m_znear - 0.1f  // Draw on top
-        );
+        //
+        ui_batch_renderer.add_quad(glm::vec2(b.x, b.y), glm::vec2(b.z, b.w), color, m_znear - 0.5f);
         
         // Draw outline
         glm::vec4 outline_color = glm::vec4(1.0f, 0.55f, 0.05f, 0.8f);
+        float x0 = b.x + 1.0f;
+        float y0 = b.y + 1.0f;
+        float x1 = b.x + b.z - 1.0f;
+        float y1 = b.y + b.w - 1.0f;
+        
         ui_render_vertex_t outline[] = {
-            ui_render_vertex_t({ b.x,       b.y       }, outline_color, m_znear - 0.05f),
-            ui_render_vertex_t({ b.x + b.z, b.y       }, outline_color, m_znear - 0.05f),
-            ui_render_vertex_t({ b.x + b.z, b.y + b.w }, outline_color, m_znear - 0.05f),
-            ui_render_vertex_t({ b.x,       b.y + b.w }, outline_color, m_znear - 0.05f),
-            ui_render_vertex_t({ b.x,       b.y       }, outline_color, m_znear - 0.05f),
+            ui_render_vertex_t({ x0, y0 }, outline_color, m_znear - 0.1f),
+            ui_render_vertex_t({ x1, y0 }, outline_color, m_znear - 0.1f),
+            ui_render_vertex_t({ x1, y1 }, outline_color, m_znear - 0.1f),
+            ui_render_vertex_t({ x0, y1 }, outline_color, m_znear - 0.1f),
+            ui_render_vertex_t({ x0, y0 }, outline_color, m_znear - 0.1f),
         };
+
         ui_batch_renderer.add_line_strip(outline, 5);
     }
 }

@@ -113,7 +113,7 @@ void ui_render_batch_t::add_line_strip(ui_render_vertex_t *_vertices, size_t _ve
 void ui_render_batch_t::end_batch()
 {
     if (!m_quad_vertex_count && !m_line_vertex_count &&
-        !m_quad_index_count && m_line_index_count) return;
+        !m_quad_index_count && !m_line_index_count) return;
     
     shader_t *shader;
     shader = shader_lib.get_shader(m_shader_handle);
