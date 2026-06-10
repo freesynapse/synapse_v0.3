@@ -67,7 +67,6 @@ public:
 	void reset_perf_counters();
 	void record_frame_time(float _dt_ms);
 	void toggle_perf_overlay();
-	void init_perf_graph();
 	void show_notification(const std::string &_msg, float _duration_s=4.0f);
 	void draw_notifications();
 	void draw_perf_stats();

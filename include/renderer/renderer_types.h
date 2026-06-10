@@ -29,9 +29,6 @@ struct render_command_t {
 struct perf_stats_t {
     bool show_overlay = true;
     bool show_graph = true;
-    vertex_array_t graph_vao;
-    bool graph_vao_initialized = false;
-    shader_handle_t graph_shader_handle = { 0 };
     uint32_t draw_calls_per_frame = 0;
 
     float frame_times[SYN_PERF_GRAPH_SAMPLE_COUNT];

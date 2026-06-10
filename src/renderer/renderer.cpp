@@ -79,9 +79,6 @@ void renderer_t::init()
     
     // DEBUG/DEV
     
-    // perfomancce graph
-    init_perf_graph();
-
     // debug geometry
     init_debug_rendering();
     
@@ -709,25 +706,6 @@ void renderer_t::toggle_perf_overlay()
 }
 
 //
-void renderer_t::init_perf_graph()
-{
-    if (m_perf_stats.graph_vao_initialized)
-        return;
-    
-    m_perf_stats.graph_vao.set_buffer_layout({
-        { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT2 },
-        { VERTEX_ATTRIB_LOCATION_COLOR, shader_data_type_t::FLOAT4 }
-    });
-    
-    m_perf_stats.graph_vao.create_empty_vertices(SYN_PERF_GRAPH_SAMPLE_COUNT * 4 * 6 * sizeof(float));
-    m_perf_stats.graph_vao.create_empty_indices(SYN_PERF_GRAPH_SAMPLE_COUNT * 6 * sizeof(uint32_t));
-    
-    m_perf_stats.graph_shader_handle = shader_lib.load_from_file("ui_perf_stats", "../assets/shaders/ui_perf_stats.glsl");
-    
-    m_perf_stats.graph_vao_initialized = true;
-}
-
-//
 void renderer_t::show_notification(const std::string &_msg, float _duration_s)
 {
     m_notification.msg = _msg;
@@ -785,90 +763,48 @@ void renderer_t::draw_notifications()
 //
 void renderer_t::draw_frame_time_graph(float _x, float _y, float _w, float _h)
 {
-    if (!m_perf_stats.graph_vao_initialized) init_perf_graph();
     if (!m_perf_stats.show_graph) return;
-    
-    renderer_2d.draw_rect_outline(_x, _y, _w, _h, 1.0f, glm::vec4(0.1f, 0.1f, 0.1f, 0.8f),
-                                  glm::vec4(glm::vec4(0.5f, 0.5f, 0.5f, 1.0f)));
-    
-    // build the vertex data
-    float vertices[4 * 6 * SYN_PERF_GRAPH_SAMPLE_COUNT];
-    uint32_t indices[6 * SYN_PERF_GRAPH_SAMPLE_COUNT];
-    
-    uint32_t vert_count = 0;
-    uint32_t vert_idx = 0;
-    uint32_t idx_count = 0;
-    
+
     float bar_width = _w / (float)SYN_PERF_GRAPH_SAMPLE_COUNT;
     float max_frame_time = (m_perf_stats.max_frame_time < 20.0f ? 20.0f : m_perf_stats.max_frame_time);
+
+    ui_batch_renderer.begin_batch();
     
+    // background and outline
+    ui_batch_renderer.add_quad({ _x, _y }, { _w, _h }, glm::vec4(0.1f, 0.1f, 0.1f, 0.8f), -1.0f);
+    ui_render_vertex_t outline[] = {
+        ui_render_vertex_t({ _x,      _y      }, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f), -0.9f),
+        ui_render_vertex_t({ _x + _w, _y      }, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f), -0.9f),
+        ui_render_vertex_t({ _x + _w, _y + _h }, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f), -0.9f),
+        ui_render_vertex_t({ _x,      _y + _h }, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f), -0.9f),
+        ui_render_vertex_t({ _x,      _y      }, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f), -0.9f),
+    };
+    ui_batch_renderer.add_line_strip(outline, 5);
+
+    // bars
     for (uint32_t i = 0; i < SYN_PERF_GRAPH_SAMPLE_COUNT; i++) {
         uint32_t sample_idx = (m_perf_stats.frame_time_idx + i) % SYN_PERF_GRAPH_SAMPLE_COUNT;
         float frame_time = m_perf_stats.frame_times[sample_idx];
-    
         if (frame_time == 0.0f) continue;
-    
-        float normalized = frame_time / max_frame_time;
-        float bar_height = normalized * _h;
-        float bar_x = _x + i * bar_width;
-        float bar_y = _y + _h - bar_height;
-    
-        // color
+
+        float normalized  = frame_time / max_frame_time;
+        float bar_height  = normalized * _h;
+        float bar_x       = _x + i * bar_width;
+        float bar_y       = _y + _h - bar_height;
+
         glm::vec4 color;
-        if (frame_time <= 16.67f) {
-            color = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
-        } else if (frame_time <= 33.33f) {
-            color = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
-        } else {
-            color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
-        }
-    
-        uint32_t base_vert = vert_idx;
-    
-        float quad_verts[] = {
-            
-            bar_x, bar_y + bar_height, color.r, color.g, color.b, color.a,              // bottom-left (0)
-            bar_x + bar_width, bar_y + bar_height, color.r, color.g, color.b, color.a,  // bottom-right (1)
-            bar_x, bar_y, color.r, color.g, color.b, color.a,                           // top-left (2)
-            bar_x + bar_width, bar_y, color.r, color.g, color.b, color.a,               // top-right (3)
-        };
-    
-        memcpy(&vertices[vert_count], quad_verts, sizeof(quad_verts));
-        vert_count += 24;
-    
-        indices[idx_count++] = base_vert + 0;
-        indices[idx_count++] = base_vert + 1;
-        indices[idx_count++] = base_vert + 2;
-        indices[idx_count++] = base_vert + 1;
-        indices[idx_count++] = base_vert + 3;
-        indices[idx_count++] = base_vert + 2;
-    
-        vert_idx += 4;
+        if      (frame_time <= 16.67f) color = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
+        else if (frame_time <= 33.33f) color = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
+        else                           color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+
+        ui_batch_renderer.add_quad({ bar_x, bar_y }, { bar_width, bar_height }, color, -0.5f);
     }
-    
-    if (idx_count == 0) return;
-    
-    //
-    glDisable(GL_DEPTH_TEST);
-    shader_t *shader = shader_lib.get_shader(m_perf_stats.graph_shader_handle);
-    shader->enable();
-    glm::mat4 projection = glm::ortho(0.0f, (float)api.m_viewport.x, (float)api.m_viewport.y, 0.0f);
-    shader->set_matrix_4fv("u_projection", projection);
-    shader->set_matrix_4fv("u_model", glm::mat4(1.0f));
-    
-    // update /vertices/indices and draw
-    m_perf_stats.graph_vao.bind();
-    m_perf_stats.graph_vao.update_vertices(vertices, sizeof(float) * vert_count);
-    m_perf_stats.graph_vao.update_indices(indices, idx_count * sizeof(uint32_t));
-    glDrawElements(GL_TRIANGLES, idx_count, GL_UNSIGNED_INT, 0);
-    m_perf_stats.draw_calls_per_frame++;
-    m_perf_stats.graph_vao.unbind();
-    
-    //
+
+    ui_batch_renderer.end_batch();
+
+    // labels
     font.render_text(_x + _w + 5.0f, _y, "%.1f ms", max_frame_time);
     font.render_text(_x + _w + 5.0f, _y + _h, "0 ms");
-    
-    glEnable(GL_DEPTH_TEST);
     
 }
 

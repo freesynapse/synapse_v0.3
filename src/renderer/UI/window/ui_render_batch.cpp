@@ -132,6 +132,8 @@ void ui_render_batch_t::end_batch()
         m_vao_quads.update_indices(m_quad_indices, m_quad_index_count * sizeof(uint32_t));
         glDrawElements(GL_TRIANGLES, m_quad_index_count, GL_UNSIGNED_INT, 0);
         m_vao_quads.unbind();
+
+        renderer.m_perf_stats.draw_calls_per_frame++;
     }
 
     // 
@@ -141,6 +143,8 @@ void ui_render_batch_t::end_batch()
         m_vao_lines.update_indices(m_line_indices, m_line_index_count * sizeof(uint32_t));
         glDrawElements(GL_LINE_STRIP, m_line_index_count, GL_UNSIGNED_INT, 0);
         m_vao_lines.unbind();
+
+        renderer.m_perf_stats.draw_calls_per_frame++;
     }
 
     shader->disable();
