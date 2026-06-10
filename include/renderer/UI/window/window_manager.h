@@ -25,6 +25,7 @@ public:
 
     void on_mouse_button_event(const event_t &_e);
     void on_mouse_move_event(const event_t &_e);
+    void on_mouse_scroll_event(const event_t &_e);
     void on_keydown_event(const event_t &_e);
     void on_ui_window_close_event(const event_t &_e);
 
