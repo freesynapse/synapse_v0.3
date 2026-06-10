@@ -73,11 +73,11 @@ void input_handler_t::key_callback(GLFWwindow *_window_ptr, int _key, int _scanc
 	e.type = event_type_t::INPUT_KEYDOWN;
 	e.as.keydown.action = _action;
 	e.as.keydown.key = _key;
+	e.as.keydown.mods = _mods;
+	e.as.keydown.focused_window_handle = window_manager.get_focused_window();
+	
 	events.dispatch_event(e);
 
-	#ifdef DEBUG_KEYS_BUTTONS
-	SYN_INFO("key: %d, action: %d\n", _key, _action);
-	#endif
 }
 
 // 
@@ -93,11 +93,10 @@ void input_handler_t::mouse_button_callback(GLFWwindow *_window_ptr, int _button
     e.as.mouse_button.action = _action;
     e.as.mouse_button.mods = _mods;
     e.as.mouse_button.pos = mouse_position;
+    e.as.mouse_button.window_handle = window_manager.get_window_at_pos(mouse_position);
+
     events.dispatch_event(e);
     
-	#ifdef DEBUG_KEYS_BUTTONS
-	SYN_INFO("button: %d, action: %d\n", _button, _action);
-	#endif
 }
 
 // 
@@ -111,12 +110,13 @@ void input_handler_t::mouse_scroll_callback(GLFWwindow *_window_ptr, double _off
 	event_t e;
 	e.type = event_type_t::INPUT_MOUSE_SCROLL;
 	e.as.mouse_scroll.xoffset = mouse_scroll_position.x;
-	e.as.mouse_scroll.yoffset = mouse_scroll_position.y;	
+	e.as.mouse_scroll.yoffset = mouse_scroll_position.y;
+	double x, y;
+	glfwGetCursorPos(root_window.m_window_ptr, &x, &y);
+	e.as.mouse_scroll.window_handle = window_manager.get_window_at_pos(glm::vec2(x, y));
+
 	events.dispatch_event(e);
-	
-	#ifdef DEBUG_KEYS_BUTTONS
-	SYN_INFO("scroll: %lf, %lf\n", _offset_x, _offset_y);
-	#endif
+
 }
 
 // 
@@ -130,10 +130,8 @@ void input_handler_t::mouse_move_callback(GLFWwindow *_window_ptr, double _x, do
 	event_t e;
 	e.type = event_type_t::INPUT_MOUSE_MOVE;
 	e.as.mouse_move.pos = mouse_position;
+	e.as.mouse_move.window_handle = window_manager.get_window_at_pos(mouse_position);
+
 	events.dispatch_event(e);
-	
-	#ifdef DEBUG_CURSOR_MOVE
-	SYN_INFO("%.2f, %.2f\n", (float)_x, (float)_y);
-	#endif
 
 }

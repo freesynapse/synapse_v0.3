@@ -20,7 +20,9 @@ public:
 	void on_window_resize(const event_t &_e);
 	void on_viewport_resize(const event_t &_e);
 	void on_cursor_freeze(const event_t &_e);
-	void on_scroll(const event_t &_e);
+	void on_mouse_scroll(const event_t &_e);
+	void on_mouse_move(const event_t &_e);
+	void on_mouse_button(const event_t &_e);
 	
 	// accessors
 	/* Rotation speed, default 10.0f */

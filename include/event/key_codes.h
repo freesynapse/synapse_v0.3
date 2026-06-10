@@ -131,8 +131,14 @@
 
 #define SYN_KEY_LAST                SYN_KEY_MENU
 
-#define SYN_KEY_PRESSED             GLFW_PRESS       // 1
-#define SYN_KEY_RELEASED            GLFW_RELEASE     // 0
+// mods
+#define SYN_MOD_SHIFT               GLFW_MOD_SHIFT
+#define SYN_MOD_CTRL                GLFW_MOD_CONTROL
+
+// actions
+#define SYN_KEY_PRESSED             GLFW_PRESS      // 1
+#define SYN_KEY_RELEASED            GLFW_RELEASE    // 0
+#define SYN_KEY_REPEAT              GLFW_REPEAT     // 2
 
 
 // Mouse buttons

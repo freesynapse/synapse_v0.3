@@ -40,15 +40,17 @@ public:
 	font_t() = default;
 	~font_t() = default;
 	
-	void init(const char *_filename, const int& _pixel_size=12, const glm::vec2& _vp_sz=glm::vec2(0.0f));
+	void init(const char *_filename, const int &_pixel_size=12, const glm::vec2 &_vp_sz=glm::vec2(0.0f));
 	void destroy();
 	
 	void begin_render_block();
 	void end_render_block(bool _use_depth_test);
-	void render_text(const float& _x, const float& _y, const char* _str, ...);
+	void render_text(const float &_x, const float &_y, const char *_str, ...);
+	void render_text_clipped(const float &_x, const float &_y, float _max_width, const char *_str, ...);
+
 	// in pixels
-	float get_string_width(const char* _str, ...);
-	void set_color(const glm::vec4& _color) { m_text_color = _color; }
+	float get_string_width(const char *_str, ...);
+	void set_color(const glm::vec4 &_color) { m_text_color = _color; }
 	void set_depth(float _depth) { m_current_depth = _depth; }
 	float get_current_depth() { return m_current_depth; }
 	const glm::vec4 &get_color() { return m_text_color; }
@@ -57,10 +59,10 @@ public:
 	inline float get_font_height() { return (float)(m_texture_height); }
 	
 	void on_resize(const event_t &_e);
-	void resize(const glm::vec2& _vp_sz_px);
+	void resize(const glm::vec2 &_vp_sz_px);
 
 private:
-	int init_font_atlas(const char *_filename, const int& _pixel_size, const glm::vec2& _vp_sz);
+	int init_font_atlas(const char *_filename, const int &_pixel_size, const glm::vec2 &_vp_sz);
 
 private:
 	// FreeType

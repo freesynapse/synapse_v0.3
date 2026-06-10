@@ -162,7 +162,7 @@ int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const
 		{ VERTEX_ATTRIB_LOCATION_COLOR, shader_data_type_t::FLOAT4 },
 		{ VERTEX_ATTRIB_LOCATION_DEPTH, shader_data_type_t::FLOAT },
 	});
-	m_vao.create_empty_vertices(sizeof(font_vertex_t) * SYN_FONT_MAX_BUFFER_LENGTH, GL_DYNAMIC_DRAW);
+	m_vao.create_empty_vertices(6 * sizeof(font_vertex_t) * SYN_FONT_MAX_BUFFER_LENGTH, GL_DYNAMIC_DRAW);
 
 	SYN_INFO("generated %dx%d text atlas.\n", m_texture_width, m_texture_height);
 
@@ -183,13 +183,13 @@ void font_t::render_text(const float& _x, const float& _y, const char* _str, ...
 	va_end(arglist);
 
 	// add vertices to the buffer
-	float x = -1 + _x * m_sx;
-	float y =  1 - _y * m_sy;
+	float x = -1.0f + _x * m_sx;
+	float y =  1.0f - _y * m_sy;
 	for (size_t i = 0; i < str_len; i++) {
-    	if (m_tmp_buffer[i] == '\0') break;
+    	if (m_tmp_buffer[i] == '\0' || m_tmp_buffer[i] == '\n') break;
 
         uint8_t ascii_val = (uint8_t)m_tmp_buffer[i];
-        if (ascii_val >= SYN_FONT_MAX_CHAR_SET_SIZE) continue;
+        if (ascii_val < 32 || ascii_val >= SYN_FONT_MAX_CHAR_SET_SIZE) continue;
 
         // calculate vertex and texture coordinates
         character_info_s c = m_chars[ascii_val];
@@ -215,6 +215,58 @@ void font_t::render_text(const float& _x, const float& _y, const char* _str, ...
         m_vertices.push_back(font_vertex_t({ x2,      y2 - h }, { c.tx,         c.ty + bh_th }, m_text_color, m_current_depth));
         m_vertices.push_back(font_vertex_t({ x2 + w,  y2 - h }, { c.tx + bw_tw, c.ty + bh_th }, m_text_color, m_current_depth));        
 	}
+}
+
+// 
+void font_t::render_text_clipped(const float &_x, const float &_y, float _max_width, const char *_str, ...)
+{
+    if (!_str) return;
+   
+	//
+	va_list arglist;
+	memset(m_tmp_buffer, 0, SYN_FONT_MAX_STRING_LENGTH);
+	va_start(arglist, _str);
+	size_t str_len = vsnprintf(m_tmp_buffer, SYN_FONT_MAX_STRING_LENGTH, _str, arglist);
+	va_end(arglist);
+   
+	// add vertices to the buffer
+	float x = -1.0f + _x * m_sx;
+	float y =  1.0f - _y * m_sy;
+	float clip_x = -1.0f + (_x + _max_width) * m_sx;
+	
+	for (size_t i = 0; i < str_len; i++) {
+       	if (m_tmp_buffer[i] == '\0' || m_tmp_buffer[i] == '\n') break;
+   
+           uint8_t ascii_val = (uint8_t)m_tmp_buffer[i];
+           if (ascii_val < 32 || ascii_val >= SYN_FONT_MAX_CHAR_SET_SIZE) continue;
+   
+           // calculate vertex and texture coordinates
+           character_info_s c = m_chars[ascii_val];
+           float x2 =  x + c.bl * m_sx;
+           float y2 = y + c.bt * m_sy;
+           float w = c.bw * m_sx;
+           float h = c.bh * m_sy;
+
+           if (x2 >= clip_x) return;
+   
+           // advance cursor
+           x += c.ax * m_sx;
+           y += c.ay * m_sy;
+   
+           // skip empty m_chars
+           if (!w || !h) continue;
+   
+           float bw_tw = c.bw / (float)m_texture_width;
+           float bh_th = c.bh / (float)m_texture_height;
+   
+           m_vertices.push_back(font_vertex_t({ x2 + w,  y2     }, { c.tx + bw_tw, c.ty         }, m_text_color, m_current_depth));
+           m_vertices.push_back(font_vertex_t({ x2,      y2     }, { c.tx,         c.ty         }, m_text_color, m_current_depth));
+           m_vertices.push_back(font_vertex_t({ x2,      y2 - h }, { c.tx,         c.ty + bh_th }, m_text_color, m_current_depth));
+           m_vertices.push_back(font_vertex_t({ x2 + w,  y2     }, { c.tx + bw_tw, c.ty         }, m_text_color, m_current_depth));
+           m_vertices.push_back(font_vertex_t({ x2,      y2 - h }, { c.tx,         c.ty + bh_th }, m_text_color, m_current_depth));
+           m_vertices.push_back(font_vertex_t({ x2 + w,  y2 - h }, { c.tx + bw_tw, c.ty + bh_th }, m_text_color, m_current_depth));        
+	}
+    
 }
 
 //

@@ -738,16 +738,13 @@ void renderer_t::show_notification(const std::string &_msg, float _duration_s)
 //
 void renderer_t::draw_perf_stats()
 {
-    if (!m_perf_stats.show_overlay)
-        return;
+    if (!m_perf_stats.show_overlay) return;
     
-    // glDisable(GL_DEPTH_TEST);
+    float padding = 10.0f;
+    float line_height = font.get_font_height();
     
-    static float padding = 10.0f;
-    static float line_height = font.get_font_height();
-    
-    static float x = padding;
-    static float y = padding;
+    float x = padding;
+    float y = padding;
     
     // text
     float text_y = y;
@@ -761,7 +758,6 @@ void renderer_t::draw_perf_stats()
         draw_frame_time_graph(x, text_y, w, h);
     }
     
-  // glEnable(GL_DEPTH_TEST);
 }
 
 // 

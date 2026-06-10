@@ -5,6 +5,7 @@
 
 // globals
 FILE *__log_fp = NULL;
+log_ring_buffer_t syn_log_buffer;
 
 // 
 char *prettify_fnc_signature(const char *f)
@@ -72,11 +73,15 @@ void syn_log(const char *_color)
     fprintf(stdout, "%s%s\033[0m", _color, __tmp_log_buffer);
     if (__log_fp != NULL)
         fprintf(__log_fp, "%s", __tmp_log_buffer);
+
+    log_level_t level = log_level_t::INFO;
+    if (strcmp(_color, DEBUG_COLOR) == 0)           level = log_level_t::DEBUG;
+    else if (strcmp(_color, WARNING_COLOR) == 0)    level = log_level_t::WARNING;
+    else if (strcmp(_color, ERROR_COLOR) == 0)      level = log_level_t::ERROR;
+
+    syn_log_buffer.push(__tmp_log_buffer, level);
+    
 }
-
-
-
-
 
 // 
 void fmt_debug_func(const char *_func)

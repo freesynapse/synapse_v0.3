@@ -1,31 +1,32 @@
 
 #include <iomanip>
 #include <string.h>
+#include <chrono>
 
 #include "utils/time.h"
 
 
 // static class variable declarations
-std::tm Time::m_tmNow;
+// std::tm Time::m_tmNow;
 
 
 //-----------------------------------------------------------------------------------
-std::tm Time::now()
+// std::tm Time::now()
+// {
+	// std::chrono::time_point<std::chrono::system_clock> chronoTime = std::chrono::system_clock::now();
+	// std::time_t now_t = std::chrono::system_clock::to_time_t(chronoTime);
+	// m_tmNow = *std::localtime(&now_t);
+// 
+	// return m_tmNow;
+// }
+
+//-----------------------------------------------------------------------------------
+std::string current_time()
 {
-	std::chrono::time_point<std::chrono::system_clock> chronoTime = std::chrono::system_clock::now();
+    std::chrono::time_point<std::chrono::system_clock> chronoTime = std::chrono::system_clock::now();
 	std::time_t now_t = std::chrono::system_clock::to_time_t(chronoTime);
-// #pragma warning(push)
-// #pragma warning(disable: 4996)
-	m_tmNow = *std::localtime(&now_t);
-// #pragma warning(pop)
 
-	return m_tmNow;
-}
-
-//-----------------------------------------------------------------------------------
-std::string Time::current_time()
-{
-	std::tm tm_now = now();
+    std::tm tm_now = *std::localtime(&now_t);
 
 	// extract the time in HH:MM:SS and return.
 	std::string time = "";
@@ -36,9 +37,13 @@ std::string Time::current_time()
 }
 
 //-----------------------------------------------------------------------------------
-std::string Time::current_date()
+std::string current_date()
 {
-	std::tm tm_now = now();
+    std::chrono::time_point<std::chrono::system_clock> chronoTime = std::chrono::system_clock::now();
+	std::time_t now_t = std::chrono::system_clock::to_time_t(chronoTime);
+
+    std::tm tm_now = *std::localtime(&now_t);
+
 	// extract the time in YYYY:MM:DD and return.
 	std::string time = "";
 	std::stringstream ss;

@@ -54,6 +54,8 @@ struct application_exit_event_t {
 struct keydown_t {
     int key;
     int action;
+    int mods;
+    window_handle_t focused_window_handle;
 };
 
 //
@@ -62,55 +64,69 @@ struct mouse_button_event_t {
     int action;
     int mods;
     glm::vec2 pos;
+    window_handle_t window_handle;
+    
 };
 
 //
 struct mouse_scroll_event_t {
     float xoffset;
     float yoffset;
+    window_handle_t window_handle;
+
 };
 
 //
 struct mouse_move_event_t {
     glm::vec2 pos;
+    window_handle_t window_handle;
+
 };
 
 //
 struct viewport_resize_event_t {
     glm::ivec2 viewport;
     glm::vec2 viewport_f;
+
 };
 
 //
 struct shader_reload_event_t {
     shader_handle_t handle;
+
 };
 
 //
 struct window_close_event_t {
+
 };
 
 //
 struct ui_window_close_event_t {
     window_handle_t handle;
+
 };
 
 //
 struct window_resize_event_t {
     uint32_t width;
     uint32_t height;
+
 };
 
 //
 struct toggle_fullscreen_event_t {
+
 };
 
 //
 struct toggle_frozencursor_event_t {
+
 };
 
 //
 struct toggle_cursor_event_t {
+
 };
 
 //

@@ -126,8 +126,7 @@ void syn_mode_3d()
     glm::ivec2 dims = root_window.window_dims();
     orbit_camera.init(60.0f, dims.x, dims.y, 0.1f, 1000.0f);
     perspective_camera.init(60.0f, dims.x, dims.y, 0.1f, 1000.0f);
-    debug_vector(__func__, "root_window.window_dims()", root_window.window_dims());
-    debug_matrix(__func__, "cam proj", orbit_camera.get_projection_matrix());
+
 }
 
 //
@@ -208,11 +207,6 @@ void syn_render_begin_3d()
     // perspective_camera.update(time_step.dt);
     orbit_camera.update(time_step.dt);
 
-    // bind the scene framebuffer, everything is rendered to this buffer
-    // renderer.bind_scene_fbuffer();
-
-    // api.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 }
 
 //
@@ -221,6 +215,14 @@ void syn_render_end_3d()
     //
     renderer.render_debug_orientation_obj();
 
+    // draw_perf_overlay does NOT contain font.start_/.end_render_block()
+    renderer.record_frame_time(time_step.dt * 1000.0f);
+    renderer.draw_perf_stats();
+    renderer.draw_notifications();
+
+    // render all scene text
+    font.end_render_block(false);
+    
     // the 3d fbo is now complete but needs to be rendered (elsewhere)
     // TODO : move this to somewhere, for now just render on screen ndc
     // renderer.render_scene_fbuffer();
@@ -228,11 +230,6 @@ void syn_render_end_3d()
     if (viewport && viewport->has_frambuffer()) {
         api.fbo_handler.unbind();
     }
-    
-    // draw_perf_overlay does NOT contain font.start_/.end_render_block()
-    renderer.record_frame_time(time_step.dt * 1000.0f);
-    renderer.draw_perf_stats();
-    renderer.draw_notifications();
 
     //
     syn_render_end();
@@ -242,12 +239,8 @@ void syn_render_end_3d()
 //
 void syn_render_end()
 {
-    // render all scene text
-    font.end_render_block(false);
-
     // everything is drawn, render the screen NDC quad
-    // renderer.render_scene_fbuffer();
-    api.set_clear_color({ 0.0f, 0.0f, 0.0f, 1.0f });
+    api.set_clear_color(0.2f, 0.2f, 0.2f, 1.0f);
     api.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     

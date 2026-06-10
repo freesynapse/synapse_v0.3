@@ -70,7 +70,6 @@ int glfw_window_t::init(const char *_name, int _width, int _height)
     m_render_dim = m_window_dim;
 
 	// set window size
-	debug_vector("", "m_window_dim", m_window_dim);
 	if (_width == 0 || _height == 0) {
 	    // start in fullscreen
 		glfwSetWindowMonitor(m_window_ptr, m_primary_monitor, 0, 0, m_screen_dim.x, m_screen_dim.y, m_video_mode->refreshRate);

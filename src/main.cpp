@@ -106,9 +106,10 @@ void setup_lights()
 //
 int main()
 {
-    syn_init("synapse v0.3", 0, 0, SYN_MODE_3D);
+    // syn_init("synapse v0.3", 0, 0, SYN_MODE_3D);
+    syn_init("synapse v0.3", 2000, 1400, SYN_MODE_3D);
     root_window.set_exit_key(SYN_KEY_ESCAPE);
-    // syn_set_window_pos_quadrant(UPPER_RIGHT);
+    syn_set_window_pos_quadrant(UPPER_RIGHT);
 
     syn_load_assets("../assets/manifests/helmet_test.syn");
     helmet = assets.get_entity("helmet");
@@ -134,15 +135,15 @@ int main()
     orbit_camera.m_y_angle = 82.0f;
     orbit_camera.m_radius = 3.0f;
 
-    // window_t win1;
-    // win1.name = "test window 1";
-    // win1.position = { 100.0f, 100.0f };
-    // win1.size = { 400.0f, 400.0f };
-    // window_handle_t win1_handle = window_manager.add_window(win1);
+    window_t win1;
+    win1.name = "test window 1";
+    win1.position = { 100.0f, 700.0f };
+    win1.size = { 400.0f, 400.0f };
+    window_handle_t win1_handle = window_manager.add_window(win1);
     
     window_t win2;
     win2.name = "test window 2";
-    win2.position = { 150.0f, 150.0f };
+    win2.position = { 1200.0f, 150.0f };
     win2.size = { 400.0f, 400.0f };
     win2.set_focused(true);
     window_handle_t win2_handle = window_manager.add_window(win2);
@@ -152,11 +153,40 @@ int main()
     viewport.position = glm::vec2(100.0f, 100.0f);// glm::vec2(0.0f);
     viewport.size = glm::vec2(600.0f);//root_window.window_fdims();
     window_handle_t viewport_handle = window_manager.add_window(viewport);
-
-    window_manager.set_viewport_window(viewport_handle);
-    
+    window_manager.set_viewport_window(viewport_handle);    
     window_t *vp = window_manager.get_window(viewport_handle);
     vp->create_framebuffer();
+
+    window_t log_win;
+    log_win.name = "Log";
+    log_win.position = glm::vec2(10.0f, 400.0f);
+    log_win.size = glm::vec2(600.0f, 300.0f);
+    widget_t log_area;
+    log_area.type = widget_type_t::TEXT_AREA;
+    log_area.anchor = widget_anchor_t::TOP_LEFT;
+    log_area.position = glm::vec2(0.0f, 0.0f);
+    log_area.size = glm::vec2(log_win.size.x - 10.0f, log_win.size.y - log_win.title_bar_height - 5.0f);
+    log_area.get_lines = [](text_area_line_t * _lines, uint32_t _max_lines) -> uint32_t {
+        uint32_t count = std::min(syn_log_buffer.count, _max_lines);
+        for (uint32_t i = 0; i < count; i++) {
+            const log_entry_t &e = syn_log_buffer.get(syn_log_buffer.count - count + i);
+            strncpy(_lines[i].text, e.msg, SYN_LOG_LINE_LEN - 1);
+            switch (e.level) {
+                case log_level_t::WARNING:  _lines[i].color = { 1.0f, 0.8f, 0.0f, 1.0f }; break;
+                case log_level_t::ERROR:    _lines[i].color = { 1.0f, 0.3f, 0.3f, 1.0f }; break;
+                case log_level_t::DEBUG:    _lines[i].color = { 0.4f, 1.0f, 0.4f, 1.0f }; break;
+                default:                    _lines[i].color = { 0.9f, 0.9f, 0.9f, 1.0f }; break;
+            }
+        }
+        return count;
+    };
+    log_area.on_resize = [](widget_t *_self, const glm::vec2 &_content_size) {
+        _self->size = glm::vec2(_content_size.x - 8.0f, _content_size.y - 5.0f);
+    };
+    window_handle_t log_handle = window_manager.add_window(log_win);
+    window_t *lw = window_manager.get_window(log_handle);
+    lw->add_widget(log_area);
+    lw->on_resize();
     
     //
     while (!root_window.should_close()) {

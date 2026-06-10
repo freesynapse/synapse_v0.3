@@ -7,6 +7,9 @@
 
 
 // 
+#define SYN_WINDOW_MAX_TABS 8
+
+// 
 class window_t
 {
 public:
@@ -22,10 +25,13 @@ public:
     void create_framebuffer();
     void resize_framebuffer();
     void destroy_framebuffer();
+
+    void on_resize();
     
     void draw();
     void draw_widgets();
-
+    void draw_tab_bar();
+    
     // interaction
     bool is_point_in_window(const glm::vec2 &_p);
     bool is_point_in_title_bar(const glm::vec2 &_p);
@@ -45,6 +51,9 @@ public:
     void add_widget(const widget_t &_widget);
     widget_t *get_widget(uint32_t _index);
     widget_t *get_widget_at_pos(const glm::vec2 &_pos);
+    // tabs
+    window_handle_t get_active_tab_child_handle();
+    int get_tab_index_at_pos(const glm::vec2 &_pos);
     
 public:
     // for events affecting this window dispatched from this window
@@ -71,21 +80,48 @@ public:
     std::string name = "";
 
 private:
+    // constants
+    float m_original_title_bar_height = title_bar_height;
+    
+    // widgets
     widget_t m_widgets[SYN_WINDOW_MAX_WIDGET_COUNT];
     uint32_t m_widget_count = 0;
 
+    // resizing
     float m_resize_border_width = 5.0f;
     glm::vec2 min_size = glm::vec2(100.0f, 100.0f);
     glm::vec2 max_size = glm::vec2(2560.0f, 1600.0f);
     
+    // framebuffer members 
     bool m_has_framebuffer = false;
     framebuffer_handle_t m_framebuffer_handle = { 0 };
 
+    // tabs
+    
+    /*  Tab children are initiated with 
+     *      m_is_visible = false
+     *      m_is_tab_child = true
+     *
+     *  The originator window has
+     *      m_is_tab_container = true
+     *      m_is_visible = true
+     *      m_tab_children index = 0
+     *  and thus responsible for drawing the active tab
+     */
+    window_handle_t m_tab_children[SYN_WINDOW_MAX_TABS];    
+    uint32_t m_tab_count = 0;
+    uint32_t m_active_tab = 0;
+    window_handle_t m_tab_parent;
+    
+    // flags
     bool m_is_active = false;
     bool m_is_visible = false;
     bool m_is_focused = false;
     bool m_is_movable = true;
     bool m_is_resizable = true;
+
+    bool m_is_tab_container = false;
+    bool m_is_tab_child = false;
     
 };
 

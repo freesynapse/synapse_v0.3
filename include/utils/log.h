@@ -67,4 +67,51 @@ void debug_vector(const char* _func, const char* _vec_name, const glm::ivec3& _i
 void debug_vector(const char* _func, const char* _vec_name, const glm::ivec2& _iv2);
 
 
+// log ring buffer, intercepts all messages before writing to file for in-memory record
+
+#define SYN_LOG_BUFFER_SIZE 256
+#define SYN_LOG_LINE_LEN    512
+
+// 
+enum class log_level_t : uint8_t {
+    INFO    = 0,
+    DEBUG   = 1,
+    WARNING = 2,
+    ERROR   = 3,
+};
+
+// 
+struct log_entry_t {
+    char msg[SYN_LOG_LINE_LEN];
+    log_level_t level;
+};
+
+// 
+struct log_ring_buffer_t {
+    log_entry_t entries[SYN_LOG_BUFFER_SIZE];
+    uint32_t head = 0;      // next write position
+    uint32_t count = 0;     // total entries, capped at SYN_LOG_BUFFER_SIZE
+
+    // 
+    void push(const char *_msg, log_level_t _level)
+    {
+        strncpy(entries[head].msg, _msg, SYN_LOG_LINE_LEN - 1);
+        entries[head].level = _level;
+        head = (head + 1) % SYN_LOG_BUFFER_SIZE;
+        if (count < SYN_LOG_BUFFER_SIZE) {
+            count++;
+        }
+    }
+
+    // 
+    const log_entry_t &get(uint32_t _idx) const
+    {
+        uint32_t start = (count < SYN_LOG_BUFFER_SIZE) ? 0 : head;
+        return entries[(start + _idx) % SYN_LOG_BUFFER_SIZE];
+    }  
+};
+
+extern log_ring_buffer_t syn_log_buffer;
+
+
 #endif // __LOG_H

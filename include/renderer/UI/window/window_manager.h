@@ -25,6 +25,7 @@ public:
 
     void on_mouse_button_event(const event_t &_e);
     void on_mouse_move_event(const event_t &_e);
+    void on_keydown_event(const event_t &_e);
     void on_ui_window_close_event(const event_t &_e);
 
     // window creation/access
@@ -41,18 +42,27 @@ public:
 
     // interaction
     window_handle_t get_window_at_pos(const glm::vec2 _pos);
+    window_handle_t get_window_at_pos(const glm::vec2 _pos, const window_handle_t &_exclude_handle);
     void set_focused_window(window_handle_t _handle);
-    const window_handle_t &get_focused_window() { return m_focused_window; }
+    const window_handle_t &get_focused_window() { return m_focused_window_handle; }
 
     // docking
     void update_dock_zones(const glm::vec2 &_mouse_pos, const window_handle_t &_dragged_window_handle);
     void apply_docking(window_handle_t _handle, dock_zone_t _zone, window_handle_t _target_handle);
+    void dock_as_tab(window_handle_t _new, window_handle_t _target);
+
+    // tabs
+    window_t *get_active_tab_child(window_t *_window);
+    void add_tab(const window_handle_t &_container_handle, const window_handle_t &_child_handle);
+    void set_active_tab(const window_handle_t &_container_handle, uint32_t _index);
+    
     
     // drawing
     void draw_windows();
     void draw_framebuffer(window_t *_window);
+    void draw_framebuffer_for(window_t *_active, window_t *_tab_container);
     void draw_dock_zone_overlays();
-
+    
 // private:
     void reorganize_depths();
     
@@ -69,8 +79,8 @@ private:
     glm::mat4 m_projection;
     
     // window focus and depth
-    window_handle_t m_hovered_window = { 0 };
-    window_handle_t m_focused_window = { 0 };
+    window_handle_t m_hovered_window_handle = { 0 };
+    window_handle_t m_focused_window_handle = { 0 };
     float m_zfar = -100.0f;
     float m_znear = 100.0f;
     

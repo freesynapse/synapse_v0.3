@@ -13,7 +13,9 @@
 static void __orbit_camera_window_resize_callback(const event_t &_e) { orbit_camera.on_window_resize(_e); }
 static void __orbit_camera_viewport_resize_callback(const event_t &_e) { orbit_camera.on_viewport_resize(_e); }
 static void __orbit_camera_frozen_cursor_callback(const event_t &_e) { orbit_camera.on_cursor_freeze(_e); }
-static void __orbit_camera_mouse_scroll_callback(const event_t &_e) { orbit_camera.on_scroll(_e); }
+static void __orbit_camera_mouse_scroll_callback(const event_t &_e) { orbit_camera.on_mouse_scroll(_e); }
+static void __orbit_camera_mouse_move_callback(const event_t &_e) { orbit_camera.on_mouse_move(_e); }
+static void __orbit_camera_mouse_button_callback(const event_t &_e) { orbit_camera.on_mouse_button(_e); }
 
 // events.register_callback(event_type_t::VIEWPORT_RESIZE, SYN_EVENT_MEMBER_FNC(orbit_camera_t::on_event));
 	// events.register_callback(event_type_t::WINDOW_TOGGLE_FROZEN_CURSOR, SYN_EVENT_MEMBER_FNC(orbit_camera_t::on_event));
@@ -46,8 +48,11 @@ void orbit_camera_t::init(float _fov_deg,
 	// register for viewport resize events
 	events.register_callback(event_type_t::VIEWPORT_RESIZE, __orbit_camera_viewport_resize_callback);
 	events.register_callback(event_type_t::WINDOW_TOGGLE_FROZEN_CURSOR, __orbit_camera_frozen_cursor_callback);
-	events.register_callback(event_type_t::INPUT_MOUSE_SCROLL, __orbit_camera_mouse_scroll_callback);
 	events.register_callback(event_type_t::WINDOW_RESIZE, __orbit_camera_window_resize_callback);
+	events.register_callback(event_type_t::INPUT_MOUSE_SCROLL, __orbit_camera_mouse_scroll_callback);
+	events.register_callback(event_type_t::INPUT_MOUSE_BUTTON, __orbit_camera_mouse_button_callback);
+	events.register_callback(event_type_t::INPUT_MOUSE_MOVE, __orbit_camera_mouse_move_callback);
+
 }
 
 //
@@ -93,39 +98,41 @@ void orbit_camera_t::handle_input(float _dt)
 
 	// update look-at angles
 	// glm::vec2 mouse_position = input.mouse_position;
-	glm::vec2 mouse_position;
-	double x, y;
-	glfwGetCursorPos(root_window.m_window_ptr, &x, &y);
-	mouse_position = { (float)x, (float)y };
+	// glm::vec2 mouse_position;
+	// double x, y;
+	// glfwGetCursorPos(root_window.m_window_ptr, &x, &y);
+	// mouse_position = { (float)x, (float)y };
 
-	if (m_first_mouse_input) {
-		m_prev_mouse_position = mouse_position;
-		m_first_mouse_input = false;
-	}
+	// if (m_first_mouse_input) {
+	// 	m_prev_mouse_position = mouse_position;
+	// 	m_first_mouse_input = false;
+	// }
 
-	if ((input.is_button_pressed(SYN_MOUSE_BUTTON_1)) &&	// requires mouse pressed
-		(mouse_position.x != m_prev_mouse_position.x || mouse_position.y != m_prev_mouse_position.y)) {
+	// if ((input.is_button_pressed(SYN_MOUSE_BUTTON_1)) &&	// requires mouse pressed
+	// 	(mouse_position.x != m_prev_mouse_position.x || mouse_position.y != m_prev_mouse_position.y)) {
 
-		m_mouse_delta = m_prev_mouse_position - mouse_position;
-		m_mouse_delta *= m_orbit_speed;
-		//m_mouse_delta *= (m_orbit_speed * _dt);
-		m_y_angle += m_mouse_delta.y;
-		m_x_angle -= m_mouse_delta.x;
-		// clamp angles
-		if (m_x_angle >= 360.0f)	m_x_angle -= 360.0f;
-		if (m_x_angle < 0.0f)	    m_x_angle += 360.0f;
+	// 	m_mouse_delta = m_prev_mouse_position - mouse_position;
+	// 	m_mouse_delta *= m_orbit_speed;
+	// 	//m_mouse_delta *= (m_orbit_speed * _dt);
+	// 	m_y_angle += m_mouse_delta.y;
+	// 	m_x_angle -= m_mouse_delta.x;
+	// 	// clamp angles
+	// 	if (m_x_angle >= 360.0f)	m_x_angle -= 360.0f;
+	// 	if (m_x_angle < 0.0f)	    m_x_angle += 360.0f;
 
-		m_y_angle = clamp(m_y_angle, 0.1f, 179.9f);
+	// 	m_y_angle = clamp(m_y_angle, 0.1f, 179.9f);
 
-	}
+	// }
 
-	m_prev_mouse_position = mouse_position;
+	// m_prev_mouse_position = mouse_position;
 
 }
 
 //
 void orbit_camera_t::on_viewport_resize(const event_t &_e)
 {
+    // if the viewport has been set to a window, then update of the
+    // projection matrix is handled by window_t::resize_viewport().
     if (window_manager.has_viewport_window()) return;
     
     glm::vec2 viewport = _e.as.viewport_resize.viewport_f;
@@ -153,10 +160,59 @@ void orbit_camera_t::on_cursor_freeze(const event_t &_e)
 }
 
 //
-void orbit_camera_t::on_scroll(const event_t &_e)
+void orbit_camera_t::on_mouse_scroll(const event_t &_e)
 {
+    window_handle_t vp = window_manager.get_viewport_window_handle();
+    if (vp.id == 0 || vp.id != _e.as.mouse_scroll.window_handle.id) return;
+    
     float delta = _e.as.mouse_scroll.yoffset * m_zoom_speed;
-    m_radius -= delta * m_radius * 0.05f;
+    m_radius += delta * m_radius * 0.05f;
 	m_radius = clamp(m_radius, 0.01f, m_z_far + 100.0f);
 
 }
+
+// 
+void orbit_camera_t::on_mouse_move(const event_t &_e)
+{
+    glm::vec2 mouse_position = _e.as.mouse_move.pos;
+    
+    if (!m_do_update_camera || !m_is_interaction_active) {
+        m_prev_mouse_position = mouse_position;
+        return;
+    }
+
+    if (m_first_mouse_input) {
+        m_prev_mouse_position = mouse_position;
+        m_first_mouse_input = false;
+    }
+
+    m_mouse_delta = m_prev_mouse_position - mouse_position;
+	m_mouse_delta *= m_orbit_speed;
+	m_y_angle += m_mouse_delta.y;
+	m_x_angle -= m_mouse_delta.x;
+
+	// clamp angles
+	if (m_x_angle >= 360.0f)	m_x_angle -= 360.0f;
+	if (m_x_angle < 0.0f)	    m_x_angle += 360.0f;
+	m_y_angle = clamp(m_y_angle, 0.1f, 179.9f);
+    
+	m_prev_mouse_position = mouse_position;
+    
+}
+
+// 
+void orbit_camera_t::on_mouse_button(const event_t &_e)
+{
+    if (_e.as.mouse_button.button != SYN_MOUSE_BUTTON_1) return;
+
+    window_handle_t vp = window_manager.get_viewport_window_handle();
+    if (vp.id == 0) return;
+    
+    if (_e.as.mouse_button.action == SYN_MOUSE_BUTTON_PRESSED) {
+        if (_e.as.mouse_button.window_handle.id != vp.id) return;
+        m_is_interaction_active = true;
+    } else {
+        m_is_interaction_active = false;
+    }
+}
+

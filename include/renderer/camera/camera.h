@@ -82,6 +82,7 @@ public:
 
 	bool m_do_update_camera = true;
 	bool m_first_mouse_input = true;
+	bool m_is_interaction_active = false;   // integration of input with the window_manager
 };
 
 
