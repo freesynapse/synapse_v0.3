@@ -19,10 +19,11 @@
 #include "renderer/camera/orbit_camera.h"
 #include "renderer/camera/perspective_camera.h"
 #include "renderer/camera/orthographic_camera.h"
-#include "utils/time_step.h"
-#include "utils/asset_manager.h"
 #include "renderer/UI/window/window_manager.h"
 #include "renderer/UI/window/ui_render_batch.h"
+#include "utils/time_step.h"
+#include "utils/asset_manager.h"
+#include "utils/random.h"
 
 
 /*  This file defines the C API style bindings for synapse, to be used from now on.
@@ -63,7 +64,7 @@ extern time_step_t                  time_step;
 extern asset_manager_t              assets;
 extern window_manager_t             window_manager;
 extern ui_render_batch_t            ui_batch_renderer;
-
+extern random_t                     rng;
 // rendering
 extern font_t                       font;
 extern perspective_camera_t         perspective_camera;
@@ -80,7 +81,6 @@ extern orthographic_camera_t        orthographic_camera;
     creates a perspective camera and an orbit camera.
  */
 void syn_init(const char *_name, int _width, int _height, int _mode);
-void syn_load_assets(const char *_asset_file="assets.syn");
 void syn_mode_2d();
 void syn_mode_3d();
 void syn_shutdown();
@@ -89,8 +89,13 @@ void syn_shutdown();
 //---------------------------------------------------------------------------------------
 // accessors and helpers
 //
-void syn_destroy_window();
 void syn_set_window_pos_quadrant(int _quadrant);
+void syn_load_assets(const char *_asset_file="assets.syn");
+void syn_load_layout(const char *_filepath);
+void syn_save_layout(const char *_filepath);
+void syn_create_viewport_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
+void syn_create_log_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
+void syn_create_properties_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 
 
 //---------------------------------------------------------------------------------------

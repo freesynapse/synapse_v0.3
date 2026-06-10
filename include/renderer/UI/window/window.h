@@ -39,6 +39,7 @@ public:
     resize_handle_t get_resize_handle_at_pos(const glm::vec2 &_pos);
     
     // accessors
+    const window_handle_t &handle() { return this_handle; }
     const bool &is_active() { return m_is_active; }
     const bool &is_visible() { return m_is_visible; }
     const bool &is_focused() { return m_is_focused; }
@@ -54,6 +55,8 @@ public:
     // tabs
     window_handle_t get_active_tab_child_handle();
     int get_tab_index_at_pos(const glm::vec2 &_pos);
+    bool is_tab_container() { return m_is_tab_container; }
+    bool is_tab_child() { return m_is_tab_child; }
     
 public:
     // for events affecting this window dispatched from this window
@@ -112,16 +115,16 @@ private:
     uint32_t m_tab_count = 0;
     uint32_t m_active_tab = 0;
     window_handle_t m_tab_parent;
+
+    bool m_is_tab_container = false;
+    bool m_is_tab_child = false;
     
-    // flags
+    // general flags
     bool m_is_active = false;
     bool m_is_visible = false;
     bool m_is_focused = false;
     bool m_is_movable = true;
     bool m_is_resizable = true;
-
-    bool m_is_tab_container = false;
-    bool m_is_tab_child = false;
     
 };
 

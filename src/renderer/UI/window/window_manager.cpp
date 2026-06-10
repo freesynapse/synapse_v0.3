@@ -80,7 +80,8 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
                 if (clicked_widget->on_click) {
                     clicked_widget->on_click();
                 }
-                return;
+                if (clicked_widget->consumes_click)
+                    return;
             }
 
             // check for resize

@@ -34,6 +34,7 @@ time_step_t                 time_step;
 asset_manager_t             assets;
 window_manager_t            window_manager;
 ui_render_batch_t           ui_batch_renderer;
+random_t                    rng;
 
 // rendering
 font_t                      font;
@@ -64,6 +65,9 @@ void syn_init(const char *_name, int _width, int _height, int _mode)
     //
     input.init();
 
+    // 
+    rng.init();
+    
     //
     api.init();
     api.set_clear_color({ 0.2f, 0.2f, 0.2f, 1.0f });
@@ -89,27 +93,6 @@ void syn_init(const char *_name, int _width, int _height, int _mode)
     }
 
     window_manager.init();
-
-}
-
-//
-void syn_load_assets(const char *_asset_file)
-{
-    scope_timer_t t;
-    assets.load_manifest(_asset_file);
-
-    // bake hdr maps if skybox is loaded
-    if (renderer.m_skybox.is_active) {
-        SYN_INFO("baking HDR irradiance and specular maps.\n");
-        renderer.bake_irradiance_hdr();
-        renderer.bake_specular_hdr();
-    }
-
-    SYN_INFO("assets loaded in %.2f ms.\n", t.get_dt_ms());
-
-    // reset performance statistics
-    renderer.m_perf_stats.frame_time_idx = 0;
-    memset(renderer.m_perf_stats.frame_times, 0, sizeof(renderer.m_perf_stats.frame_times));
 
 }
 
@@ -167,6 +150,191 @@ void syn_set_window_pos_quadrant(int _quadrant)
     root_window.set_window_position(xoffset, yoffset);
 
 }
+
+//
+void syn_load_assets(const char *_asset_file)
+{
+    scope_timer_t t;
+    assets.load_manifest(_asset_file);
+
+    // bake hdr maps if skybox is loaded
+    if (renderer.m_skybox.is_active) {
+        SYN_INFO("baking HDR irradiance and specular maps.\n");
+        renderer.bake_irradiance_hdr();
+        renderer.bake_specular_hdr();
+    }
+
+    SYN_INFO("assets loaded in %.2f ms.\n", t.get_dt_ms());
+
+    // reset performance statistics
+    renderer.m_perf_stats.frame_time_idx = 0;
+    memset(renderer.m_perf_stats.frame_times, 0, sizeof(renderer.m_perf_stats.frame_times));
+
+}
+
+// 
+void syn_load_layout(const char *_filepath)
+{
+    FILE *fp = fopen(_filepath, "r");
+    if (!fp) {
+        SYN_WARNING("could not open layout file '%s'.\n", _filepath);
+        return;
+    }
+
+    float sw = root_window.get_fwidth();
+    float sh = root_window.get_fheight();
+
+    char line[256];
+    char type[64] = "";
+    char name[128] = "";
+
+    glm::vec2 position = { 0.0f, 0.0f };
+    glm::vec2 size     = { 0.5f, 0.5f };
+
+    auto flush_window = [&]() {
+        if (strlen(type) == 0) return;
+        glm::vec2 abs_pos  = { position.x * sw, position.y * sh };
+        glm::vec2 abs_size = { size.x * sw,     size.y * sh     };
+        if (strcmp(type, "viewport") == 0) syn_create_viewport_window(name, abs_pos, abs_size);
+        else if (strcmp(type, "log") == 0) syn_create_log_window(name, abs_pos, abs_size);
+        else if (strcmp(type, "properties") == 0) syn_create_properties_window(name, abs_pos, abs_size);
+        else if (strcmp(type, "window") == 0) {
+            window_t win;
+            win.name = name;
+            win.position = abs_pos;
+            win.size = abs_size;
+            window_manager.add_window(win);
+        }
+
+        memset(type, 0, sizeof(type));
+        memset(name, 0, sizeof(name));
+        position = { 0.0f, 0.0f };
+        size     = { 0.5f, 0.5f };
+    };
+
+    while (fgets(line, sizeof(line), fp)) {
+        // strip newline
+        size_t len = strlen(line);
+        while (len > 0 && (line[len-1] == '\n' || line[len-1] == '\r'))
+            line[--len] = '\0';
+
+        if (line[0] == '#') {
+            // commit previous block
+            flush_window();
+            sscanf(line + 1, "%s", type);
+        }
+        else if (strncmp(line, "name", 4) == 0)     sscanf(line + 4, " %[^\n]", name);
+        else if (strncmp(line, "position", 8) == 0) sscanf(line + 8, " %f %f", &position.x, &position.y);
+        else if (strncmp(line, "size", 4) == 0)     sscanf(line + 4, " %f %f", &size.x, &size.y);
+    }
+
+    // commit last block
+    flush_window();
+    fclose(fp);
+    SYN_INFO("layout loaded from '%s'.\n", _filepath);
+    
+}
+
+// 
+void syn_save_layout(const char *_filepath)
+{
+    FILE *fp = fopen(_filepath, "w");
+    if (!fp) {
+        SYN_WARNING("could not open layout file '%s' for writing.\n", _filepath);
+        return;
+    }
+
+    float sw = root_window.get_fwidth();
+    float sh = root_window.get_fheight();
+
+    for (uint32_t i = 0; i < SYN_MAX_WINDOW_COUNT; i++) {
+        window_t *win = window_manager.get_window({ i + 1 });
+        if (!win || !win->is_active()) continue;
+        if (win->is_tab_child()) continue;
+     
+        const char *type = "window";
+        if      (win->handle().id == window_manager.get_viewport_window_handle().id) type = "viewport";
+        else if (win->handle().id == window_manager.get_log_window_handle().id) type = "log";
+        else if (win->handle().id == window_manager.get_properties_window_handle().id) type = "properties";
+
+        fprintf(fp, "#%s\n", type);
+        fprintf(fp, "name        %s\n", win->name.c_str());
+        fprintf(fp, "position    %.4f %.4f\n", win->position.x / sw, win->position.y / sh);
+        fprintf(fp, "size        %.4f %.4f\n", win->size.x / sw,     win->size.y / sh);
+        fprintf(fp, "\n");
+    }
+
+    fclose(fp);
+    SYN_INFO("layout saved to '%s'.\n", _filepath);
+    
+}
+
+// 
+void syn_create_viewport_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size)
+{
+    window_t win;
+    win.name = _name;
+    win.position = _pos;
+    win.size = _size;
+    window_handle_t handle = window_manager.add_window(win);
+    window_manager.set_viewport_window(handle);    
+    window_t *w = window_manager.get_window(handle);
+    w->create_framebuffer();
+    
+}
+
+// 
+void syn_create_log_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size)
+{
+    window_t win;
+    win.name = _name;
+    win.position = _pos;
+    win.size = _size;
+
+    widget_t text_area;
+    text_area.type = widget_type_t::TEXT_AREA;
+    text_area.anchor = widget_anchor_t::TOP_LEFT;
+    text_area.position = glm::vec2(0.0f, 0.0f);
+    text_area.size = glm::vec2(win.size.x - 10.0f, win.size.y - win.title_bar_height - 5.0f);
+    text_area.consumes_click = false;
+    text_area.get_lines = [](text_area_line_t * _lines, uint32_t _max_lines) -> uint32_t {
+        uint32_t count = std::min(syn_log_buffer.count, _max_lines);
+        for (uint32_t i = 0; i < count; i++) {
+            const log_entry_t &e = syn_log_buffer.get(syn_log_buffer.count - count + i);
+            strncpy(_lines[i].text, e.msg, SYN_LOG_LINE_LEN - 1);
+            switch (e.level) {
+                case log_level_t::WARNING:  _lines[i].color = { 1.0f, 0.8f, 0.0f, 1.0f }; break;
+                case log_level_t::ERROR:    _lines[i].color = { 1.0f, 0.3f, 0.3f, 1.0f }; break;
+                case log_level_t::DEBUG:    _lines[i].color = { 0.4f, 1.0f, 0.4f, 1.0f }; break;
+                default:                    _lines[i].color = { 0.9f, 0.9f, 0.9f, 1.0f }; break;
+            }
+        }
+        return count;
+    };
+    text_area.on_resize = [](widget_t *_self, const glm::vec2 &_content_size) {
+        _self->size = glm::vec2(_content_size.x - 8.0f, _content_size.y - 5.0f);
+    };
+    window_handle_t handle = window_manager.add_window(win);
+    window_t *lw = window_manager.get_window(handle);
+    lw->add_widget(text_area);
+    lw->on_resize();
+
+    window_manager.set_log_window_handle(handle);
+    
+}
+
+// 
+void syn_create_properties_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size)
+{
+    window_t win;
+    win.name = _name;
+    win.position = _pos;
+    win.size = _size;
+    window_handle_t handle = window_manager.add_window(win);
+    window_manager.set_properties_window_handle(handle);
+
+}
+
 
 //---------------------------------------------------------------------------------------
 // rendering loop functions

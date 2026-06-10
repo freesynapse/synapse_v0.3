@@ -40,6 +40,12 @@ public:
     window_handle_t get_viewport_window_handle() { return m_viewport_window_handle; }
     bool has_viewport_window() { return m_viewport_window_handle.id != 0; }
 
+    // static window types
+    void set_log_window_handle(const window_handle_t &_handle) { m_log_window_handle = _handle; }
+    window_handle_t get_log_window_handle() { return m_log_window_handle; }
+    void set_properties_window_handle(const window_handle_t &_handle) { m_properties_window_handle = _handle; }
+    window_handle_t get_properties_window_handle() { return m_properties_window_handle; }
+    
     // interaction
     window_handle_t get_window_at_pos(const glm::vec2 _pos);
     window_handle_t get_window_at_pos(const glm::vec2 _pos, const window_handle_t &_exclude_handle);
@@ -70,9 +76,13 @@ private:
     window_t m_pool[SYN_MAX_WINDOW_COUNT];
     size_t m_active_count = 0;
 
+    // static window handles
+    window_handle_t m_viewport_window_handle = { 0 };
+    window_handle_t m_log_window_handle = { 0 };
+    window_handle_t m_properties_window_handle = { 0 };
+
     shader_handle_t m_window_shader_handle;
 
-    window_handle_t m_viewport_window_handle = { 0 };
     shader_handle_t m_tex_quad_shader_handle;
     vertex_array_t m_tex_quad_vao;
     

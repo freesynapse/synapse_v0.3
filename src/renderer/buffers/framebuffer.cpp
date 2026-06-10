@@ -52,7 +52,7 @@ void framebuffer_base_t::save_as_png(const std::string &_file_path/* ="" */)
 			
 		std::string time = current_time();
 		std::replace(time.begin(), time.end(), ':', '.');
-		file_name = dir_name + current_date() + '_' + time + '_' + Random::rand_str(24) + ".png";
+		file_name = dir_name + current_date() + '_' + time + '_' + rng.rand_str(24) + ".png";
 
 	}
 	else

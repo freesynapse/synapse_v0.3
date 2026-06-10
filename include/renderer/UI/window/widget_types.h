@@ -48,6 +48,7 @@ struct widget_t {
     
     // callbacks
     std::function<void()> on_click;
+    bool consumes_click = true;
     // call: count = get_lines(text_area_lines_t *_out_buffer, uint32_t _max_lines)
     std::function<uint32_t(text_area_line_t *, uint32_t)> get_lines;
     std::function<void(widget_t *, const glm::vec2 &)> on_resize;

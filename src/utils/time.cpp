@@ -5,22 +5,7 @@
 
 #include "utils/time.h"
 
-
-// static class variable declarations
-// std::tm Time::m_tmNow;
-
-
-//-----------------------------------------------------------------------------------
-// std::tm Time::now()
-// {
-	// std::chrono::time_point<std::chrono::system_clock> chronoTime = std::chrono::system_clock::now();
-	// std::time_t now_t = std::chrono::system_clock::to_time_t(chronoTime);
-	// m_tmNow = *std::localtime(&now_t);
 // 
-	// return m_tmNow;
-// }
-
-//-----------------------------------------------------------------------------------
 std::string current_time()
 {
     std::chrono::time_point<std::chrono::system_clock> chronoTime = std::chrono::system_clock::now();
@@ -36,7 +21,7 @@ std::string current_time()
 	return ss.str();
 }
 
-//-----------------------------------------------------------------------------------
+//
 std::string current_date()
 {
     std::chrono::time_point<std::chrono::system_clock> chronoTime = std::chrono::system_clock::now();
@@ -52,7 +37,7 @@ std::string current_date()
 	return ss.str();
 }
 
-//-----------------------------------------------------------------------------------
+//
 char *get_timestamp()
 {
     memset(__tmp_time_buffer, 0, 16);

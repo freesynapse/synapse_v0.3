@@ -1,0 +1,14 @@
+#viewport
+name        Viewport
+position    0.00 0.00
+size        0.80 0.80
+
+#log
+name        Log
+position    0.00 0.80
+size        0.80 0.20
+
+#properties
+name        Properties
+position    0.80 0.00
+size        0.20 1.00
