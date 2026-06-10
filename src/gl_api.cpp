@@ -26,15 +26,15 @@ void gl_api_t::init()
 void gl_api_t::on_resize(const event_t &_e)
 {
 
-    glm::ivec2 new_viewport = _e.as.viewport_resize.viewport;
+    glm::ivec2 vp = _e.as.viewport_resize.viewport;
 
     // set main viewport
-    if (new_viewport.x > 0 && new_viewport.y > 0) {
-        m_viewport = new_viewport;
-        set_viewport(glm::ivec2(0, 0), new_viewport);
+    if (vp.x > 0 && vp.y > 0) {
+        m_viewport = vp;
+        set_viewport(glm::ivec2(0, 0), vp);
 
     } else {
-        SYN_WARNING("viewport not set : new viewport = [%d, %d]\n", new_viewport.x, new_viewport.y);
+        SYN_WARNING("viewport not set : new viewport = [%d, %d]\n", vp.x, vp.y);
     }
 }
 

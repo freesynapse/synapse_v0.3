@@ -75,6 +75,7 @@ int glfw_window_t::init(const char *_name, int _width, int _height)
 		glfwSetWindowMonitor(m_window_ptr, m_primary_monitor, 0, 0, m_screen_dim.x, m_screen_dim.y, m_video_mode->refreshRate);
 		m_window_dim = m_screen_dim;
 		m_is_fullscreen = true;
+		font.update_screen_size();
 	}
 	else {
         glfwSetWindowSize(m_window_ptr, m_window_dim.x, m_window_dim.y);

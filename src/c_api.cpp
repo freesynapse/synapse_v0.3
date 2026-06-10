@@ -297,6 +297,7 @@ void syn_create_log_window(const char *_name, const glm::vec2 &_pos, const glm::
     text_area.position = glm::vec2(0.0f, 0.0f);
     text_area.size = glm::vec2(win.size.x - 10.0f, win.size.y - win.title_bar_height - 5.0f);
     text_area.consumes_click = false;
+
     text_area.get_lines = [](text_area_line_t * _lines, uint32_t _max_lines) -> uint32_t {
         uint32_t count = std::min(syn_log_buffer.count, _max_lines);
         for (uint32_t i = 0; i < count; i++) {
@@ -311,9 +312,15 @@ void syn_create_log_window(const char *_name, const glm::vec2 &_pos, const glm::
         }
         return count;
     };
+
     text_area.on_resize = [](widget_t *_self, const glm::vec2 &_content_size) {
         _self->size = glm::vec2(_content_size.x - 8.0f, _content_size.y - 5.0f);
     };
+
+    text_area.on_scroll = [](widget_t *_self, float _delta) {
+        _self->scroll_offset = glm::clamp(_self->scroll_offset + _delta, 0.0f, (float)_self->scroll_max_lines);
+    };
+    
     window_handle_t handle = window_manager.add_window(win);
     window_t *lw = window_manager.get_window(handle);
     lw->add_widget(text_area);
@@ -415,6 +422,11 @@ void syn_render_end()
     // ui rendering
     api.clear_depth_buffer();
     window_manager.draw_windows();
+
+    // 
+    renderer.draw_perf_stats();
+    renderer.draw_notifications();
+    font.end_render_block(false);
     
     //
     root_window.post_render();

@@ -10,6 +10,7 @@
 //
 static void __window_manager_on_mouse_button_callback(const event_t &_e) { window_manager.on_mouse_button_event(_e); }
 static void __window_manager_on_mouse_move_callback(const event_t &_e) { window_manager.on_mouse_move_event(_e); }
+static void __window_manager_on_mouse_scroll_callback(const event_t &_e) { window_manager.on_mouse_scroll_event(_e); }
 static void __window_manager_on_keydown_callback(const event_t &_e) { window_manager.on_keydown_event(_e); }
 static void __window_manager_on_ui_window_close_callback(const event_t &_e) { window_manager.on_ui_window_close_event(_e); }
 
@@ -38,6 +39,7 @@ void window_manager_t::init()
     //
     events.register_callback(event_type_t::INPUT_MOUSE_BUTTON, __window_manager_on_mouse_button_callback);
     events.register_callback(event_type_t::INPUT_MOUSE_MOVE, __window_manager_on_mouse_move_callback);
+    events.register_callback(event_type_t::INPUT_MOUSE_SCROLL, __window_manager_on_mouse_scroll_callback);
     events.register_callback(event_type_t::INPUT_KEYDOWN, __window_manager_on_keydown_callback);
     events.register_callback(event_type_t::UI_WINDOW_CLOSE, __window_manager_on_ui_window_close_callback);
     
@@ -286,6 +288,23 @@ void window_manager_t::on_mouse_move_event(const event_t &_e)
         }
     }
     
+}
+
+// 
+void window_manager_t::on_mouse_scroll_event(const event_t &_e)
+{
+    float delta = _e.as.mouse_scroll.yoffset;
+
+    window_handle_t hovered = get_window_at_pos(m_mouse_pos);
+    if (hovered.id == 0) return;
+
+    window_t *win = get_window(hovered);
+    if (!win) return;
+
+    widget_t *w = win->get_widget_at_pos(m_mouse_pos);
+    if (w && w->on_scroll) {
+        w->on_scroll(w, delta);
+    }
 }
 
 // 

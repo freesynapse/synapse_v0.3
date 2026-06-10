@@ -726,32 +726,40 @@ void asset_manager_t::render_loading_assets()
     }
 
     glm::ivec2 dims = root_window.window_dims();
-    static float bar_width = 600.0f;
-    static float bar_height = 20.0f;
-    static float bar_x = (dims.x - bar_width) / 2.0f;
-    static float bar_y = dims.y / 2.0f;
+    api.set_viewport({ 0, 0 }, dims);
 
-    renderer_2d.draw_rect_outline(bar_x, bar_y,
-                                  bar_width, bar_height,
-                                  2.0f,
-                                  glm::vec4(0.3f, 0.3f, 0.3f, 1.0f),
-                                  glm::vec4(0.8f, 0.8f, 0.8f, 1.0f));
+    float bar_width = dims.x * 0.5f;
+    float bar_height = dims.y * 0.02f;
+    float bar_x = (dims.x - bar_width) / 2.0f;
+    float bar_y = (dims.y + bar_height) / 2.0f;
 
+    glm::vec2 pos  = { bar_x, bar_y };
+    glm::vec2 size = { bar_width, bar_height };
+    glm::vec4 lc = glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
+    ui_batch_renderer.add_quad(pos, size, glm::vec4(0.3f, 0.3f, 0.3f, 1.0f), -1.0f);
+    ui_render_vertex_t ls[] = {
+        ui_render_vertex_t({ pos.x, pos.y }, lc, 0.0f),
+        ui_render_vertex_t({ pos.x + size.x, pos.y }, lc, 0.0f),
+        ui_render_vertex_t({ pos.x + size.x, pos.y + size.y }, lc, 0.0f),
+        ui_render_vertex_t({ pos.x, pos.y + size.y }, lc, 0.0f),
+        ui_render_vertex_t({ pos.x, pos.y }, lc, 0.0f),
+    };
+    ui_batch_renderer.add_line_strip(ls, 5);
+    
     float filled_width = bar_width * progress;
-    renderer_2d.draw_rect(bar_x, bar_y, filled_width, bar_height, glm::vec4(0.65f, 0.30f, 0.04f, 1.0f));
+    ui_batch_renderer.add_quad(pos, { filled_width, bar_height }, glm::vec4(0.65f, 0.30f, 0.04f, 1.0f), -0.5f);
 
-    //
-
+    //    
     int percent = (int)(progress * 100.0f);
     float percent_x = bar_x + bar_width * 0.5f - font.get_string_width("%d%%", percent) * 0.5f;
-    static float asset_text_y = bar_y - font.get_font_height() * 0.5f + 3.0f;
+    float asset_text_y = bar_y - font.get_font_height() * 0.5f;
 
-    static float percent_y = bar_y + bar_height - 4.0f;
+    float percent_y = bar_y + (bar_height + font.get_font_height()) * 0.5f;
+
+    ui_batch_renderer.end_batch();
 
     font.render_text(percent_x, percent_y, "%d%%", percent);
-
     font.render_text(bar_x, asset_text_y, "Loading assets... %s", m_load_progress.current_asset.c_str());
-
     font.end_render_block(false);
 
     root_window.post_render();

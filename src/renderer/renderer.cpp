@@ -747,7 +747,7 @@ void renderer_t::draw_perf_stats()
     float y = padding;
     
     // text
-    float text_y = y;
+    float text_y = y + line_height;
     font.render_text(x, text_y += line_height, "FPS: %d (%.2f ms)", time_step.fps, time_step.dt * 1000.0f);
     font.render_text(x, text_y += line_height, "Draw Calls: %d", m_perf_stats.draw_calls_per_frame);
     
@@ -1086,7 +1086,7 @@ void renderer_t::render_debug_grid(float _y_level)
 //
 void renderer_t::render_debug_orientation_obj()
 {
-    api.set_viewport({0, 0}, {m_orientation_obj_size, m_orientation_obj_size});
+    api.set_viewport({0, 0}, { m_orientation_obj_size, m_orientation_obj_size });
     
     // render on top
     api.clear_depth_buffer();

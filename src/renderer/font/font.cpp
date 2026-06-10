@@ -318,16 +318,16 @@ void font_t::on_resize(const event_t &_e)
 	if (!m_update_on_resize)
 		return;
 
-	glm::ivec2 new_viewport = _e.as.viewport_resize.viewport;
+	glm::ivec2 vp = _e.as.viewport_resize.viewport;
 
-	m_sx = 2.0f / (float)new_viewport.x;
-	m_sy = 2.0f / (float)new_viewport.y;
+	m_sx = 2.0f / (float)vp.x;
+	m_sy = 2.0f / (float)vp.y;
 
 }
 
 //
-void font_t::resize(const glm::vec2& _vp_sz_px)
+void font_t::update_screen_size()
 {
-	m_sx = 2.0f / _vp_sz_px.x;
-	m_sy = 2.0f / _vp_sz_px.y;
+	m_sx = 2.0f / root_window.get_fwidth();
+	m_sy = 2.0f / root_window.get_fheight();
 }

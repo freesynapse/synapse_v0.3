@@ -144,5 +144,5 @@ void ui_render_batch_t::end_batch()
     }
 
     shader->disable();
-    
+
 }

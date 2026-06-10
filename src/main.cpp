@@ -106,10 +106,10 @@ void setup_lights()
 //
 int main()
 {
-    // syn_init("synapse v0.3", 0, 0, SYN_MODE_3D);
-    syn_init("synapse v0.3", 2000, 1400, SYN_MODE_3D);
+    syn_init("synapse v0.3", 0, 0, SYN_MODE_3D);
+    // syn_init("synapse v0.3", 2000, 1400, SYN_MODE_3D);
     root_window.set_exit_key(SYN_KEY_ESCAPE);
-    syn_set_window_pos_quadrant(UPPER_RIGHT);
+    // syn_set_window_pos_quadrant(UPPER_RIGHT);
 
     syn_load_assets("../assets/manifest.syn");
     helmet = assets.get_entity("helmet");
@@ -135,21 +135,12 @@ int main()
     orbit_camera.m_y_angle = 82.0f;
     orbit_camera.m_radius = 3.0f;
 
-    window_t win1;
-    win1.name = "test window 1";
-    win1.position = { 100.0f, 700.0f };
-    win1.size = { 400.0f, 400.0f };
-    window_handle_t win1_handle = window_manager.add_window(win1);
-    
-    window_t win2;
-    win2.name = "test window 2";
-    win2.position = { 1200.0f, 150.0f };
-    win2.size = { 400.0f, 400.0f };
-    win2.set_focused(true);
-    window_handle_t win2_handle = window_manager.add_window(win2);
+    //window_t win;
+    //win.name = "test window 1";
+    //win.position = { 100.0f, 700.0f };
+    //win.size = { 400.0f, 400.0f };
+    //window_handle_t win_handle = window_manager.add_window(win);
 
-    // window_handle_t vp_handle = syn_create_viewport_window("Scene", glm::vec2(100.0f), glm::vec2(600.0f));
-    // window_handle_t log_handle = syn_create_log_window("Log", glm::vec2(10.0f, 400.0f), glm::vec2(600.0f, 300.0f));
     syn_load_layout("../assets/layout.syn");
     
     //

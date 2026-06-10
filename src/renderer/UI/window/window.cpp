@@ -225,20 +225,28 @@ void window_t::draw_widgets()
             case widget_type_t::TEXT_AREA: {
                 if (!w->get_lines) break;
 
+                float prev_depth = font.get_current_depth();
+                float font_depth = (depth + window_manager.m_ddepth_layer_text) / window_manager.m_zfar;
+                font.set_depth(font_depth);
+                glm::vec4 prev_color = font.get_color();
+
+                // 
                 float line_h = font.get_font_height();
                 uint32_t max_lines = (uint32_t)(w->size.y / line_h);
 
+                // get the text
                 text_area_line_t lines[256];
-                uint32_t count = w->get_lines(lines, std::min(max_lines, 256u));
+                uint32_t count = w->get_lines(lines, 256u);
 
-                float font_depth = (depth + window_manager.m_ddepth_layer_text) / window_manager.m_zfar;
-                float prev_depth = font.get_current_depth();
-                glm::vec4 prev_color = font.get_color();
-                font.set_depth(font_depth);
+                // scrolling
+                w->scroll_max_lines = (count > max_lines) ? count - max_lines : 0;
+                uint32_t start = w->scroll_max_lines - (uint32_t)w->scroll_offset;
+                uint32_t display_count = (count > start) ? std::min(count - start, max_lines) : 0;
 
-                for (uint32_t j = 0; j < count; j++) {
-                    font.set_color(lines[j].color);
-                    font.render_text_clipped(p.x + 4.0f, p.y + j * line_h + line_h, w->size.x - 8.0f, "%s", lines[j].text);
+                // render text
+                for (uint32_t j = 0; j < display_count; j++) {
+                    font.set_color(lines[start + j].color);
+                    font.render_text_clipped(p.x + 4.0f, p.y + j * line_h + line_h, w->size.x - 8.0f, "%s", lines[start + j].text);
                 }
                 font.set_depth(prev_depth);
                 font.set_color(prev_color);

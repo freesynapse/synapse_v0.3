@@ -54,12 +54,12 @@ public:
 	void set_depth(float _depth) { m_current_depth = _depth; }
 	float get_current_depth() { return m_current_depth; }
 	const glm::vec4 &get_color() { return m_text_color; }
-	
-	// Accessors
-	inline float get_font_height() { return (float)(m_texture_height); }
+	float get_font_height() { return (float)(m_texture_height); }
+	float get_sx() { return m_sx; }
+	float get_sy() { return m_sy; }
 	
 	void on_resize(const event_t &_e);
-	void resize(const glm::vec2 &_vp_sz_px);
+	void update_screen_size();
 
 private:
 	int init_font_atlas(const char *_filename, const int &_pixel_size, const glm::vec2 &_vp_sz);
