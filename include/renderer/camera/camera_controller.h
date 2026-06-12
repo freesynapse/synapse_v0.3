@@ -14,64 +14,33 @@ enum class camera_mode_t {
 class camera_controller_t
 {
 public:
-    void init(orbit_camera_t* orbit_cam, perspective_camera_t* fps_cam);
-    void update(float dt);
-    void switch_mode(camera_mode_t new_mode);
-    
-    void handle_orbit_input(float dt);
-    void handle_fps_input(float dt);
-    
-    glm::mat4 get_view_matrix();
-    glm::mat4 get_projection_matrix();
-    glm::mat4 get_view_projection_matrix();
+    void init(orbit_camera_t *_orbit_cam, perspective_camera_t *_fps_cam);
+    void update(float _dt);
+    void set_mode(camera_mode_t _mode);
+    void toggle_mode();
 
-public:
-    camera_mode_t m_mode = camera_mode_t::ORBIT;
-
-    // smoothing parameters
-    float m_orbit_smooth_factor = 0.15f;  // [0.1 .. 0.3], lower: smoother
-    float m_fps_smooth_factor = 0.2f;
-    float m_zoom_smooth_factor = 0.1f;
-
-    // orbit camera state
-    struct {
-        float target_distance = 5.0f;
-        float current_distance = 5.0f;
-        float target_yaw = 0.0f;
-        float current_yaw = 0.0f;
-        float target_pitch = 0.0f;
-        float current_pitch = 0.0f;
-        glm::vec3 target_focus = glm::vec3(0.0f);
-        glm::vec3 current_focus = glm::vec3(0.0f);
-        
-        float rotation_speed = 0.3f;
-        float zoom_speed = 1.0f;
-        float pan_speed = 0.01f;
-        float min_distance = 1.0f;
-        float max_distance = 50.0f;
-    } orbit;
+    void update_projection_matrix();
+    void set_aspect_ratio(float _ar);
     
-    // fps camera state
-    struct {
-        glm::vec3 target_position = glm::vec3(0.0f, 2.0f, 5.0f);
-        glm::vec3 current_position = glm::vec3(0.0f, 2.0f, 5.0f);
-        float target_yaw = -90.0f;
-        float current_yaw = -90.0f;
-        float target_pitch = 0.0f;
-        float current_pitch = 0.0f;
-        
-        float move_speed = 5.0f;
-        float sprint_multiplier = 2.0f;
-        float look_sensitivity = 0.1f;
-    } fps;
+    camera_mode_t get_mode() { return m_mode; }
+    bool is_orbit() { return m_mode == camera_mode_t::ORBIT; }
+    bool is_pesepective() { return m_mode == camera_mode_t::PERSPECTIVE; }
+
+    const glm::vec3 &get_position();
+    const glm::mat4 &get_view_matrix();
+    const glm::mat4 &get_projection_matrix();
+    const glm::mat4 &get_view_projection_matrix();
+    float get_z_near();
+    float get_z_far();
 
 private:
-    orbit_camera_t *m_orbit_camera_ptr = nullptr;
-    perspective_camera_t *m_fps_camera_ptr = nullptr;
-
-    float lerp(float _a, float _b, float _t);
-    glm::vec3 lerp(const glm::vec3 &_a, const glm::vec3 &_b, float _t);
+    void sync_perspective_from_orbit();
+    void sync_orbit_from_perspective();
     
+    camera_mode_t m_mode = camera_mode_t::ORBIT;
+    orbit_camera_t *m_orbit_ptr = nullptr;
+    perspective_camera_t *m_perspective_ptr = nullptr;
+
 };
 
 

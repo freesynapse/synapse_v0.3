@@ -736,7 +736,7 @@ void asset_manager_t::render_loading_assets()
     glm::vec2 pos  = { bar_x, bar_y };
     glm::vec2 size = { bar_width, bar_height };
     glm::vec4 lc = glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
-    ui_batch_renderer.add_quad(pos, size, glm::vec4(0.3f, 0.3f, 0.3f, 1.0f), -1.0f);
+    renderer_2d.batch.add_quad(pos, size, glm::vec4(0.3f, 0.3f, 0.3f, 1.0f), -1.0f);
     ui_render_vertex_t ls[] = {
         ui_render_vertex_t({ pos.x, pos.y }, lc, 0.0f),
         ui_render_vertex_t({ pos.x + size.x, pos.y }, lc, 0.0f),
@@ -744,10 +744,10 @@ void asset_manager_t::render_loading_assets()
         ui_render_vertex_t({ pos.x, pos.y + size.y }, lc, 0.0f),
         ui_render_vertex_t({ pos.x, pos.y }, lc, 0.0f),
     };
-    ui_batch_renderer.add_line_strip(ls, 5);
+    renderer_2d.batch.add_line_strip(ls, 5);
     
     float filled_width = bar_width * progress;
-    ui_batch_renderer.add_quad(pos, { filled_width, bar_height }, glm::vec4(0.65f, 0.30f, 0.04f, 1.0f), -0.5f);
+    renderer_2d.batch.add_quad(pos, { filled_width, bar_height }, glm::vec4(0.65f, 0.30f, 0.04f, 1.0f), -0.5f);
 
     //    
     int percent = (int)(progress * 100.0f);
@@ -756,7 +756,7 @@ void asset_manager_t::render_loading_assets()
 
     float percent_y = bar_y + (bar_height + font.get_font_height()) * 0.5f;
 
-    ui_batch_renderer.end_batch();
+    renderer_2d.batch.end_batch();
 
     font.render_text(percent_x, percent_y, "%d%%", percent);
     font.render_text(bar_x, asset_text_y, "Loading assets... %s", m_load_progress.current_asset.c_str());

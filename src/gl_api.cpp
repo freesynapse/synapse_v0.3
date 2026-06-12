@@ -137,9 +137,23 @@ const glm::ivec2 &gl_api_t::get_viewport()
 }
 
 //
-const glm::vec2 gl_api_t::get_viewport_f()
+const glm::vec2 gl_api_t::get_fviewport()
 {
     return glm::vec2(m_viewport.x, m_viewport.y);
+}
+
+// 
+const glm::ivec2 &gl_api_t::get_scene_viewport()
+{
+    return m_scene_viewport;
+    
+}
+
+// 
+const glm::fvec2 gl_api_t::get_scene_fviewport()
+{
+    return glm::vec2(m_scene_viewport.x, m_scene_viewport.y);
+    
 }
 
 //
@@ -153,6 +167,13 @@ void gl_api_t::set_viewport(const glm::ivec2 &_position, const glm::ivec2 &_size
 {
     glViewport(_position.x, _position.y, _size.x, _size.y);
 
+}
+
+//
+void gl_api_t::set_scene_viewport(const glm::ivec2 &_size)
+{
+    m_scene_viewport = _size;
+    
 }
 
 //

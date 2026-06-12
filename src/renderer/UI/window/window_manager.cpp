@@ -43,8 +43,8 @@ void window_manager_t::init()
     events.register_callback(event_type_t::INPUT_KEYDOWN, __window_manager_on_keydown_callback);
     events.register_callback(event_type_t::UI_WINDOW_CLOSE, __window_manager_on_ui_window_close_callback);
     
-    if (!ui_batch_renderer.is_initalized()) {
-        ui_batch_renderer.init();
+    if (!renderer_2d.batch.is_initalized()) {
+        renderer_2d.batch.init();
     }
 }
 
@@ -531,8 +531,12 @@ void window_manager_t::set_viewport_window(const window_handle_t &_handle)
 
     m_viewport_window_handle = _handle;
 
-    SYN_INFO("set viewport window to '%s'.\n", win->name.c_str());
+    // 
+    api.set_scene_viewport(win->get_content_size());
     
+    
+    SYN_INFO("set viewport window to '%s'.\n", win->name.c_str());
+
 }
 
 // 
@@ -790,7 +794,7 @@ void window_manager_t::draw_windows()
                               m_zfar, m_znear);
     
     // 1. draw all colored geometry
-    ui_batch_renderer.begin_batch();
+    renderer_2d.batch.begin_batch();
 
     for (uint32_t i = 0; i < SYN_MAX_WINDOW_COUNT; i++) {
         window_t *win = &m_pool[i];
@@ -803,7 +807,7 @@ void window_manager_t::draw_windows()
     draw_dock_zone_overlays();
 
     // draw all quads / line_strips
-    ui_batch_renderer.end_batch();
+    renderer_2d.batch.end_batch();
 
     // 2. draw all textured content.
     for (uint32_t i = 0; i < SYN_MAX_WINDOW_COUNT; i++) {
@@ -888,7 +892,7 @@ void window_manager_t::draw_dock_zone_overlays()
         glm::vec4 color = glm::vec4(0.65f, 0.30f, 0.04f, m_dock_preview_alpha);
         
         //
-        ui_batch_renderer.add_quad(glm::vec2(b.x, b.y), glm::vec2(b.z, b.w), color, m_znear - 0.5f);
+        renderer_2d.batch.add_quad(glm::vec2(b.x, b.y), glm::vec2(b.z, b.w), color, m_znear - 0.5f);
         
         // Draw outline
         glm::vec4 outline_color = glm::vec4(1.0f, 0.55f, 0.05f, 0.8f);
@@ -905,7 +909,7 @@ void window_manager_t::draw_dock_zone_overlays()
             ui_render_vertex_t({ x0, y0 }, outline_color, m_znear - 0.1f),
         };
 
-        ui_batch_renderer.add_line_strip(outline, 5);
+        renderer_2d.batch.add_line_strip(outline, 5);
     }
 }
 

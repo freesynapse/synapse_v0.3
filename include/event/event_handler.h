@@ -28,21 +28,25 @@ struct events_t
 	/* Process all events in the queue. */
 	void process_events();
 
-	// Registration of function pointers that will be alerted by the event handler
-	// when an event of a certain event_type_t is dispatched.
+	/* Get next event from the queue. */
+	bool next_event(event_t &_out_event);
+
+	/*  Registration of function pointers that will be alerted by the event handler
+	 *  when an event of a certain event_type_t is dispatched.
+	 */
 	void register_callback(event_type_t _event_type, event_callback_fnc_t _handler_fnc);
+
+	/* Flushes events of type */
+	void flush_event_type(event_type_t _type);
 
 	// DEBUG
 	int queue_length();
 
-	/* Get next event from the queue. */
-	bool next_event(event_t &_out_event);
-
 	
 	// member variables
-	uint32_t queue_head;
-	uint32_t queue_tail;
-	event_t event_queue[MAX_QUEUE_EVENTS];
+	uint32_t m_queue_head;
+	uint32_t m_queue_tail;
+	event_t m_queue[MAX_QUEUE_EVENTS];
 
 };
 

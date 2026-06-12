@@ -17,11 +17,13 @@ public:
 
 	virtual void update(float _dt) override;
 	virtual void handle_input(float _dt);
+	virtual void update_view_matrix() override;
 
 	void on_viewport_resize(const event_t &_e);
 	void on_window_resize(const event_t &_e);
 	void on_cursor_freeze(const event_t &_e);
-	void on_scroll(const event_t &_e);
+	void on_mouse_move(const event_t &_e);
+	void on_keydown(const event_t &e);
 
 	inline float get_x_angle() const  	 { return m_x_angle;   	}
 	inline void set_x_angle(float _x) 	 { m_x_angle = _x;   	}

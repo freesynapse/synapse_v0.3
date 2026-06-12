@@ -33,11 +33,11 @@ entity_library_t            entity_lib;
 time_step_t                 time_step;
 asset_manager_t             assets;
 window_manager_t            window_manager;
-ui_render_batch_t           ui_batch_renderer;
 random_t                    rng;
 
 // rendering
 font_t                      font;
+camera_controller_t         cam;
 perspective_camera_t        perspective_camera;
 orbit_camera_t              orbit_camera;
 orthographic_camera_t       orthographic_camera;
@@ -109,7 +109,7 @@ void syn_mode_3d()
     glm::ivec2 dims = root_window.window_dims();
     orbit_camera.init(60.0f, dims.x, dims.y, 0.1f, 1000.0f);
     perspective_camera.init(60.0f, dims.x, dims.y, 0.1f, 1000.0f);
-
+    cam.init(&orbit_camera, &perspective_camera);
 }
 
 //
@@ -173,7 +173,7 @@ void syn_load_assets(const char *_asset_file)
 }
 
 // 
-void syn_load_layout(const char *_filepath)
+void syn_load_ui_layout(const char *_filepath)
 {
     FILE *fp = fopen(_filepath, "r");
     if (!fp) {
@@ -236,7 +236,7 @@ void syn_load_layout(const char *_filepath)
 }
 
 // 
-void syn_save_layout(const char *_filepath)
+void syn_save_ui_layout(const char *_filepath)
 {
     FILE *fp = fopen(_filepath, "w");
     if (!fp) {
@@ -380,7 +380,7 @@ void syn_render_begin_3d()
     }
 
     // perspective_camera.update(time_step.dt);
-    orbit_camera.update(time_step.dt);
+    cam.update(time_step.dt);
 
 }
 
@@ -392,8 +392,8 @@ void syn_render_end_3d()
 
     // draw_perf_overlay does NOT contain font.start_/.end_render_block()
     renderer.record_frame_time(time_step.dt * 1000.0f);
-    renderer.draw_perf_stats();
-    renderer.draw_notifications();
+    // renderer.draw_perf_stats();
+    // renderer.draw_notifications();
 
     // render all scene text
     font.end_render_block(false);

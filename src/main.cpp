@@ -14,12 +14,11 @@ void handle_input()
         events.dispatch_event(e);
     }
 
+    // 
     if (input.was_key_pressed(SYN_KEY_TAB)) {
-        event_t e;
-        e.type = event_type_t::WINDOW_TOGGLE_FROZEN_CURSOR;
-        events.dispatch_event(e);
+        cam.toggle_mode();
     }
-
+    
     // TODO :   refactor and abstract away
     if (input.was_key_pressed(SYN_KEY_F2)) {
         renderer.toggle_wireframe();
@@ -123,25 +122,17 @@ int main()
     mesh_handle_t sphere_mesh = generate_uv_sphere(1.0f, 36, 18);
     material_handle_t chrome_mat = assets.get_material("gold");
     glm::mat4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -2.0f, 0.0f));
-    // glm::mat4 transform(1.0f);
 
     sphere = entity_lib.create_entity("test_sphere", sphere_mesh, chrome_mat, transform);
 
-    // perspective_camera.set_x_angle(320.0f);
-    // perspective_camera.set_y_angle(30.0f);
-    // perspective_camera.set_position({ 2.7f, 2.0f, 2.7f });
     orbit_camera.m_orbit_speed = 0.5f;
     orbit_camera.m_x_angle = 23.0f;
     orbit_camera.m_y_angle = 82.0f;
-    orbit_camera.m_radius = 3.0f;
+    orbit_camera.m_distance = 3.0f;
+    // cam.set_mode(camera_mode_t::ORBIT);
 
-    //window_t win;
-    //win.name = "test window 1";
-    //win.position = { 100.0f, 700.0f };
-    //win.size = { 400.0f, 400.0f };
-    //window_handle_t win_handle = window_manager.add_window(win);
-
-    syn_load_layout("../assets/layout.syn");
+    //
+    syn_load_ui_layout("../assets/layout.syn");
     
     //
     while (!root_window.should_close()) {

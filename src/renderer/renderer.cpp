@@ -238,8 +238,8 @@ void renderer_t::render_skybox()
     
     shader_t *sky_shader = shader_lib.get_shader(m_skybox.shader_handle);
     sky_shader->enable();
-    sky_shader->set_matrix_4fv("u_view", orbit_camera.get_view_matrix());
-    sky_shader->set_matrix_4fv("u_projection", orbit_camera.get_projection_matrix());
+    sky_shader->set_matrix_4fv("u_view", cam.get_view_matrix());
+    sky_shader->set_matrix_4fv("u_projection", cam.get_projection_matrix());
     
     cubemap_internal_t *cubemap = cubemap_lib.get_cubemap(m_skybox.cubemap_handle);
     glActiveTexture(GL_TEXTURE0);
@@ -592,7 +592,7 @@ void renderer_t::cmd_flush()
                 return a.material.id < b.material.id;
                 });
     
-    glm::mat4 mat_vp = orbit_camera.get_view_projection_matrix();
+    glm::mat4 mat_vp = cam.get_view_projection_matrix();
     
     // track previously bound assets
     uint32_t current_active_shader_id = 0;
@@ -607,11 +607,11 @@ void renderer_t::cmd_flush()
         // batching layer 1: only switch shader when needed
         shader = shader_lib.get_shader(mat->shader_handle);
         if (shader && shader->get_id() != current_active_shader_id) {
-        shader->enable();
-        current_active_shader_id = shader->get_id();
-    
-        shader->set_matrix_4fv("u_view_projection", mat_vp);
-        shader->set_uniform_3fv("u_view_pos", orbit_camera.get_position());
+            shader->enable();
+            current_active_shader_id = shader->get_id();
+        
+            shader->set_matrix_4fv("u_view_projection", mat_vp);
+            shader->set_uniform_3fv("u_view_pos", cam.get_position());
         }
     
         // batching layer 2: only update the material ubo when material changes
@@ -745,8 +745,9 @@ void renderer_t::draw_notifications()
         float alpha = glm::clamp(m_notification.display_time / m_notification.duration, 0.0f, 1.0f);
         float msg_width = font.get_string_width("%s", m_notification.msg.c_str());
     
-        float x = api.m_viewport.x * 0.5f - msg_width * 0.5f;
-        float y = api.m_viewport.y - 200.0f;
+        glm::vec2 vp = api.get_scene_fviewport();
+        float x = vp.x  * 0.5f - msg_width * 0.5f;
+        float y = vp.y - 200.0f;
     
         glm::vec4 prev_color = font.get_color();
         glm::vec4 color = prev_color;
@@ -768,10 +769,10 @@ void renderer_t::draw_frame_time_graph(float _x, float _y, float _w, float _h)
     float bar_width = _w / (float)SYN_PERF_GRAPH_SAMPLE_COUNT;
     float max_frame_time = (m_perf_stats.max_frame_time < 20.0f ? 20.0f : m_perf_stats.max_frame_time);
 
-    ui_batch_renderer.begin_batch();
+    renderer_2d.batch.begin_batch();
     
     // background and outline
-    ui_batch_renderer.add_quad({ _x, _y }, { _w, _h }, glm::vec4(0.1f, 0.1f, 0.1f, 0.8f), -1.0f);
+    renderer_2d.batch.add_quad({ _x, _y }, { _w, _h }, glm::vec4(0.1f, 0.1f, 0.1f, 0.8f), -1.0f);
     ui_render_vertex_t outline[] = {
         ui_render_vertex_t({ _x,      _y      }, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f), -0.9f),
         ui_render_vertex_t({ _x + _w, _y      }, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f), -0.9f),
@@ -779,7 +780,7 @@ void renderer_t::draw_frame_time_graph(float _x, float _y, float _w, float _h)
         ui_render_vertex_t({ _x,      _y + _h }, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f), -0.9f),
         ui_render_vertex_t({ _x,      _y      }, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f), -0.9f),
     };
-    ui_batch_renderer.add_line_strip(outline, 5);
+    renderer_2d.batch.add_line_strip(outline, 5);
 
     // bars
     for (uint32_t i = 0; i < SYN_PERF_GRAPH_SAMPLE_COUNT; i++) {
@@ -797,10 +798,10 @@ void renderer_t::draw_frame_time_graph(float _x, float _y, float _w, float _h)
         else if (frame_time <= 33.33f) color = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
         else                           color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
 
-        ui_batch_renderer.add_quad({ bar_x, bar_y }, { bar_width, bar_height }, color, -0.5f);
+        renderer_2d.batch.add_quad({ bar_x, bar_y }, { bar_width, bar_height }, color, -0.5f);
     }
 
-    ui_batch_renderer.end_batch();
+    renderer_2d.batch.end_batch();
 
     // labels
     font.render_text(_x + _w + 5.0f, _y, "%.1f ms", max_frame_time);
@@ -898,7 +899,7 @@ void renderer_t::render_debug_normals(mesh_handle_t _mesh_handle, const glm::mat
     
     shader->enable();
     
-    glm::mat4 vp = orbit_camera.get_view_projection_matrix();
+    glm::mat4 vp = cam.get_view_projection_matrix();
     glm::mat3 normal_matrix = glm::mat3(glm::transpose(glm::inverse(_transform)));
     
     shader->set_matrix_4fv("u_model", _transform);
@@ -982,7 +983,7 @@ void renderer_t::render_debug_bounding_boxes(const glm::vec3 &_min,
     if (!shader) return;
     
     shader->enable();
-    shader->set_matrix_4fv("u_view_projection", orbit_camera.get_view_projection_matrix());
+    shader->set_matrix_4fv("u_view_projection", cam.get_view_projection_matrix());
     
     glLineWidth(2.0f);
     glDrawArrays(GL_LINES, 0, lines.size() / 7);
@@ -1006,11 +1007,11 @@ void renderer_t::render_debug_grid(float _y_level)
     
     shader->enable();
     
-    glm::mat4 vp = orbit_camera.get_view_projection_matrix();
+    glm::mat4 vp = cam.get_view_projection_matrix();
     shader->set_matrix_4fv("u_inv_view_projection", glm::inverse(vp));
     shader->set_matrix_4fv("u_view_projection", vp);
-    shader->set_uniform_1f("u_near", orbit_camera.get_z_near());
-    shader->set_uniform_1f("u_far", orbit_camera.get_z_far());
+    shader->set_uniform_1f("u_near", cam.get_z_near());
+    shader->set_uniform_1f("u_far", cam.get_z_far());
     shader->set_uniform_1f("u_grid_y", _y_level);
     
     glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
@@ -1028,7 +1029,7 @@ void renderer_t::render_debug_orientation_obj()
     api.clear_depth_buffer();
     
     //
-    glm::mat4 cam_rot = glm::mat4(glm::mat3(orbit_camera.get_view_matrix()));
+    glm::mat4 cam_rot = glm::mat4(glm::mat3(cam.get_view_matrix()));
     static glm::mat4 ortho_proj = glm::ortho(-1.1f, 1.1f, -1.1f, 1.1f, -1.1f, 1.1f);
     glm::mat4 mvp = ortho_proj * cam_rot;
     

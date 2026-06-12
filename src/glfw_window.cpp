@@ -228,7 +228,7 @@ void glfw_window_t::glfw_window_resize_callback(GLFWwindow* _window, int _width,
 
     e.type = event_type_t::VIEWPORT_RESIZE;
     e.as.viewport_resize.viewport = glm::ivec2(_width, _height);
-    e.as.viewport_resize.viewport_f = glm::vec2(_width, _height);
+    e.as.viewport_resize.fviewport = glm::vec2(_width, _height);
     events.dispatch_event(e);
     
 }

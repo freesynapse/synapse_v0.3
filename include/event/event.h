@@ -86,7 +86,7 @@ struct mouse_move_event_t {
 //
 struct viewport_resize_event_t {
     glm::ivec2 viewport;
-    glm::vec2 viewport_f;
+    glm::vec2 fviewport;
 
 };
 

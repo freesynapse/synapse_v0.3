@@ -52,9 +52,12 @@ public:
     void set_clear_color(const glm::vec4 &_color);
 
     const glm::ivec2 &get_viewport();
-    const glm::vec2 get_viewport_f();
+    const glm::vec2 get_fviewport();
+    const glm::ivec2 &get_scene_viewport();
+    const glm::fvec2 get_scene_fviewport();
 	float get_aspect_ratio();      
     void set_viewport(const glm::ivec2 &_position, const glm::ivec2 &_size);
+    void set_scene_viewport(const glm::ivec2 &_size);
     void reset_viewport();
     
     // error checking
@@ -75,6 +78,7 @@ public:
 private:
     // renderer variables
 	glm::ivec2 m_viewport = { 0, 0 };
+	glm::ivec2 m_scene_viewport = { 0, 0 };
 	glm::vec4 m_clear_color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	bool m_is_blending = true;
 

@@ -36,7 +36,7 @@ public:
 	virtual void reset() override;
 	void on_viewport_resize(const event_t &_e);
 	void on_cursor_freeze(const event_t &_e);
-	void on_scroll(const event_t &_e);
+	void on_mouse_scroll(const event_t &_e);
 
 	// accessors
 	inline void set_projection_matrix(float _left, float _right, float _bottom, float _top) override;

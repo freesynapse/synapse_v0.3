@@ -13,7 +13,7 @@
 // static event callback wrappers
 static void __orbit_camera_viewport_resize_callback(const event_t &_e) { orbit_camera.on_viewport_resize(_e); }
 static void __orbit_camera_frozen_cursor_callback(const event_t &_e) { orbit_camera.on_cursor_freeze(_e); }
-static void __orbit_camera_mouse_scroll_callback(const event_t &_e) { orbit_camera.on_scroll(_e); }
+static void __orbit_camera_mouse_scroll_callback(const event_t &_e) { orbit_camera.on_mouse_scroll(_e); }
 
 // 
 orthographic_camera_t::orthographic_camera_t(float _aspect_ratio, float _zoom_level)
@@ -137,7 +137,7 @@ void orthographic_camera_t::update(float _dt)
 // 
 void orthographic_camera_t::on_viewport_resize(const event_t &_e)
 {
-    glm::vec2 viewport = _e.as.viewport_resize.viewport_f;
+    glm::vec2 viewport = _e.as.viewport_resize.fviewport;
     if (viewport.x <= 0 || viewport.y <= 0) return;
 
     m_aspect_ratio = viewport.x / viewport.y;
@@ -153,12 +153,11 @@ void orthographic_camera_t::on_cursor_freeze(const event_t &_e)
 }
 
 // 
-void orthographic_camera_t::on_scroll(const event_t &_e)
+void orthographic_camera_t::on_mouse_scroll(const event_t &_e)
 {
     if (m_zoom_amplifier > 1.0f || m_zoom_amplifier < 1.0f) {
         m_zoom_level *= pow(m_zoom_amplifier, _e.as.mouse_scroll.yoffset);// * zoom_speed);
-    }
-	else {
+    } else {
 	    m_zoom_level -= _e.as.mouse_scroll.yoffset * m_zoom_speed;
 	}
  

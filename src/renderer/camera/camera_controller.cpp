@@ -1,95 +1,171 @@
 
-#include <glm/gtc/matrix_transform.hpp>
-
 #include "renderer/camera/camera_controller.h"
+#include "utils/log.h"
 
 #include "c_api.h"
 
 
 // 
-void camera_controller_t::init(orbit_camera_t *_orbit_cam, perspective_camera_t *_fps_cam)
+void camera_controller_t::init(orbit_camera_t* _orbit_cam, perspective_camera_t* _perspective_cam)
 {
-    m_orbit_camera_ptr = _orbit_cam;
-    m_fps_camera_ptr = _fps_cam;
+    m_orbit_ptr = _orbit_cam;
+    m_perspective_ptr = _perspective_cam;
 
-    // initialize state(s)
-    orbit.current_distance = orbit.target_distance;
-    orbit.current_yaw = orbit.target_yaw;
-    orbit.current_pitch = orbit.target_pitch;
-    orbit.current_focus = orbit.target_focus;
+    m_mode = camera_mode_t::ORBIT;
+    m_orbit_ptr->set_active(true);
+    m_perspective_ptr->set_active(false);
     
-    fps.current_position = fps.target_position;
-    fps.current_yaw = fps.target_yaw;
-    fps.current_pitch = fps.target_pitch;
-     
 }
 
 // 
-void camera_controller_t::update(float dt)
+void camera_controller_t::update(float _dt)
 {
     if (m_mode == camera_mode_t::ORBIT) {
-        handle_orbit_input(dt);
-          
-          // Smooth interpolation
-          orbit.current_distance = lerp(orbit.current_distance, orbit.target_distance, m_orbit_smooth_factor);
-          orbit.current_yaw = lerp(orbit.current_yaw, orbit.target_yaw, m_orbit_smooth_factor);
-          orbit.current_pitch = lerp(orbit.current_pitch, orbit.target_pitch, m_orbit_smooth_factor);
-          orbit.current_focus = lerp(orbit.current_focus, orbit.target_focus, m_orbit_smooth_factor);
-          
-          // Update orbit camera
-          //m_orbit_camera_ptr->set_distance(orbit.current_distance);
-          //m_orbit_camera_ptr->set_yaw(orbit.current_yaw);
-          //m_orbit_camera_ptr->set_pitch(orbit.current_pitch);
-          //m_orbit_camera_ptr->set_focus_point(orbit.current_focus);
-               
+        m_orbit_ptr->update(_dt);
+    } else {
+        m_perspective_ptr->update(_dt);
     }
-    else if (m_mode == camera_mode_t::PERSPECTIVE) {
-        
+}
+
+// 
+void camera_controller_t::set_mode(camera_mode_t _mode)
+{
+    if (m_mode == _mode) return;
+    
+    if (_mode == camera_mode_t::ORBIT) {
+        sync_orbit_from_perspective();
+        m_orbit_ptr->set_active(true);
+        m_perspective_ptr->set_active(false);
+
+        // event_t e;
+        // e.type = event_type_t::WINDOW_TOGGLE_FROZEN_CURSOR;
+        // events.dispatch_event(e);
+        // events.flush_event_type(event_type_t::WINDOW_TOGGLE_FROZEN_CURSOR);
+
+        m_orbit_ptr->m_first_mouse_input = true;    
+
+    } else {
+        sync_perspective_from_orbit();
+        m_orbit_ptr->set_active(false);
+        m_perspective_ptr->set_active(true);
+
+        m_perspective_ptr->m_first_mouse_input = true;    
     }
+
+    event_t e;
+    e.type = event_type_t::WINDOW_TOGGLE_FROZEN_CURSOR;
+    events.dispatch_event(e);
+    events.flush_event_type(event_type_t::WINDOW_TOGGLE_FROZEN_CURSOR);
+    
+    m_mode = _mode;
+    renderer.show_notification(m_mode == camera_mode_t::ORBIT ? "Camera: Orbit" : "Camera: Perspective");
     
 }
 
 // 
-void camera_controller_t::switch_mode(camera_mode_t new_mode)
+void camera_controller_t::toggle_mode()
 {
+    set_mode(m_mode == camera_mode_t::ORBIT ? camera_mode_t::PERSPECTIVE : camera_mode_t::ORBIT);
     
 }
 
 // 
-
-void camera_controller_t::handle_orbit_input(float dt)
+void camera_controller_t::update_projection_matrix()
 {
+    m_orbit_ptr->update_projection_matrix();
+    m_perspective_ptr->update_projection_matrix();
+
+}
+
+// 
+void camera_controller_t::set_aspect_ratio(float _ar)
+{
+    m_orbit_ptr->set_aspect_ratio(_ar);
+    m_perspective_ptr->set_aspect_ratio(_ar);
     
 }
 
 // 
-void camera_controller_t::handle_fps_input(float dt)
+const glm::vec3 &camera_controller_t::get_position()
 {
+    return m_mode == camera_mode_t::ORBIT ? 
+                m_orbit_ptr->get_position() : 
+                m_perspective_ptr->get_position();
+}
+
+// 
+const glm::mat4 &camera_controller_t::get_view_matrix()
+{
+    return m_mode == camera_mode_t::ORBIT ? 
+                m_orbit_ptr->get_view_matrix() : 
+                m_perspective_ptr->get_view_matrix();
     
 }
 
 // 
-
-glm::mat4 camera_controller_t::get_view_matrix()
+const glm::mat4 &camera_controller_t::get_projection_matrix()
 {
-    return glm::mat4(1.0f);
+    return m_mode == camera_mode_t::ORBIT ? 
+                m_orbit_ptr->get_projection_matrix() : 
+                m_perspective_ptr->get_projection_matrix();
+}
+
+// 
+const glm::mat4 &camera_controller_t::get_view_projection_matrix()
+{
+    return m_mode == camera_mode_t::ORBIT ? 
+                m_orbit_ptr->get_view_projection_matrix() : 
+                m_perspective_ptr->get_view_projection_matrix();
+}
+
+// 
+float camera_controller_t::get_z_near()
+{
+    return m_mode == camera_mode_t::ORBIT ? 
+                m_orbit_ptr->get_z_near() : 
+                m_perspective_ptr->get_z_near();
+}
+
+// 
+float camera_controller_t::get_z_far()
+{
+    return m_mode == camera_mode_t::ORBIT ? 
+                m_orbit_ptr->get_z_far() : 
+                m_perspective_ptr->get_z_far();
+}
+
+
+// 
+void camera_controller_t::sync_perspective_from_orbit()
+{
+    glm::vec3 eye = m_orbit_ptr->get_position();
+    m_perspective_ptr->set_position(eye);
+
+    glm::vec3 forward = glm::normalize(m_orbit_ptr->m_focus_point - eye);
+    float xangle =  glm::degrees(atan2f(forward.x, -forward.z));
+    float yangle = -glm::degrees(asinf(glm::clamp(forward.y, -1.0f, 1.0f)));
+
+    m_perspective_ptr->set_position(eye);
+    m_perspective_ptr->set_x_angle(xangle);
+    m_perspective_ptr->set_y_angle(yangle);
+    m_perspective_ptr->update_view_matrix();
 
 }
 
 // 
-glm::mat4 camera_controller_t::get_projection_matrix()
+void camera_controller_t::sync_orbit_from_perspective()
 {
-    return glm::mat4(1.0f);
+    glm::vec3 pos = m_perspective_ptr->get_position();
+    glm::vec3 forward = glm::normalize(-m_perspective_ptr->get_look_at_vector());
+
+    m_orbit_ptr->m_focus_point = pos + forward * m_orbit_ptr->m_distance;
+
+    glm::vec3 to_eye = glm::normalize(pos - m_orbit_ptr->m_focus_point);
+    float xangle = glm::degrees(atan2f(to_eye.z, to_eye.x));
+    float yangle = glm::degrees(acosf(glm::clamp(to_eye.y, -1.0f, 1.0f)));
+
+    m_orbit_ptr->set_x_angle(xangle);
+    m_orbit_ptr->set_y_angle(yangle);
+    m_orbit_ptr->update_view_matrix();
 
 }
-
-// 
-glm::mat4 camera_controller_t::get_view_projection_matrix()
-{
-    return glm::mat4(1.0f);
-
-}
-
-// 
-float camera_controller_t::lerp(float _a, float _b, float _t) { return _a + (_b - _a) * _t; }
-glm::vec3 camera_controller_t::lerp(const glm::vec3 &_a, const glm::vec3 &_b, float _t) { return _a + (_b - _a) * _t; }

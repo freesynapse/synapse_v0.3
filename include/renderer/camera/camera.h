@@ -35,35 +35,37 @@ public:
 	// virtual void on_event(event_t *_e) = 0;
 
 	// accessors
-	virtual inline void set_update_mode(bool _update) { m_do_update_camera = _update; }
+	virtual void set_update_mode(bool _update) { m_do_update_camera = _update; }
 
-	// virtual inline void setProjectionMatrix(float _fov, float _width, float _height, float _z_near, float _z_far)
+	// virtual void setProjectionMatrix(float _fov, float _width, float _height, float _z_near, float _z_far)
 	// { projection_matrix = glm::perspective(glm::radians(_fov), _width / _height, _z_near, _z_far); }
-	virtual inline void set_projection_matrix(const glm::mat4& _mat) { m_projection_matrix = _mat; }
-	virtual inline void set_projection_matrix(float _left, float _right, float _bottom, float _top) {}
+	virtual void set_projection_matrix(const glm::mat4& _mat) { m_projection_matrix = _mat; }
+	virtual void set_projection_matrix(float _left, float _right, float _bottom, float _top) {}
 	/* FOV (in degrees) */
-	virtual inline void set_fov(float _fov) { m_fov = _fov; update_projection_matrix(); }
-	virtual inline void set_view_distance(float _znear, float _zfar) { m_z_near = _znear; m_z_far = _zfar; update_projection_matrix(); }
+	virtual void set_fov(float _fov) { m_fov = _fov; update_projection_matrix(); }
+	virtual void set_view_distance(float _znear, float _zfar) { m_z_near = _znear; m_z_far = _zfar; update_projection_matrix(); }
 
-	virtual inline const glm::mat4& get_projection_matrix() const { return m_projection_matrix; }
-	virtual inline const glm::mat4& get_view_matrix() const { return m_view_matrix; }
-	virtual inline glm::mat4 get_inverted_view_matrix() { return glm::inverse(m_view_matrix); }
-	virtual inline const glm::mat4& get_view_projection_matrix() const { return m_view_projection_matrix; }
-	virtual inline const glm::vec3& get_position() const { return m_position; }
-	virtual inline void set_position(const glm::vec3& _v) { m_position = _v; }
+	virtual const glm::mat4& get_projection_matrix() const { return m_projection_matrix; }
+	virtual const glm::mat4& get_view_matrix() const { return m_view_matrix; }
+	virtual glm::mat4 get_inverted_view_matrix() { return glm::inverse(m_view_matrix); }
+	virtual const glm::mat4& get_view_projection_matrix() const { return m_view_projection_matrix; }
+	virtual const glm::vec3& get_position() const { return m_position; }
+	virtual void set_position(const glm::vec3& _v) { m_position = _v; }
 	/* FOV (in degrees) */
-	virtual inline float get_fov() const { return m_fov; }
-	virtual inline float get_z_near() const { return m_z_near; }
-	virtual inline float get_z_far() const { return m_z_far; }
-	virtual inline float get_aspect_ratio() const { return m_aspect_ratio; }
-	virtual inline void set_aspect_ratio(float _aspect_ratio) { m_aspect_ratio = _aspect_ratio; }
-	virtual inline const glm::vec3& get_look_at_vector() const { return m_look_at_vector; }
+	virtual float get_fov() const { return m_fov; }
+	virtual float get_z_near() const { return m_z_near; }
+	virtual float get_z_far() const { return m_z_far; }
+	virtual float get_aspect_ratio() const { return m_aspect_ratio; }
+	virtual void set_aspect_ratio(float _aspect_ratio) { m_aspect_ratio = _aspect_ratio; }
+	virtual const glm::vec3& get_look_at_vector() const { return m_look_at_vector; }
 	/* Speed variables */
-	inline float get_zoom_speed() const  { return m_zoom_speed; 	}
-	inline void set_zoom_speed(float _s) { m_zoom_speed = _s; 	}
-	inline float get_move_speed() const  { return m_move_speed;   }
-	inline void set_move_speed(float _s) { m_move_speed = _s; 	}
+	float get_zoom_speed() const  { return m_zoom_speed; 	}
+	void set_zoom_speed(float _s) { m_zoom_speed = _s; 	}
+	float get_move_speed() const  { return m_move_speed;   }
+	void set_move_speed(float _s) { m_move_speed = _s; 	}
 
+	void set_active(bool _do_update_camera) { m_do_update_camera = _do_update_camera; }
+	
 // protected:
 	glm::mat4 m_projection_matrix = glm::mat4(1.0f);
 	glm::mat4 m_view_matrix = glm::mat4(1.0f);

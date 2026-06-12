@@ -1,9 +1,6 @@
 
 #include "renderer/camera/orbit_camera.h"
-#include "renderer/renderer.h"
 #include "event/key_codes.h"
-#include "glfw_window.h"
-#include "event/input_manager.h"
 #include "utils/math_utils.h"
 
 #include "c_api.h"
@@ -16,11 +13,6 @@ static void __orbit_camera_frozen_cursor_callback(const event_t &_e) { orbit_cam
 static void __orbit_camera_mouse_scroll_callback(const event_t &_e) { orbit_camera.on_mouse_scroll(_e); }
 static void __orbit_camera_mouse_move_callback(const event_t &_e) { orbit_camera.on_mouse_move(_e); }
 static void __orbit_camera_mouse_button_callback(const event_t &_e) { orbit_camera.on_mouse_button(_e); }
-
-// events.register_callback(event_type_t::VIEWPORT_RESIZE, SYN_EVENT_MEMBER_FNC(orbit_camera_t::on_event));
-	// events.register_callback(event_type_t::WINDOW_TOGGLE_FROZEN_CURSOR, SYN_EVENT_MEMBER_FNC(orbit_camera_t::on_event));
-	// events.register_callback(event_type_t::INPUT_MOUSE_SCROLL, SYN_EVENT_MEMBER_FNC(orbit_camera_t::on_event));
-
 
 //
 void orbit_camera_t::init(float _fov_deg,
@@ -53,79 +45,41 @@ void orbit_camera_t::init(float _fov_deg,
 	events.register_callback(event_type_t::INPUT_MOUSE_BUTTON, __orbit_camera_mouse_button_callback);
 	events.register_callback(event_type_t::INPUT_MOUSE_MOVE, __orbit_camera_mouse_move_callback);
 
+	double x, y;
+    glfwGetCursorPos(root_window.m_window_ptr, &x, &y);
+    m_prev_mouse_position = { (float)x, (float)y };
+   	
 }
 
-//
+// 
 void orbit_camera_t::update(float _dt)
 {
-	// get input to adjust position and look-at
-	handle_input(_dt);
-
-	// calculate the up vector
-	m_forward_vector = glm::normalize(m_position - m_target_vector);
-	// calculate temporary up vector
-	if (fabs(m_forward_vector.x) < FLT_EPSILON && fabs(m_forward_vector.z) < FLT_EPSILON) {
-		if (m_forward_vector.y > 0)	// looking along pos y-axis
-			m_up_vector = { 0, 0, -1 };
-		else					// looking along neg y-axis
-			m_up_vector = { 0, 0, 1 };
-	}
-	else
-		m_up_vector = { 0, 1, 0 };
-
-	// calculate the right vector
-	m_right_vector = glm::normalize(glm::cross(m_forward_vector, m_up_vector));
-	// recalculate the up vector
-	m_up_vector = glm::normalize(glm::cross(m_right_vector, m_forward_vector));
-
-	// update camera position based on rotation angles
-	m_position.x = m_radius * sinf(deg_to_rad(m_y_angle)) * cosf(deg_to_rad(m_x_angle));
-	m_position.y = m_radius * cosf(deg_to_rad(m_y_angle));
-	m_position.z = m_radius * sinf(deg_to_rad(m_y_angle)) * sinf(deg_to_rad(m_x_angle));
-
-	// set view matrix and update VP matrix
-	m_view_matrix = glm::lookAt(m_position, m_target_vector, m_up_vector);
-	m_view_projection_matrix = m_projection_matrix * m_view_matrix;
-
+    update_view_matrix();
 }
 
-//
-void orbit_camera_t::handle_input(float _dt)
+// 
+void orbit_camera_t::update_view_matrix()
 {
-	// break if input is disabled (i.e. in engine edit mode).
-	if (!m_do_update_camera)// || !root_window.m_is_cursor_frozen)
-		return;
+    // update camera position based on rotation angles
+    m_position.x = m_distance * sinf(deg_to_rad(m_y_angle)) * cosf(deg_to_rad(m_x_angle));
+    m_position.y = m_distance * cosf(deg_to_rad(m_y_angle));
+    m_position.z = m_distance * sinf(deg_to_rad(m_y_angle)) * sinf(deg_to_rad(m_x_angle));
+    m_position  += m_focus_point;  // offset by focus point
 
-	// update look-at angles
-	// glm::vec2 mouse_position = input.mouse_position;
-	// glm::vec2 mouse_position;
-	// double x, y;
-	// glfwGetCursorPos(root_window.m_window_ptr, &x, &y);
-	// mouse_position = { (float)x, (float)y };
+    // forward vector (eye -> focus)
+    m_forward_vector = glm::normalize(m_position - m_focus_point);
 
-	// if (m_first_mouse_input) {
-	// 	m_prev_mouse_position = mouse_position;
-	// 	m_first_mouse_input = false;
-	// }
+    // up vector
+    if (fabs(m_forward_vector.x) < FLT_EPSILON && fabs(m_forward_vector.z) < FLT_EPSILON)
+        m_up_vector = m_forward_vector.y > 0 ? glm::vec3(0,0,-1) : glm::vec3(0,0,1);
+    else
+        m_up_vector = glm::vec3(0, 1, 0);
 
-	// if ((input.is_button_pressed(SYN_MOUSE_BUTTON_1)) &&	// requires mouse pressed
-	// 	(mouse_position.x != m_prev_mouse_position.x || mouse_position.y != m_prev_mouse_position.y)) {
+    m_right_vector = glm::normalize(glm::cross(m_forward_vector, m_up_vector));
+    m_up_vector    = glm::normalize(glm::cross(m_right_vector, m_forward_vector));
 
-	// 	m_mouse_delta = m_prev_mouse_position - mouse_position;
-	// 	m_mouse_delta *= m_orbit_speed;
-	// 	//m_mouse_delta *= (m_orbit_speed * _dt);
-	// 	m_y_angle += m_mouse_delta.y;
-	// 	m_x_angle -= m_mouse_delta.x;
-	// 	// clamp angles
-	// 	if (m_x_angle >= 360.0f)	m_x_angle -= 360.0f;
-	// 	if (m_x_angle < 0.0f)	    m_x_angle += 360.0f;
-
-	// 	m_y_angle = clamp(m_y_angle, 0.1f, 179.9f);
-
-	// }
-
-	// m_prev_mouse_position = mouse_position;
-
+    m_view_matrix            = glm::lookAt(m_position, m_focus_point, m_up_vector);
+    m_view_projection_matrix = m_projection_matrix * m_view_matrix;
 }
 
 //
@@ -135,7 +89,7 @@ void orbit_camera_t::on_viewport_resize(const event_t &_e)
     // projection matrix is handled by window_t::resize_viewport().
     if (window_manager.has_viewport_window()) return;
     
-    glm::vec2 viewport = _e.as.viewport_resize.viewport_f;
+    glm::vec2 viewport = _e.as.viewport_resize.fviewport;
     if (viewport.x <= 0 || viewport.y <= 0) return;
 
     m_aspect_ratio = viewport.x / viewport.y;
@@ -154,8 +108,8 @@ void orbit_camera_t::on_window_resize(const event_t &_e)
 //
 void orbit_camera_t::on_cursor_freeze(const event_t &_e)
 {
-	update_view_matrix();
-	m_first_mouse_input = true;
+	// update_view_matrix();
+	// m_first_mouse_input = true;
 
 }
 
@@ -166,8 +120,8 @@ void orbit_camera_t::on_mouse_scroll(const event_t &_e)
     if (vp.id == 0 || vp.id != _e.as.mouse_scroll.window_handle.id) return;
     
     float delta = _e.as.mouse_scroll.yoffset * m_zoom_speed;
-    m_radius += delta * m_radius * 0.05f;
-	m_radius = clamp(m_radius, 0.01f, m_z_far + 100.0f);
+    m_distance += delta * m_distance * 0.05f;
+	m_distance = clamp(m_distance, 0.01f, m_z_far + 100.0f);
 
 }
 
@@ -175,11 +129,25 @@ void orbit_camera_t::on_mouse_scroll(const event_t &_e)
 void orbit_camera_t::on_mouse_move(const event_t &_e)
 {
     glm::vec2 mouse_position = _e.as.mouse_move.pos;
-    
+
+    #if 0
+    static bool once = false;
+    if (!once) {
+        once = true;
+        SYN_INFO("ORBIT move: active=%d interaction=%d pos=(%.1f, %.1f) prev=(%.1f, %.1f)\n",
+            m_do_update_camera, m_is_interaction_active,
+            mouse_position.x, mouse_position.y,
+            m_prev_mouse_position.x, m_prev_mouse_position.y);
+    }
+    #endif
     if (!m_do_update_camera || !m_is_interaction_active) {
         m_prev_mouse_position = mouse_position;
         return;
     }
+
+    #if 0
+    SYN_INFO("passed the m_do_update_camera check..\n");
+    #endif
 
     if (m_first_mouse_input) {
         m_prev_mouse_position = mouse_position;

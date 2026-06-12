@@ -16,11 +16,11 @@
 #include "renderer/mesh/mesh_library.h"
 #include "renderer/entity/entity_library.h"
 #include "renderer/font/font.h"
+#include "renderer/camera/camera_controller.h"
 #include "renderer/camera/orbit_camera.h"
 #include "renderer/camera/perspective_camera.h"
 #include "renderer/camera/orthographic_camera.h"
 #include "renderer/UI/window/window_manager.h"
-#include "renderer/UI/window/ui_render_batch.h"
 #include "utils/time_step.h"
 #include "utils/asset_manager.h"
 #include "utils/random.h"
@@ -63,10 +63,11 @@ extern entity_library_t             entity_lib;
 extern time_step_t                  time_step;
 extern asset_manager_t              assets;
 extern window_manager_t             window_manager;
-extern ui_render_batch_t            ui_batch_renderer;
 extern random_t                     rng;
+
 // rendering
 extern font_t                       font;
+extern camera_controller_t          cam;
 extern perspective_camera_t         perspective_camera;
 extern orbit_camera_t               orbit_camera;
 extern orthographic_camera_t        orthographic_camera;
@@ -91,8 +92,8 @@ void syn_shutdown();
 //
 void syn_set_window_pos_quadrant(int _quadrant);
 void syn_load_assets(const char *_asset_file="assets.syn");
-void syn_load_layout(const char *_filepath);
-void syn_save_layout(const char *_filepath);
+void syn_load_ui_layout(const char *_filepath);
+void syn_save_ui_layout(const char *_filepath);
 void syn_create_viewport_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 void syn_create_log_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 void syn_create_properties_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);

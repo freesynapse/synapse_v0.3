@@ -59,9 +59,9 @@ void window_t::create_framebuffer()
         glm::ivec2(content_size.x, content_size.y), 
         1, true, id);
 
-    orbit_camera.set_aspect_ratio(content_size.x / content_size.y);
-    orbit_camera.update_projection_matrix();
-
+    cam.set_aspect_ratio(content_size.x / content_size.y);
+    cam.update_projection_matrix();
+    
     m_has_framebuffer = (m_framebuffer_handle.id != 0);
 
     SYN_INFO("created framebuffer for window '%s' (%dx%d).\n", 
@@ -80,8 +80,8 @@ void window_t::resize_framebuffer()
                 framebuffer_t *fbo = api.fbo_handler.get_framebuffer(m_framebuffer_handle);
                 if (fbo) {
                     fbo->resize(glm::ivec2(content_size.x, content_size.y));
-                    orbit_camera.set_aspect_ratio(content_size.x / content_size.y);
-                    orbit_camera.update_projection_matrix();
+                    cam.set_aspect_ratio(content_size.x / content_size.y);
+                    cam.update_projection_matrix();
                 }
                 continue;
             }
@@ -102,8 +102,10 @@ void window_t::resize_framebuffer()
 
     if (fbo) {
         fbo->resize(glm::vec2((int)content_size.x, (int)content_size.y));
-        orbit_camera.set_aspect_ratio(content_size.x / content_size.y);
-        orbit_camera.update_projection_matrix();
+        cam.set_aspect_ratio(content_size.x / content_size.y);
+        cam.update_projection_matrix();
+
+        api.set_scene_viewport(content_size);
     }
 }
 
@@ -148,10 +150,10 @@ void window_t::draw()
         draw_tab_bar();
         return;
     } else {
-        ui_batch_renderer.add_quad(position, { size.x, title_bar_height }, tb_color, depth);
+        renderer_2d.batch.add_quad(position, { size.x, title_bar_height }, tb_color, depth);
     }
     // content area
-    ui_batch_renderer.add_quad({ position.x, position.y + title_bar_height }, 
+    renderer_2d.batch.add_quad({ position.x, position.y + title_bar_height }, 
                                 { size.x, size.y - title_bar_height }, 
                                 bg_color, depth);
     // lines
@@ -165,7 +167,7 @@ void window_t::draw()
         ui_render_vertex_t({ p.x,       p.y + s.y  }, outline_color, depth + 0.03f),
         ui_render_vertex_t({ p.x,       p.y        }, outline_color, depth + 0.03f),
     };
-    ui_batch_renderer.add_line_strip(line_vertices, sizeof(line_vertices) / sizeof(line_vertices[0]));
+    renderer_2d.batch.add_line_strip(line_vertices, sizeof(line_vertices) / sizeof(line_vertices[0]));
     
     float tx = position.x + 10.0f;
     float ty = position.y + title_bar_height - font.get_font_height() * 0.5f;
@@ -196,7 +198,7 @@ void window_t::draw_widgets()
 
         switch (w->type) {
             case widget_type_t::BUTTON: {
-                ui_batch_renderer.add_quad(p, w->size, fg_c, depth_offset);
+                renderer_2d.batch.add_quad(p, w->size, fg_c, depth_offset);
 
                 glm::vec2 s = w->size;
                 ui_render_vertex_t line_vertices[] = {
@@ -206,7 +208,7 @@ void window_t::draw_widgets()
                     ui_render_vertex_t({ p.x,       p.y + s.y }, ol_c, depth_offset + 0.01f),
                     ui_render_vertex_t({ p.x,       p.y       }, ol_c, depth_offset + 0.01f),
                 };
-                ui_batch_renderer.add_line_strip(line_vertices, sizeof(line_vertices) / sizeof(line_vertices[0]));
+                renderer_2d.batch.add_line_strip(line_vertices, sizeof(line_vertices) / sizeof(line_vertices[0]));
 
                 if (!w->text.empty()) {
                     float x = p.x + 0.5f * w->size.x - 0.5f * font.get_string_width("%s", w->text.c_str());
@@ -275,7 +277,7 @@ void window_t::draw_tab_bar()
         bool is_active = (i == m_active_tab);
 
         glm::vec4 tab_color = is_active ? title_bar_color_focused : title_bar_color;
-        ui_batch_renderer.add_quad({ tab_x, tab_y }, { tab_w, tab_h }, tab_color, depth);
+        renderer_2d.batch.add_quad({ tab_x, tab_y }, { tab_w, tab_h }, tab_color, depth);
 
         // tab label, centered
         float text_x = tab_x + tab_w * 0.5f - font.get_string_width("%s", tab->name.c_str()) * 0.5f;
@@ -292,7 +294,7 @@ void window_t::draw_tab_bar()
                 ui_render_vertex_t({ div_x, tab_y }, outline_color, depth + 0.03f),
                 ui_render_vertex_t({ div_x, tab_y + tab_h }, outline_color, depth + 0.03f)
             };
-            ui_batch_renderer.add_line_strip(div, 2);
+            renderer_2d.batch.add_line_strip(div, 2);
         }
 
         tab_x += tab_w;
@@ -309,10 +311,10 @@ void window_t::draw_tab_bar()
         ui_render_vertex_t({ p.x,       p.y + s.y  }, outline_color, depth + 0.03f),
         ui_render_vertex_t({ p.x,       p.y        }, outline_color, depth + 0.03f),
     };
-    ui_batch_renderer.add_line_strip(line_vertices, sizeof(line_vertices) / sizeof(line_vertices[0]));
+    renderer_2d.batch.add_line_strip(line_vertices, sizeof(line_vertices) / sizeof(line_vertices[0]));
 
     // content area background
-    ui_batch_renderer.add_quad({ p.x, p.y + tb_h }, { s.x, s.y - tb_h }, bg_color, depth);
+    renderer_2d.batch.add_quad({ p.x, p.y + tb_h }, { s.x, s.y - tb_h }, bg_color, depth);
 
     draw_widgets();
     
