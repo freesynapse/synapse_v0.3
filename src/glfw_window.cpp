@@ -75,7 +75,6 @@ int glfw_window_t::init(const char *_name, int _width, int _height)
 		glfwSetWindowMonitor(m_window_ptr, m_primary_monitor, 0, 0, m_screen_dim.x, m_screen_dim.y, m_video_mode->refreshRate);
 		m_window_dim = m_screen_dim;
 		m_is_fullscreen = true;
-		font.update_screen_size();
 	}
 	else {
         glfwSetWindowSize(m_window_ptr, m_window_dim.x, m_window_dim.y);
@@ -87,6 +86,7 @@ int glfw_window_t::init(const char *_name, int _width, int _height)
 	glfwSetFramebufferSizeCallback(m_window_ptr, __glfw_window_resize_callback);
 	// callbacks for keyboard and mouse input reside in the InputManager static class
 	glfwSetKeyCallback(m_window_ptr, __input_key_callback);
+	glfwSetCharCallback(m_window_ptr, __input_char_callback);
 	glfwSetMouseButtonCallback(m_window_ptr, __input_mouse_button_callback);
 	glfwSetCursorPosCallback(m_window_ptr, __input_mouse_move_callback);
 	glfwSetScrollCallback(m_window_ptr, __input_mouse_scroll_callback);
@@ -275,7 +275,10 @@ void glfw_window_t::on_toggle_frozen_cursor_event(const event_t &_e)
 //
 void glfw_window_t::on_keydown_event(const event_t &_e)
 {
-    if (_e.as.keydown.key == (int)m_to_close_key && _e.as.keydown.action == 1) {
+    if (_e.as.keydown.action != 1) return;
+    
+    if (_e.as.keydown.key == m_to_close_key && 
+        _e.as.keydown.mods == m_to_close_mods) {
         SYN_INFO("exit signal recieved.\n");
         event_t e;
         e.type = event_type_t::WINDOW_CLOSE;
