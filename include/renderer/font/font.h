@@ -18,6 +18,7 @@ struct font_vertex_t {
 
 	font_vertex_t(const glm::vec2 _pos, const glm::vec2 _uv, const glm::vec4 _color, float _depth) :
         position(_pos), uv(_uv), color(_color), depth(_depth) {}
+    font_vertex_t() {}
 };
 
 // 
@@ -55,11 +56,7 @@ public:
 	float get_current_depth() { return m_current_depth; }
 	const glm::vec4 &get_color() { return m_text_color; }
 	float get_font_height() { return (float)(m_texture_height); }
-	float get_sx() { return m_sx; }
-	float get_sy() { return m_sy; }
-	
-	void on_resize(const event_t &_e);
-	void update_screen_size();
+	float get_font_glyph_height() { return (float)(m_font_ascender); }
 
 private:
 	int init_font_atlas(const char *_filename, const int &_pixel_size, const glm::vec2 &_vp_sz);
@@ -74,11 +71,12 @@ private:
 	GLuint m_atlas_texture_id = 0;
 	unsigned int m_texture_width = 0;
 	unsigned int m_texture_height = 0;
-
+	
 	// atlas
 	char m_tmp_buffer[SYN_FONT_MAX_STRING_LENGTH];
 	std::vector<font_vertex_t> m_vertices;
 	character_info_s m_chars[SYN_FONT_MAX_CHAR_SET_SIZE];
+	float m_font_ascender;  // pixels from base to top of the tallest glyph
 
 	// GLSL shaders
 	shader_handle_t m_shader_handle = { 0 };
@@ -89,8 +87,6 @@ private:
 	// rendering parameters
 	glm::vec2 m_viewport_size = { 0.0f, 0.0f };
 	bool m_update_on_resize = true;
-	float m_sx = 0.0f;
-	float m_sy = 0.0f;
 
 };
 

@@ -6,13 +6,15 @@ layout(location=4) in vec2 a_uv;
 layout(location=5) in vec4 a_color;
 layout(location=6) in float a_depth;
 
+uniform mat4 u_projection;
+
 out vec2 v_uv;
 out vec4 v_color;
 
 // 
 void main()
 {
-	gl_Position = vec4(a_position, a_depth, 1.0f);
+	gl_Position = u_projection * vec4(a_position, a_depth, 1.0);
 	v_uv = a_uv;
 	v_color = a_color;	
 }
@@ -33,4 +35,5 @@ void main()
 {
 	float a = texture(u_font_atlas, v_uv).r;
 	frag_color = vec4(vec3(v_color.rgb), a * v_color.a);	
+
 }

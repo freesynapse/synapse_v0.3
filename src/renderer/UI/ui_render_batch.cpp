@@ -61,9 +61,9 @@ void ui_render_batch_t::begin_batch()
 
 // 
 void ui_render_batch_t::add_quad(const glm::vec2 &_position,
-                               const glm::vec2 &_size,
-                               const glm::vec4 &_color,
-                               float _depth)
+                                 const glm::vec2 &_size,
+                                 const glm::vec4 &_color,
+                                 float _depth)
 {
     if (m_quad_vertex_count + 4 >= SYN_UI_BATCH_MAX_QUADS * 4 ||
         m_quad_index_count + 6 >= SYN_UI_BATCH_MAX_QUADS * 6) 

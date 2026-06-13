@@ -12,7 +12,7 @@ static void __gl_api_on_resize_callback(const event_t &_e) { api.on_resize(_e); 
 //
 void gl_api_t::init()
 {
-    m_viewport = root_window.window_dims();
+    m_viewport = root_window.get_window_dims();
 
     // 
     fbo_handler.init();

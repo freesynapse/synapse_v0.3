@@ -6,23 +6,16 @@
 #include "renderer/font/font.h"
 
 #include "utils/log.h"
-#include "event/event_handler.h"
 #include "utils/math_utils.h"
 #include "glfw_window.h"
 
 #include "c_api.h"
 
 
-// static event callback wrappers
-static void __font_on_resize_callback(const event_t &_e) { font.on_resize(_e); }
-
 //
 void font_t::init(const char *_filename, const int &_pixel_size, const glm::vec2 &_vp_sz)
 {
 	m_shader_handle = shader_lib.load_from_file("font_shader", "../assets/shaders/font.glsl");
-
-	// register resize events
-	events.register_callback(event_type_t::VIEWPORT_RESIZE, __font_on_resize_callback);
 
 	// initialize the text atlas texture
 	init_font_atlas(_filename, _pixel_size, _vp_sz);
@@ -43,7 +36,7 @@ void font_t::destroy()
 }
 
 //
-int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const glm::vec2& _vp_sz)
+int font_t::init_font_atlas(const char* _filename, const int &_pixel_size, const glm::vec2 &_vp_sz)
 {
 	// Init the FreeType lib
 	if (FT_Init_FreeType(&m_ft_lib)) {
@@ -61,15 +54,8 @@ int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const
 	// Initialize variables before atlas creation
 	FT_Set_Pixel_Sizes(m_ft_face, 0, _pixel_size);
 	FT_GlyphSlot g = m_ft_face->glyph;
-	if (_vp_sz.x <= 1.0f || _vp_sz.y <= 1.0f) {
-	    auto vp = root_window.window_dims();
-	    m_sx = 2.0f / (float)vp.x;
-		m_sy = 2.0f / (float)vp.y;
-	}
-	else {
-		m_sx = 2.0f / (float)_vp_sz.x;
-		m_sy = 2.0f / (float)_vp_sz.y;
-	}
+	FT_Load_Char(m_ft_face, 'H', FT_LOAD_RENDER);
+	m_font_ascender = (float)m_ft_face->glyph->bitmap.rows;
 
 	unsigned int roww = 0;
 	unsigned int rowh = 0;
@@ -171,9 +157,9 @@ int font_t::init_font_atlas(const char* _filename, const int& _pixel_size, const
 }
 
 //
-void font_t::render_text(const float& _x, const float& _y, const char* _str, ...)
+void font_t::render_text(const float &_x, const float &_y, const char* _str, ...)
 {
-	if (!_str) return;
+    if (!_str) return;
 
 	//
 	va_list arglist;
@@ -183,8 +169,9 @@ void font_t::render_text(const float& _x, const float& _y, const char* _str, ...
 	va_end(arglist);
 
 	// add vertices to the buffer
-	float x = -1.0f + _x * m_sx;
-	float y =  1.0f - _y * m_sy;
+	float x = std::round(_x);
+	float y = std::round(_y);
+	
 	for (size_t i = 0; i < str_len; i++) {
     	if (m_tmp_buffer[i] == '\0' || m_tmp_buffer[i] == '\n') break;
 
@@ -193,102 +180,109 @@ void font_t::render_text(const float& _x, const float& _y, const char* _str, ...
 
         // calculate vertex and texture coordinates
         character_info_s c = m_chars[ascii_val];
-        float x2 =  x + c.bl * m_sx;
-        float y2 = y + c.bt * m_sy;
-        float w = c.bw * m_sx;
-        float h = c.bh * m_sy;
+        float x2 = std::round(x + c.bl);
+        float y2 = std::round(y - c.bt);
+        float w = c.bw;
+        float h = c.bh;
 
         // advance cursor
-        x += c.ax * m_sx;
-        y += c.ay * m_sy;
+        x += c.ax;
+        y += c.ay;
 
         // skip empty m_chars
         if (!w || !h) continue;
 
-        float bw_tw = c.bw / (float)m_texture_width;
-        float bh_th = c.bh / (float)m_texture_height;
+        float u0 = c.tx;
+        float v0 = c.ty;
+        float u1 = c.tx + c.bw / (float)m_texture_width;
+        float v1 = c.ty + c.bh / (float)m_texture_height;
 
-        m_vertices.push_back(font_vertex_t({ x2 + w,  y2     }, { c.tx + bw_tw, c.ty         }, m_text_color, m_current_depth));
-        m_vertices.push_back(font_vertex_t({ x2,      y2     }, { c.tx,         c.ty         }, m_text_color, m_current_depth));
-        m_vertices.push_back(font_vertex_t({ x2,      y2 - h }, { c.tx,         c.ty + bh_th }, m_text_color, m_current_depth));
-        m_vertices.push_back(font_vertex_t({ x2 + w,  y2     }, { c.tx + bw_tw, c.ty         }, m_text_color, m_current_depth));
-        m_vertices.push_back(font_vertex_t({ x2,      y2 - h }, { c.tx,         c.ty + bh_th }, m_text_color, m_current_depth));
-        m_vertices.push_back(font_vertex_t({ x2 + w,  y2 - h }, { c.tx + bw_tw, c.ty + bh_th }, m_text_color, m_current_depth));        
+        m_vertices.push_back(font_vertex_t({ x2,     y2 + h }, { u0, v1 }, m_text_color, m_current_depth));  // bottom-left
+        m_vertices.push_back(font_vertex_t({ x2 + w, y2 + h }, { u1, v1 }, m_text_color, m_current_depth));  // bottom-right
+        m_vertices.push_back(font_vertex_t({ x2 + w, y2     }, { u1, v0 }, m_text_color, m_current_depth));  // top-right
+        m_vertices.push_back(font_vertex_t({ x2,     y2 + h }, { u0, v1 }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2 + w, y2     }, { u1, v0 }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2,     y2     }, { u0, v0 }, m_text_color, m_current_depth));  // top-left
+        
 	}
 }
-
-// 
+  
+//
 void font_t::render_text_clipped(const float &_x, const float &_y, float _max_width, const char *_str, ...)
 {
     if (!_str) return;
-   
-	//
-	va_list arglist;
-	memset(m_tmp_buffer, 0, SYN_FONT_MAX_STRING_LENGTH);
-	va_start(arglist, _str);
-	size_t str_len = vsnprintf(m_tmp_buffer, SYN_FONT_MAX_STRING_LENGTH, _str, arglist);
-	va_end(arglist);
-   
-	// add vertices to the buffer
-	float x = -1.0f + _x * m_sx;
-	float y =  1.0f - _y * m_sy;
-	float clip_x = -1.0f + (_x + _max_width) * m_sx;
-	
-	for (size_t i = 0; i < str_len; i++) {
-       	if (m_tmp_buffer[i] == '\0' || m_tmp_buffer[i] == '\n') break;
-   
-           uint8_t ascii_val = (uint8_t)m_tmp_buffer[i];
-           if (ascii_val < 32 || ascii_val >= SYN_FONT_MAX_CHAR_SET_SIZE) continue;
-   
-           // calculate vertex and texture coordinates
-           character_info_s c = m_chars[ascii_val];
-           float x2 =  x + c.bl * m_sx;
-           float y2 = y + c.bt * m_sy;
-           float w = c.bw * m_sx;
-           float h = c.bh * m_sy;
 
-           if (x2 >= clip_x) return;
-   
-           // advance cursor
-           x += c.ax * m_sx;
-           y += c.ay * m_sy;
-   
-           // skip empty m_chars
-           if (!w || !h) continue;
-   
-           float bw_tw = c.bw / (float)m_texture_width;
-           float bh_th = c.bh / (float)m_texture_height;
-   
-           m_vertices.push_back(font_vertex_t({ x2 + w,  y2     }, { c.tx + bw_tw, c.ty         }, m_text_color, m_current_depth));
-           m_vertices.push_back(font_vertex_t({ x2,      y2     }, { c.tx,         c.ty         }, m_text_color, m_current_depth));
-           m_vertices.push_back(font_vertex_t({ x2,      y2 - h }, { c.tx,         c.ty + bh_th }, m_text_color, m_current_depth));
-           m_vertices.push_back(font_vertex_t({ x2 + w,  y2     }, { c.tx + bw_tw, c.ty         }, m_text_color, m_current_depth));
-           m_vertices.push_back(font_vertex_t({ x2,      y2 - h }, { c.tx,         c.ty + bh_th }, m_text_color, m_current_depth));
-           m_vertices.push_back(font_vertex_t({ x2 + w,  y2 - h }, { c.tx + bw_tw, c.ty + bh_th }, m_text_color, m_current_depth));        
-	}
-    
+    va_list arglist;
+    memset(m_tmp_buffer, 0, SYN_FONT_MAX_STRING_LENGTH);
+    va_start(arglist, _str);
+    size_t str_len = vsnprintf(m_tmp_buffer, SYN_FONT_MAX_STRING_LENGTH, _str, arglist);
+    va_end(arglist);
+
+    float x = std::round(_x);
+    float y = std::round(_y);
+    float clip_x = _x + _max_width;
+
+    for (size_t i = 0; i < str_len; i++) {
+        if (m_tmp_buffer[i] == '\0' || m_tmp_buffer[i] == '\n') break;
+
+        uint8_t ascii_val = (uint8_t)m_tmp_buffer[i];
+        if (ascii_val < 32 || ascii_val >= SYN_FONT_MAX_CHAR_SET_SIZE) continue;
+
+        character_info_s c = m_chars[ascii_val];
+        float x2 = std::round(x + c.bl);
+        float y2 = std::round(y - c.bt);
+        float w = c.bw;
+        float h = c.bh;
+
+        if (x2 >= clip_x) return;
+
+        x += c.ax;
+        y += c.ay;
+
+        if (!w || !h) continue;
+
+        float u0 = c.tx;
+        float v0 = c.ty;
+        float u1 = c.tx + c.bw / (float)m_texture_width;
+        float v1 = c.ty + c.bh / (float)m_texture_height;
+
+        m_vertices.push_back(font_vertex_t({ x2,     y2 + h }, { u0, v1 }, m_text_color, m_current_depth));  // bottom-left
+        m_vertices.push_back(font_vertex_t({ x2 + w, y2 + h }, { u1, v1 }, m_text_color, m_current_depth));  // bottom-right
+        m_vertices.push_back(font_vertex_t({ x2 + w, y2     }, { u1, v0 }, m_text_color, m_current_depth));  // top-right
+        m_vertices.push_back(font_vertex_t({ x2,     y2 + h }, { u0, v1 }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2 + w, y2     }, { u1, v0 }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2,     y2     }, { u0, v0 }, m_text_color, m_current_depth));  // top-left
+    }
 }
 
 //
 void font_t::end_render_block(bool _use_depth_test)
-{
+{    
     if (m_vertices.empty()) return;
 
     if (!_use_depth_test) {
         api.disable_depth_test();
     }
 
-	shader_t *shader = shader_lib.get_shader(m_shader_handle);
+    glm::mat4 proj = glm::ortho(0.0f, root_window.get_fwidth(), 
+                                root_window.get_fheight(), 0.0f, 
+                                window_manager.get_zfar(), window_manager.get_znear());
+    
+    
+    shader_t *shader = shader_lib.get_shader(m_shader_handle);
 	shader->enable();
-
+	shader->set_matrix_4fv("u_projection", proj);
+    
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, m_atlas_texture_id);
 
 	m_vao.bind();
-	m_vao.update_vertices(&m_vertices[0], sizeof(font_vertex_t) * m_vertices.size(), 0);
+	m_vao.update_vertices(&m_vertices[0], sizeof(font_vertex_t) * m_vertices.size(), 0);	
 	glDrawArrays(GL_TRIANGLES, 0, m_vertices.size());
-	m_vao.unbind();
+    m_vao.unbind();
 
+    renderer.m_perf_stats.draw_calls_per_frame++;
+    
     shader->disable();
 
     if (!_use_depth_test) {
@@ -296,7 +290,6 @@ void font_t::end_render_block(bool _use_depth_test)
     }
 
 	m_vertices.clear();
-
 }
 
 //
@@ -309,25 +302,7 @@ float font_t::get_string_width(const char* _str, ...)
 	int offset = vsprintf(m_tmp_buffer, _str, arglist);
 	va_end(arglist);
 
+	// monospaced font required here...
 	return offset * m_chars[(uint32_t)m_tmp_buffer[0]].ax;
 }
 
-//
-void font_t::on_resize(const event_t &_e)
-{
-	if (!m_update_on_resize)
-		return;
-
-	glm::ivec2 vp = _e.as.viewport_resize.viewport;
-
-	m_sx = 2.0f / (float)vp.x;
-	m_sy = 2.0f / (float)vp.y;
-
-}
-
-//
-void font_t::update_screen_size()
-{
-	m_sx = 2.0f / root_window.get_fwidth();
-	m_sy = 2.0f / root_window.get_fheight();
-}

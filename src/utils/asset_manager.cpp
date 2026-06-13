@@ -725,7 +725,7 @@ void asset_manager_t::render_loading_assets()
         progress = (float)m_load_progress.loaded_assets / (float)m_load_progress.total_assets;
     }
 
-    glm::ivec2 dims = root_window.window_dims();
+    glm::ivec2 dims = root_window.get_window_dims();
     api.set_viewport({ 0, 0 }, dims);
 
     float bar_width = dims.x * 0.5f;

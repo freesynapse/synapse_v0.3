@@ -39,7 +39,7 @@ struct glfw_window_t
     
     // accessors
     bool should_close() const { return (glfwWindowShouldClose(m_window_ptr) || m_to_close_window); }
-    void set_exit_key(unsigned int _key) { m_to_close_key = _key; }
+    void set_exit_key(int _key, int _mods=0) { m_to_close_key = _key; m_to_close_mods = _mods; }
     void set_vsync(bool _b) { m_is_vsync = _b; glfwSwapInterval((int)_b); }
     void set_cursor_pos(const glm::vec2& _pos) { glfwSetCursorPos(m_window_ptr, _pos.x, _pos.y); }
     void close() { m_to_close_window = true; }
@@ -47,8 +47,8 @@ struct glfw_window_t
     void set_window_position(const glm::ivec2 &_pos) { m_window_position = _pos; glfwSetWindowPos(m_window_ptr, _pos.x, _pos.y); glfwPollEvents(); }
     void set_window_dim(const glm::ivec2 &_dims) { m_window_dim = _dims; glfwSetWindowSize(m_window_ptr, _dims.x, _dims.y); glfwPollEvents(); }
     void set_window_dim(int _w, int _h) { m_window_dim = { _w, _h }; glfwSetWindowSize(m_window_ptr, _w, _h); glfwPollEvents(); }
-    const glm::ivec2 &window_dims() { return (m_is_fullscreen ? m_screen_dim : m_window_dim); }
-    const glm::vec2 window_fdims() { return (m_is_fullscreen ? glm::vec2(m_screen_dim.x, m_screen_dim.y) : glm::vec2(m_window_dim.x, m_window_dim.y)); }
+    const glm::ivec2 &get_window_dims() { return (m_is_fullscreen ? m_screen_dim : m_window_dim); }
+    const glm::vec2 get_window_fdims() { return (m_is_fullscreen ? glm::vec2(m_screen_dim.x, m_screen_dim.y) : glm::vec2(m_window_dim.x, m_window_dim.y)); }
     float get_fwidth() { return (m_is_fullscreen ? m_screen_dim.x : m_window_dim.x); }
     float get_fheight() { return (m_is_fullscreen ? m_screen_dim.y : m_window_dim.y); }
     void set_fullscreen(const bool& _fullscreen);
@@ -80,7 +80,8 @@ public:
     GLFWmonitor* m_primary_monitor = NULL;
     const GLFWvidmode* m_video_mode;
 
-    uint32_t m_to_close_key = SYN_KEY_ESCAPE;
+    int m_to_close_key = SYN_KEY_W;
+    int m_to_close_mods = SYN_MOD_CTRL;
     
     // flags
     bool m_is_closed = false;
