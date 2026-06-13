@@ -6,7 +6,7 @@
 #include <glm/glm.hpp>
 
 // 
-#define SYN_WINDOW_MAX_WIDGET_COUNT  16
+#define SYN_WINDOW_MAX_WIDGET_COUNT  64
 #define SYN_TEXT_AREA_LINE_LEN      512
 
 // 
@@ -14,6 +14,7 @@ enum class widget_type_t {
     BUTTON,
     LABEL,
     TEXT_AREA,
+    FLOAT_FIELD,
 };
 
 // 
@@ -32,30 +33,44 @@ struct text_area_line_t {
 };
 
 // 
+struct float_field_t {
+    float  value    =  0.0f;
+    float *binding  =  nullptr;
+    float  min      = -FLT_MAX;
+    float  max      =  FLT_MAX;
+    bool   editing  =  false;
+    char   buf[32]  =  {};
+    int    cursor   =  0;
+    std::function<void(float)> on_change;
+};
+
+// 
 struct widget_t {
     widget_type_t type;
     widget_anchor_t anchor;
     glm::vec2 position; // relative to anchor
     glm::vec2 size;
-    glm::vec4 color;
-    glm::vec4 hover_color;
-    glm::vec4 outline_color;
-    std::string text = "";
-    bool is_enabled = true;
-    bool is_hovered = false;
-    bool is_visible = true;
-    bool in_title_bar = false;
+    glm::vec4 color             = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
+    glm::vec4 hover_color       = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
+    glm::vec4 outline_color     = glm::vec4(0.4f, 0.4f, 0.4f, 1.0f);
+    std::string text            = "";
+    bool is_enabled             = true;
+    bool is_hovered             = false;
+    bool is_visible             = true;
+    bool in_title_bar           = false;
     
     // callbacks
-    std::function<void()> on_click;
-    bool consumes_click = true;
+    std::function<void(widget_t *)> on_click;
+    bool consumes_click         = true;
 
     // call: count = get_lines(text_area_lines_t *_out_buffer, uint32_t _max_lines)
     std::function<uint32_t(text_area_line_t *, uint32_t)> get_lines;
     std::function<void(widget_t *, const glm::vec2 &)> on_resize;
     std::function<void(widget_t *, float)> on_scroll;
-    float scroll_offset = 0.0f;
-    uint32_t scroll_max_lines = 0;
+    float scroll_offset         = 0.0f;
+    uint32_t scroll_max_lines   = 0;
+
+    float_field_t float_field;
     
     // 
     widget_t() = default;

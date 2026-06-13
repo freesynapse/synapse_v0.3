@@ -63,41 +63,41 @@ public:
     window_handle_t this_handle;
     
     // window params
-    glm::vec2 position = glm::vec2(0.0f);
-    glm::vec2 size = glm::vec2(0.0f);     // vec2(width, height)
+    glm::vec2 position                          = glm::vec2(0.0f);
+    glm::vec2 size                              = glm::vec2(0.0f);     // vec2(width, height)
 
-    float depth = 0.0f; // z depth [-1..1]
+    float depth                                 = 0.0f; // z depth [-100.0 ... 100.0]
 
-    glm::vec4 bg_color = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
-    glm::vec4 fg_color = glm::vec4(1.0f);
-    glm::vec4 outline_color = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
+    glm::vec4 bg_color                          = glm::vec4(0.2f, 0.2f, 0.2f, 1.0f);
+    glm::vec4 fg_color                          = glm::vec4(1.0f);
+    glm::vec4 outline_color                     = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
 
-    float title_bar_height = 26.0f;
-    glm::vec4 title_bar_color = glm::vec4(0.15f, 0.15f, 0.15f, 1.0f);
-    glm::vec4 title_bar_color_focused = glm::vec4(0.65f, 0.30f, 0.04f, 1.0f);
+    float title_bar_height                      = 26.0f;
+    glm::vec4 title_bar_color                   = glm::vec4(0.15f, 0.15f, 0.15f, 1.0f);
+    glm::vec4 title_bar_color_focused           = glm::vec4(0.65f, 0.30f, 0.04f, 1.0f);
 
-    bool fit_to_content_height = false;
-    bool fit_to_content_width  = false;
-    bool is_scrollable = false;
+    bool fit_to_content_height                  = false;
+    bool fit_to_content_width                   = false;
+    bool is_scrollable                          = false;
     
-    std::string name = "";
+    std::string name                            = "";
 
 private:
     // constants
-    float m_original_title_bar_height = title_bar_height;
+    float m_original_title_bar_height           = title_bar_height;
     
     // widgets
     widget_t m_widgets[SYN_WINDOW_MAX_WIDGET_COUNT];
-    uint32_t m_widget_count = 0;
+    uint32_t m_widget_count                     = 0;
 
     // resizing
-    float m_resize_border_width = 5.0f;
-    glm::vec2 min_size = glm::vec2(100.0f, 100.0f);
-    glm::vec2 max_size = glm::vec2(2560.0f, 1600.0f);
+    float m_resize_border_width                 = 5.0f;
+    glm::vec2 min_size                          = glm::vec2(100.0f, 100.0f);
+    glm::vec2 max_size                          = glm::vec2(2560.0f, 1600.0f);
     
     // framebuffer members 
-    bool m_has_framebuffer = false;
-    framebuffer_handle_t m_framebuffer_handle = { 0 };
+    bool m_has_framebuffer                      = false;
+    framebuffer_handle_t m_framebuffer_handle   = { 0 };
 
     // tabs
     
@@ -112,19 +112,19 @@ private:
      *  and thus responsible for drawing the active tab
      */
     window_handle_t m_tab_children[SYN_WINDOW_MAX_TABS];    
-    uint32_t m_tab_count = 0;
-    uint32_t m_active_tab = 0;
+    uint32_t m_tab_count                        = 0;
+    uint32_t m_active_tab                       = 0;
     window_handle_t m_tab_parent;
 
-    bool m_is_tab_container = false;
-    bool m_is_tab_child = false;
+    bool m_is_tab_container                     = false;
+    bool m_is_tab_child                         = false;
     
     // general flags
-    bool m_is_active = false;
-    bool m_is_visible = false;
-    bool m_is_focused = false;
-    bool m_is_movable = true;
-    bool m_is_resizable = true;
+    bool m_is_active                            = false;
+    bool m_is_visible                           = false;
+    bool m_is_focused                           = false;
+    bool m_is_movable                           = true;
+    bool m_is_resizable                         = true;
     
 };
 

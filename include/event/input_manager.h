@@ -18,6 +18,7 @@ struct input_handler_t
 	void init();
 
 	void key_callback(GLFWwindow *_window_ptr, int _key, int _scancode, int _action, int _mods);
+	void input_char_callback(GLFWwindow *_window_ptr, uint32_t _codepoint);
 	void mouse_button_callback(GLFWwindow *_window_ptr, int _button, int _action, int _mods);
 	void mouse_scroll_callback(GLFWwindow *_window_ptr, double _offset_x, double _offset_y);
 	void mouse_move_callback(GLFWwindow *_window_ptr, double _x, double _y);
@@ -37,6 +38,7 @@ struct input_handler_t
 
 // callback wrappers
 void __input_key_callback(GLFWwindow *_window_ptr, int _key, int _scancode, int _action, int _mods);
+void __input_char_callback(GLFWwindow *_window_ptr, unsigned int _codepoint);
 void __input_mouse_button_callback(GLFWwindow *_window_ptr, int _button, int _action, int _mods);
 void __input_mouse_scroll_callback(GLFWwindow *_window_ptr, double _offset_x, double _offset_y);
 void __input_mouse_move_callback(GLFWwindow *_window_ptr, double _x, double _y);

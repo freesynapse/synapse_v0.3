@@ -42,6 +42,9 @@ perspective_camera_t        perspective_camera;
 orbit_camera_t              orbit_camera;
 orthographic_camera_t       orthographic_camera;
 
+// editing
+entity_handle_t             selected_entity = { 0 };
+
 
 //---------------------------------------------------------------------------------------
 // high-level control functions
@@ -99,14 +102,14 @@ void syn_init(const char *_name, int _width, int _height, int _mode)
 //
 void syn_mode_2d()
 {
-    glm::ivec2 dims = root_window.window_dims();
+    glm::ivec2 dims = root_window.get_window_dims();
     orthographic_camera = orthographic_camera_t((float)dims.x / (float)dims.y);
 }
 
 //
 void syn_mode_3d()
 {
-    glm::ivec2 dims = root_window.window_dims();
+    glm::ivec2 dims = root_window.get_window_dims();
     orbit_camera.init(60.0f, dims.x, dims.y, 0.1f, 1000.0f);
     perspective_camera.init(60.0f, dims.x, dims.y, 0.1f, 1000.0f);
     cam.init(&orbit_camera, &perspective_camera);
@@ -139,7 +142,7 @@ void syn_set_window_pos_quadrant(int _quadrant)
     int xoffset, yoffset;
     glfwGetWindowPos(root_window.m_window_ptr, &xoffset, &yoffset);
     glm::ivec2 screen_dim = root_window.m_screen_dim;
-    glm::ivec2 win_dim = root_window.window_dims();
+    glm::ivec2 win_dim = root_window.get_window_dims();
     switch (_quadrant) {
         case UPPER_LEFT:    xoffset =                        0;  yoffset =                        0;    break;
         case UPPER_RIGHT:   xoffset = screen_dim.x - win_dim.x;  yoffset =                        0;    break;
@@ -340,6 +343,22 @@ void syn_create_properties_window(const char *_name, const glm::vec2 &_pos, cons
     window_handle_t handle = window_manager.add_window(win);
     window_manager.set_properties_window_handle(handle);
 
+    window_t *pw = window_manager.get_window(handle);
+
+    // test float field
+    widget_t field;
+    field.type              = widget_type_t::FLOAT_FIELD;
+    field.anchor            = widget_anchor_t::TOP_LEFT;
+    field.position          = glm::vec2(100.0f, 100.0f);
+    field.size              = glm::vec2(120.0f, 20.0f);
+    field.text              = "value";
+    field.float_field.value = 1.0f;
+    field.float_field.min   = -1000.0f;
+    field.float_field.max   = 1000.0f;
+
+    pw->add_widget(field);
+    pw->on_resize();
+    
 }
 
 
@@ -392,15 +411,11 @@ void syn_render_end_3d()
 
     // draw_perf_overlay does NOT contain font.start_/.end_render_block()
     renderer.record_frame_time(time_step.dt * 1000.0f);
-    // renderer.draw_perf_stats();
-    // renderer.draw_notifications();
 
     // render all scene text
     font.end_render_block(false);
     
-    // the 3d fbo is now complete but needs to be rendered (elsewhere)
-    // TODO : move this to somewhere, for now just render on screen ndc
-    // renderer.render_scene_fbuffer();
+    // render scene in viewport window
     window_t *viewport = window_manager.get_viewport_window();
     if (viewport && viewport->has_frambuffer()) {
         api.fbo_handler.unbind();

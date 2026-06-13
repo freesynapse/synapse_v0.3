@@ -37,11 +37,6 @@ void camera_controller_t::set_mode(camera_mode_t _mode)
         m_orbit_ptr->set_active(true);
         m_perspective_ptr->set_active(false);
 
-        // event_t e;
-        // e.type = event_type_t::WINDOW_TOGGLE_FROZEN_CURSOR;
-        // events.dispatch_event(e);
-        // events.flush_event_type(event_type_t::WINDOW_TOGGLE_FROZEN_CURSOR);
-
         m_orbit_ptr->m_first_mouse_input = true;    
 
     } else {
@@ -169,3 +164,4 @@ void camera_controller_t::sync_orbit_from_perspective()
     m_orbit_ptr->update_view_matrix();
 
 }
+

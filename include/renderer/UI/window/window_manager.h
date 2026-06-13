@@ -27,6 +27,7 @@ public:
     void on_mouse_move_event(const event_t &_e);
     void on_mouse_scroll_event(const event_t &_e);
     void on_keydown_event(const event_t &_e);
+    void on_input_char_event(const event_t &_e);
     void on_ui_window_close_event(const event_t &_e);
 
     // window creation/access
@@ -63,14 +64,17 @@ public:
     void add_tab(const window_handle_t &_container_handle, const window_handle_t &_child_handle);
     void set_active_tab(const window_handle_t &_container_handle, uint32_t _index);
     
-    
     // drawing
     void draw_windows();
     void draw_framebuffer(window_t *_window);
     void draw_framebuffer_for(window_t *_active, window_t *_tab_container);
     void draw_dock_zone_overlays();
+
+    // misc. accessors
+    float get_zfar() { return m_zfar; }
+    float get_znear() { return m_znear; }
     
-// private:
+private:
     void reorganize_depths();
     
 private:
@@ -122,6 +126,13 @@ private:
     dock_zone_visual_t m_dock_zones[5];
     dock_zone_t m_hovered_dock_zone = dock_zone_t::NONE;
     window_handle_t m_dock_target_window = { 0 };
+
+    // float filed scrubbing
+    bool m_is_scrubbing = false;
+    widget_t *m_scrub_widget = nullptr;
+    glm::vec2 m_scrub_start_pos = glm::vec2(0.0f, 0.0f);
+    float m_scrub_start_val = 0.0f;
+    
     
 };
 

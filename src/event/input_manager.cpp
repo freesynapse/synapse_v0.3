@@ -12,6 +12,7 @@
 
 // glfw callback wrappers
 void __input_key_callback(GLFWwindow *_window_ptr, int _key, int _scancode, int _action, int _mods) { input.key_callback(_window_ptr, _key, _scancode, _action, _mods); }
+void __input_char_callback(GLFWwindow *_window_ptr, unsigned int _codepoint) { input.input_char_callback(_window_ptr, _codepoint); }
 void __input_mouse_button_callback(GLFWwindow *_window_ptr, int _button, int _action, int _mods) { input.mouse_button_callback(_window_ptr, _button, _action, _mods); } 
 void __input_mouse_scroll_callback(GLFWwindow *_window_ptr, double _offset_x, double _offset_y) { input.mouse_scroll_callback(_window_ptr, _offset_x, _offset_y); } 
 void __input_mouse_move_callback(GLFWwindow *_window_ptr, double _x, double _y) { input.mouse_move_callback(_window_ptr, _x, _y); } 
@@ -78,6 +79,19 @@ void input_handler_t::key_callback(GLFWwindow *_window_ptr, int _key, int _scanc
 	
 	events.dispatch_event(e);
 
+}
+
+// 
+void input_handler_t::input_char_callback(GLFWwindow *_window_ptr, uint32_t _codepoint)
+{
+    (void)_window_ptr;
+    event_t e;
+    e.type = event_type_t::INPUT_CHAR;
+    e.as.input_char.codepoint = _codepoint;
+    e.as.input_char.focused_window_handle = window_manager.get_focused_window();
+
+    events.dispatch_event(e);
+    
 }
 
 // 

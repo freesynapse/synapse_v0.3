@@ -5,6 +5,60 @@
 entity_handle_t helmet;
 entity_handle_t sphere;
 
+void setup_lights();
+void render(float _dt);
+void handle_input();
+
+//
+int main()
+{
+    syn_init("synapse v0.3", 0, 0, SYN_MODE_3D);
+    // syn_init("synapse v0.3", 2000, 1400, SYN_MODE_3D);
+    root_window.set_exit_key(SYN_KEY_W, SYN_MOD_CTRL);
+    // syn_set_window_pos_quadrant(UPPER_RIGHT);
+
+    syn_load_assets("../assets/manifest.syn");
+    helmet = assets.get_entity("helmet");
+
+    //
+    time_step.fps_limit = 60.0f;
+    perspective_camera.m_position = { 0.0f, 2.0f, 20.0f };
+
+    setup_lights();
+
+    mesh_handle_t sphere_mesh = generate_uv_sphere(1.0f, 36, 18);
+    material_handle_t chrome_mat = assets.get_material("gold");
+    glm::mat4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -2.0f, 0.0f));
+
+    sphere = entity_lib.create_entity("test_sphere", sphere_mesh, chrome_mat, transform);
+
+    orbit_camera.m_orbit_speed = 0.5f;
+    orbit_camera.m_x_angle = 23.0f;
+    orbit_camera.m_y_angle = 82.0f;
+    orbit_camera.m_distance = 3.0f;
+    // cam.set_mode(camera_mode_t::ORBIT);
+
+    //
+    syn_load_ui_layout("../assets/layout.syn");
+    
+    //
+    while (!root_window.should_close()) {
+
+        handle_input();
+
+        // RENDERING 3D tests
+        syn_render_begin_3d();
+        render(time_step.dt);
+        syn_render_end_3d();
+    }
+
+    syn_shutdown();
+
+    return 0;
+
+}
+
+
 //
 void handle_input()
 {
@@ -99,54 +153,5 @@ void setup_lights()
     renderer.set_light(3, sun);
 
     renderer.update_lighting_ubo();
-
-}
-
-//
-int main()
-{
-    syn_init("synapse v0.3", 0, 0, SYN_MODE_3D);
-    // syn_init("synapse v0.3", 2000, 1400, SYN_MODE_3D);
-    root_window.set_exit_key(SYN_KEY_ESCAPE);
-    // syn_set_window_pos_quadrant(UPPER_RIGHT);
-
-    syn_load_assets("../assets/manifest.syn");
-    helmet = assets.get_entity("helmet");
-
-    //
-    time_step.fps_limit = 60.0f;
-    perspective_camera.m_position = { 0.0f, 2.0f, 20.0f };
-
-    setup_lights();
-
-    mesh_handle_t sphere_mesh = generate_uv_sphere(1.0f, 36, 18);
-    material_handle_t chrome_mat = assets.get_material("gold");
-    glm::mat4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -2.0f, 0.0f));
-
-    sphere = entity_lib.create_entity("test_sphere", sphere_mesh, chrome_mat, transform);
-
-    orbit_camera.m_orbit_speed = 0.5f;
-    orbit_camera.m_x_angle = 23.0f;
-    orbit_camera.m_y_angle = 82.0f;
-    orbit_camera.m_distance = 3.0f;
-    // cam.set_mode(camera_mode_t::ORBIT);
-
-    //
-    syn_load_ui_layout("../assets/layout.syn");
-    
-    //
-    while (!root_window.should_close()) {
-
-        handle_input();
-
-        // RENDERING 3D tests
-        syn_render_begin_3d();
-        render(time_step.dt);
-        syn_render_end_3d();
-    }
-
-    syn_shutdown();
-
-    return 0;
 
 }

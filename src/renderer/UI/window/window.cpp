@@ -1,4 +1,6 @@
 
+#include <string.h>
+
 #include "renderer/UI/window/window.h"
 #include "utils/log.h"
 
@@ -18,7 +20,7 @@ void window_t::init()
     close_btn.hover_color   = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
     close_btn.outline_color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
     close_btn.in_title_bar  = true;
-    close_btn.on_click = [this]() {
+    close_btn.on_click = [this](widget_t *) {
         event_t e;
         e.type = event_type_t::UI_WINDOW_CLOSE;
         e.as.ui_window_close.handle = this->this_handle;
@@ -171,7 +173,7 @@ void window_t::draw()
     
     float tx = position.x + 10.0f;
     float ty = position.y + title_bar_height - font.get_font_height() * 0.5f;
-    float font_depth = (depth + window_manager.m_ddepth_layer_text) / window_manager.m_zfar;
+    float font_depth = depth + window_manager.m_ddepth_layer_text;//depth + window_manager.m_ddepth_layer_text;//(depth + window_manager.m_ddepth_layer_text) / window_manager.m_zfar;
     font.set_color(fg_color);
     font.set_depth(font_depth);
     font.render_text(tx, ty, "%s", name.c_str());
@@ -213,7 +215,6 @@ void window_t::draw_widgets()
                 if (!w->text.empty()) {
                     float x = p.x + 0.5f * w->size.x - 0.5f * font.get_string_width("%s", w->text.c_str());
                     float y = p.y + w->size.y - 0.5f * font.get_font_height();
-                    font.set_depth(depth_offset + 0.02f);
                     font.render_text(x, y, "%s", w->text.c_str());
                 }
                 
@@ -228,7 +229,7 @@ void window_t::draw_widgets()
                 if (!w->get_lines) break;
 
                 float prev_depth = font.get_current_depth();
-                float font_depth = (depth + window_manager.m_ddepth_layer_text) / window_manager.m_zfar;
+                float font_depth = depth + window_manager.m_ddepth_layer_text;//(depth + window_manager.m_ddepth_layer_text) / window_manager.m_zfar;
                 font.set_depth(font_depth);
                 glm::vec4 prev_color = font.get_color();
 
@@ -254,6 +255,59 @@ void window_t::draw_widgets()
                 font.set_color(prev_color);
                 
                 break;
+            }
+
+            case widget_type_t::FLOAT_FIELD: {
+                float_field_t &ff = w->float_field;
+
+                renderer_2d.batch.add_quad(p, w->size, fg_c, depth_offset);
+
+                // outline
+                glm::vec2 s = w->size;
+                glm::vec4 ol_c_ = ff.editing ? glm::vec4(0.6f, 0.6f, 0.6f, 1.0f) : ol_c;
+                ui_render_vertex_t line_vertices[] = {
+                    ui_render_vertex_t({ p.x,       p.y       }, ol_c_, depth_offset + 0.01f),
+                    ui_render_vertex_t({ p.x + s.x, p.y       }, ol_c_, depth_offset + 0.01f),
+                    ui_render_vertex_t({ p.x + s.x, p.y + s.y }, ol_c_, depth_offset + 0.01f),
+                    ui_render_vertex_t({ p.x,       p.y + s.y }, ol_c_, depth_offset + 0.01f),
+                    ui_render_vertex_t({ p.x,       p.y       }, ol_c_, depth_offset + 0.01f),
+                };
+
+                renderer_2d.batch.add_line_strip(line_vertices, 5);
+
+                // label to the left
+                float font_depth = depth + window_manager.m_ddepth_layer_text;
+                font.set_depth(font_depth);
+
+                float text_y = p.y + s.y * 0.5f + font.get_font_glyph_height() * 0.5f;
+                if (!w->text.empty()) {
+                    float label_x = p.x - font.get_string_width("%s", w->text.c_str()) - 6.0f;
+                    font.render_text(label_x, text_y, "%s", w->text.c_str());
+                }
+
+                char display[32] = {};
+                if (ff.editing) {
+                    snprintf(display, sizeof(display), "%s", ff.buf);
+                } else {
+                    snprintf(display, sizeof(display), "%.3f", ff.value);
+                }
+
+                float val_w = font.get_string_width("%s", display);
+                float val_x = p.x + s.x - val_w - 6.0f;
+                font.render_text(val_x, text_y, "%s", display);
+
+                // cursor (line)
+                if (ff.editing) {
+                    char before[32] = {};
+                    strncpy(before, ff.buf, ff.cursor);
+                    float cur_x = val_x + font.get_string_width("%s", before);
+                    ui_render_vertex_t cur[] = {
+                        ui_render_vertex_t({ cur_x, p.y + 3.0f       }, glm::vec4(1.0f), depth_offset + 0.02f),
+                        ui_render_vertex_t({ cur_x, p.y + s.y - 3.0f }, glm::vec4(1.0f), depth_offset + 0.02f),
+                    };
+                    renderer_2d.batch.add_line_strip(cur, 2);
+                }
+                
             }
             
             default:

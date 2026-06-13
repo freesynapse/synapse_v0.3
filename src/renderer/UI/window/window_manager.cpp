@@ -12,6 +12,7 @@ static void __window_manager_on_mouse_button_callback(const event_t &_e) { windo
 static void __window_manager_on_mouse_move_callback(const event_t &_e) { window_manager.on_mouse_move_event(_e); }
 static void __window_manager_on_mouse_scroll_callback(const event_t &_e) { window_manager.on_mouse_scroll_event(_e); }
 static void __window_manager_on_keydown_callback(const event_t &_e) { window_manager.on_keydown_event(_e); }
+static void __window_manager_on_input_char_callback(const event_t &_e) { window_manager.on_input_char_event(_e); }
 static void __window_manager_on_ui_window_close_callback(const event_t &_e) { window_manager.on_ui_window_close_event(_e); }
 
 //
@@ -41,6 +42,7 @@ void window_manager_t::init()
     events.register_callback(event_type_t::INPUT_MOUSE_MOVE, __window_manager_on_mouse_move_callback);
     events.register_callback(event_type_t::INPUT_MOUSE_SCROLL, __window_manager_on_mouse_scroll_callback);
     events.register_callback(event_type_t::INPUT_KEYDOWN, __window_manager_on_keydown_callback);
+    events.register_callback(event_type_t::INPUT_CHAR, __window_manager_on_input_char_callback);
     events.register_callback(event_type_t::UI_WINDOW_CLOSE, __window_manager_on_ui_window_close_callback);
     
     if (!renderer_2d.batch.is_initalized()) {
@@ -79,11 +81,21 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
             // first check for widget
             widget_t *clicked_widget = win->get_widget_at_pos(pos);
             if (clicked_widget) {
-                if (clicked_widget->on_click) {
-                    clicked_widget->on_click();
+                set_focused_window(clicked);
+                if (clicked_widget->type == widget_type_t::FLOAT_FIELD) {
+                    // start scrub (in case), edit or scrub mode decided on release
+                    m_is_scrubbing = true;
+                    m_scrub_widget = clicked_widget;
+                    m_scrub_start_pos = pos;
+                    m_scrub_start_val = clicked_widget->float_field.value;
+                    if (clicked_widget->consumes_click) return;
                 }
-                if (clicked_widget->consumes_click)
-                    return;
+                else {
+                    if (clicked_widget->on_click) {
+                        clicked_widget->on_click(clicked_widget);
+                    }
+                    if (clicked_widget->consumes_click) return;
+                }
             }
 
             // check for resize
@@ -132,6 +144,19 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
         }
     
     } else if (action == SYN_MOUSE_BUTTON_RELEASED) {
+        if (m_is_scrubbing) {
+            float dist = glm::abs(pos.x - m_scrub_start_pos.x);
+            if (dist < 3.0f) {
+                float_field_t &ff = m_scrub_widget->float_field;
+                ff.editing = true;
+                snprintf(ff.buf, sizeof(ff.buf), "%.3f", ff.value);
+                ff.cursor = (int)strlen(ff.buf);
+            }
+            // if dragged, value is already updated; just commit
+            m_is_scrubbing = false;
+            m_scrub_widget = nullptr;
+        }
+
         if (m_is_dragging) {
 
             if (m_enable_docking && m_hovered_dock_zone != dock_zone_t::NONE) {
@@ -261,6 +286,18 @@ void window_manager_t::on_mouse_move_event(const event_t &_e)
         }
     }
 
+    // adjusting float field value
+    if (m_is_scrubbing && m_scrub_widget) {
+        float_field_t &ff = m_scrub_widget->float_field;
+        float delta = m_mouse_pos.x - m_scrub_start_pos.x;
+        float speed = (input.is_key_down(SYN_KEY_LEFT_SHIFT)) ? 0.001f : 0.01f;
+        float new_val = glm::clamp(m_scrub_start_val + delta * speed, ff.min, ff.max);
+        ff.value = new_val;
+        if (ff.binding) *ff.binding = new_val;
+        if (ff.on_change) ff.on_change(new_val);
+        return;
+    }
+    
     // moving windows -- the ui_batch_renderer takes care of the rendering
     if (m_is_dragging && m_drag_window_handle.id > 0) {
         update_dock_zones(m_mouse_pos, m_drag_window_handle);
@@ -334,6 +371,102 @@ void window_manager_t::on_keydown_event(const event_t &_e)
         }
     }
 
+    // float field keyboard handling
+    for (uint32_t i = 0; i < win->m_widget_count; i++) {
+        widget_t *w = &win->m_widgets[i];
+        if (w->type != widget_type_t::FLOAT_FIELD || !w->float_field.editing) continue;
+
+        float_field_t &ff = w->float_field;
+        int len = (int)strlen(ff.buf);
+
+        switch (key)
+        {
+            case SYN_KEY_ENTER: {
+                char *end;
+                float v = strtof(ff.buf, &end);
+                if (end != ff.buf) {
+                    v = glm::clamp(v, ff.min, ff.max);
+                    ff.value = v;
+                    if (ff.binding) *ff.binding = v;
+                    if (ff.on_change) ff.on_change(v);
+                }
+                ff.editing = false;
+                break;
+            }
+            
+            case SYN_KEY_ESCAPE: {
+                ff.editing = false;
+                break;
+            }
+
+            case SYN_KEY_BACKSPACE: {
+                if (ff.cursor > 0) {
+                    memmove(&ff.buf[ff.cursor - 1], &ff.buf[ff.cursor], len - ff.cursor + 1);
+                    ff.cursor--;
+                }
+                break;
+            }
+
+            case SYN_KEY_DELETE: {
+                if (ff.cursor < len) {
+                    memmove(&ff.buf[ff.cursor], &ff.buf[ff.cursor + 1], len - ff.cursor);
+                }
+                break;
+            }
+
+            case SYN_KEY_LEFT: {
+                if (ff.cursor > 0) ff.cursor--;
+                break;
+            }
+
+            case SYN_KEY_RIGHT: {
+                if (ff.cursor < len) ff.cursor++;
+                break;
+            }
+
+            default: break;
+            
+        }
+
+        // only one float field can be in edit mode, yes?
+        return;
+    }
+    
+}
+
+// 
+void window_manager_t::on_input_char_event(const event_t &_e)
+{
+    SYN_INFO("on_input_char_event: codepoint=%u, focused_window=%d\n", 
+             _e.as.input_char.codepoint,
+             _e.as.input_char.focused_window_handle.id);
+
+
+    if (_e.as.input_char.focused_window_handle.id == 0) return;
+    window_t *win = get_window(_e.as.input_char.focused_window_handle);
+    if (!win) return;
+
+    unsigned int cp = _e.as.input_char.codepoint;
+    if (!((cp >= '0' && cp <= '9') || cp == '.' || cp == '-')) return;
+
+    for (uint32_t i = 0; i < win->m_widget_count; i++) {
+        widget_t *w = &win->m_widgets[i];
+        SYN_INFO("  widget[%d]: type=%d, editing=%d\n", 
+                 i, (int)w->type, 
+                 w->type == widget_type_t::FLOAT_FIELD ? w->float_field.editing : -1);
+        
+        if (w->type != widget_type_t::FLOAT_FIELD || !w->float_field.editing) continue;
+
+        float_field_t &ff = w->float_field;
+        int len = (int)strlen(ff.buf);
+        if (len >= 31) return;
+
+        memmove(&ff.buf[ff.cursor + 1], &ff.buf[ff.cursor], len - ff.cursor + 1);
+        ff.buf[ff.cursor] = (char)cp;
+        ff.cursor++;
+
+        return;
+    }
     
 }
 
@@ -944,11 +1077,9 @@ void window_manager_t::reorganize_depths()
         if (std::abs(win->depth - new_depth) > 0.01f) {
             win->depth = new_depth;
         }
-        // TODO : invert to -=???
         new_depth += m_ddepth_per_layer;
     }
     
-    // m_next_depth = closest_depth - m_ddepth_per_layer;
     m_next_depth = closest_depth + m_ddepth_per_layer;
 }
 
