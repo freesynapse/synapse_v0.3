@@ -5,6 +5,9 @@
 #include <functional>
 #include <glm/glm.hpp>
 
+#include "renderer/entity/entity_types.h"
+
+
 // 
 #define SYN_WINDOW_MAX_WIDGET_COUNT  64
 #define SYN_TEXT_AREA_LINE_LEN      512
@@ -15,6 +18,7 @@ enum class widget_type_t {
     LABEL,
     TEXT_AREA,
     FLOAT_FIELD,
+    HIERARCHY,
 };
 
 // 
@@ -30,6 +34,14 @@ enum class widget_anchor_t {
 struct text_area_line_t {
     char text[SYN_TEXT_AREA_LINE_LEN];
     glm::vec4 color;
+};
+
+// 
+struct hierarchy_widget_t {
+    entity_handle_t *selected;
+    float row_height = 0.0f;
+    float scroll_offset = 0.0f;
+
 };
 
 // 
@@ -71,6 +83,7 @@ struct widget_t {
     uint32_t scroll_max_lines   = 0;
 
     float_field_t float_field;
+    hierarchy_widget_t hierarchy_widget;
     
     // 
     widget_t() = default;

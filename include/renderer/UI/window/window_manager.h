@@ -132,6 +132,9 @@ private:
     widget_t *m_scrub_widget = nullptr;
     glm::vec2 m_scrub_start_pos = glm::vec2(0.0f, 0.0f);
     float m_scrub_start_val = 0.0f;
+
+    // hierarchy widget
+    widget_t *m_hierarchy_widget = nullptr;
     
     
 };

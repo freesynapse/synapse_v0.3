@@ -6,6 +6,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtx/matrix_decompose.hpp>
 
 #include "renderer/mesh/mesh_types.h"
 #include "renderer/material/material_types.h"
@@ -25,6 +26,10 @@ struct entity_t {
     material_handle_t material_handle;
     glm::mat4 transform = glm::mat4(1.0f);
 
+    glm::vec3 t_position = glm::vec3(0.0f);
+    glm::vec3 t_rotation = glm::vec3(0.0f);
+    glm::vec3 t_scale    = glm::vec3(1.0f);
+    
     bool is_active = false;
 
     entity_t() :
@@ -50,5 +55,22 @@ struct entity_t {
     
 };
 
+// 
+struct transfrom_components_t {
+    glm::vec3 position = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 rotation = glm::vec3(0.0f, 0.0f, 0.0f);   // Euler degrees
+    glm::vec3 scale    = glm::vec3(0.0f, 0.0f, 0.0f);
+};
+
+inline transfrom_components_t decompose_transorm(const glm::mat4 &_m)
+{
+    transfrom_components_t out;
+    glm::vec3 scew;
+    glm::vec4 persp;
+    glm::quat orientation;
+    glm::decompose(_m, out.scale, orientation, out.position, scew, persp);
+    out.rotation = glm::degrees(glm::eulerAngles(orientation));
+    return out;
+}
 
 #endif // __ENTITY_TYPES_H

@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "renderer/UI/window/window.h"
+#include "renderer/entity/entity_library.h"
 #include "utils/log.h"
 
 #include "c_api.h"
@@ -194,6 +195,7 @@ void window_t::draw_widgets()
         if (!w->is_visible) continue;
 
         glm::vec2 p = w->in_title_bar ? w->get_absolute_position(position, size) : w->get_absolute_position(content_pos, content_size);
+        glm::vec2 s = w->size;
         glm::vec4 fg_c = w->is_hovered ? w->hover_color : w->color;
         glm::vec4 ol_c = w->outline_color;
         float depth_offset = (depth + 0.01f);
@@ -201,8 +203,7 @@ void window_t::draw_widgets()
         switch (w->type) {
             case widget_type_t::BUTTON: {
                 renderer_2d.batch.add_quad(p, w->size, fg_c, depth_offset);
-
-                glm::vec2 s = w->size;
+                
                 ui_render_vertex_t line_vertices[] = {
                     ui_render_vertex_t({ p.x,       p.y       }, ol_c, depth_offset + 0.01f),
                     ui_render_vertex_t({ p.x + s.x, p.y       }, ol_c, depth_offset + 0.01f),
@@ -222,6 +223,12 @@ void window_t::draw_widgets()
             }
 
             case widget_type_t::LABEL: {
+                if (!w->text.empty()) {
+                    float font_depth = depth + window_manager.m_ddepth_layer_text;
+                    font.set_depth(font_depth);
+                    font.set_color(glm::vec4(1.0f));
+                    font.render_text_clipped(p.x + 4.0f, p.y + s.y * 0.5f + font.get_font_glyph_height() * 0.5f, s.x - 8.0f, "%s", w->text.c_str());
+                }
                 break;
             }
 
@@ -263,7 +270,6 @@ void window_t::draw_widgets()
                 renderer_2d.batch.add_quad(p, w->size, fg_c, depth_offset);
 
                 // outline
-                glm::vec2 s = w->size;
                 glm::vec4 ol_c_ = ff.editing ? glm::vec4(0.6f, 0.6f, 0.6f, 1.0f) : ol_c;
                 ui_render_vertex_t line_vertices[] = {
                     ui_render_vertex_t({ p.x,       p.y       }, ol_c_, depth_offset + 0.01f),
@@ -307,9 +313,40 @@ void window_t::draw_widgets()
                     };
                     renderer_2d.batch.add_line_strip(cur, 2);
                 }
-                
+                break;
             }
             
+            case widget_type_t::HIERARCHY: {
+                hierarchy_widget_t &hw = w->hierarchy_widget;
+                hw.row_height = font.get_font_glyph_height() + 6.0f;
+                float font_depth = depth + window_manager.m_ddepth_layer_text;
+                font.set_depth(font_depth);
+                font.set_color(fg_color);
+
+                uint32_t max_rows = (uint32_t)(s.y / hw.row_height);
+                uint32_t start = (uint32_t)hw.scroll_offset;
+
+                uint32_t drawn = 0;
+                for (uint32_t i = 0; i < SYN_MAX_ENTITY_COUNT && drawn < max_rows; i++) {
+                    entity_t *e = &entity_lib.m_pool[i];
+                    if (!e->is_active) continue;
+                    if (i < start) continue;
+
+                    float row_y = p.y + drawn * hw.row_height;
+                    entity_handle_t handle = { i + 1 };
+
+                    // highlight selected
+                    bool is_selected = hw.selected && hw.selected->id == handle.id;
+                    if (is_selected) {
+                        renderer_2d.batch.add_quad({ p.x, row_y }, { s.x, hw.row_height }, w->hover_color, depth_offset);
+                    }
+
+                    font.render_text_clipped(p.x + 6.0f, row_y + hw.row_height - font.get_font_glyph_height() * 0.5f, s.x - 8.0f, "%s", e->name.c_str());
+                    drawn++;
+                }
+                break;
+            }
+
             default:
                 break;
         }

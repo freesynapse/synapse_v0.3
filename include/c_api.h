@@ -72,6 +72,9 @@ extern perspective_camera_t         perspective_camera;
 extern orbit_camera_t               orbit_camera;
 extern orthographic_camera_t        orthographic_camera;
 
+// editing
+extern entity_handle_t              selected_entity_handle;
+
 
 //---------------------------------------------------------------------------------------
 // high-level control functions

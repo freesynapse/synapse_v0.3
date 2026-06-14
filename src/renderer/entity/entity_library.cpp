@@ -40,6 +40,11 @@ entity_handle_t entity_library_t::create_entity(const std::string &_name,
     ent.transform = _transform;
     ent.is_active = true;
 
+    transfrom_components_t tc = decompose_transorm(_transform);
+    ent.t_position = tc.position;
+    ent.t_rotation = tc.rotation;
+    ent.t_scale    = tc.scale;
+    
     m_active_count++;
     
     return { slot + 1 };

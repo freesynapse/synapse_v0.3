@@ -43,7 +43,7 @@ orbit_camera_t              orbit_camera;
 orthographic_camera_t       orthographic_camera;
 
 // editing
-entity_handle_t             selected_entity = { 0 };
+entity_handle_t             selected_entity_handle = { 0 };
 
 
 //---------------------------------------------------------------------------------------
@@ -345,18 +345,68 @@ void syn_create_properties_window(const char *_name, const glm::vec2 &_pos, cons
 
     window_t *pw = window_manager.get_window(handle);
 
-    // test float field
-    widget_t field;
-    field.type              = widget_type_t::FLOAT_FIELD;
-    field.anchor            = widget_anchor_t::TOP_LEFT;
-    field.position          = glm::vec2(100.0f, 100.0f);
-    field.size              = glm::vec2(120.0f, 20.0f);
-    field.text              = "value";
-    field.float_field.value = 1.0f;
-    field.float_field.min   = -1000.0f;
-    field.float_field.max   = 1000.0f;
+    float w = _size.x;
+    float h = _size.y - pw->title_bar_height;
+    float hier_h = h * 0.4f;
+    float insp_y = hier_h + 4.0f;
+    float field_h = 20.0f;
+    float field_w = w * 0.5f;
+    float label_x = w * 0.1f;
 
-    pw->add_widget(field);
+    // label
+    widget_t label0;
+    label0.type             = widget_type_t::LABEL;
+    label0.anchor           = widget_anchor_t::TOP_LEFT;
+    label0.position         = glm::vec2(0.0f, 0.0f);
+    label0.size             = glm::vec2(w, field_h);
+    label0.text             = "Entities";
+    pw->add_widget(label0);
+
+    // entity hierarchy
+    widget_t hier;
+    hier.type               = widget_type_t::HIERARCHY;
+    hier.anchor             = widget_anchor_t::TOP_LEFT;
+    hier.position           = glm::vec2(label_x * 0.5f, field_h);
+    hier.size               = glm::vec2(w, hier_h);
+    hier.hierarchy_widget.selected = &selected_entity_handle;
+    hier.on_scroll = [](widget_t *_w, float _delta) {
+        _w->hierarchy_widget.scroll_offset = glm::max(0.0f, _w->hierarchy_widget.scroll_offset - _delta);
+    };
+    pw->add_widget(hier);
+
+    // label
+    widget_t sep;
+    sep.type                = widget_type_t::LABEL;
+    sep.anchor              = widget_anchor_t::TOP_LEFT;
+    sep.position            = glm::vec2(0.0f, insp_y);
+    sep.size                = glm::vec2(w, field_h);
+    sep.text                = "Transform";
+    pw->add_widget(sep);
+    
+    // transform float fields
+    const char *labels[] = { "px", "py", "pz", "rx", "ry", "rz", "sx", "sy", "sz" };
+    for (int i = 0; i < 9; i++) {
+        widget_t f;
+        f.type              = widget_type_t::FLOAT_FIELD;
+        f.anchor            = widget_anchor_t::TOP_LEFT;
+        f.position          = glm::vec2(label_x, insp_y + (i + 1) * (field_h + 2.0f));
+        f.size              = glm::vec2(field_w, field_h);
+        f.text              = labels[i];
+        f.float_field.value = 1.0f;
+        f.float_field.min   = (i >= 6) ? 0.001f : -10000.0f;
+        f.float_field.max   = 10000.0f;
+        f.float_field.on_change = [i](float _v) {
+            if (!selected_entity_handle.is_valid()) return;
+            entity_t *e = entity_lib.get_entity(selected_entity_handle);
+            if (!e) return;
+            if      (i < 3) e->t_position[i % 3] = _v;
+            else if (i < 6) e->t_rotation[i % 3] = _v;
+            else            e->t_scale[i % 3]    = _v;
+            e->transform = entity_t::make_transform(e->t_position, e->t_rotation, e->t_scale);
+        };
+        pw->add_widget(f);
+    }
+
     pw->on_resize();
     
 }

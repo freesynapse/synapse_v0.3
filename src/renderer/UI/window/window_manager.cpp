@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "renderer/UI/window/window_manager.h"
+#include "renderer/entity/entity_types.h"
 #include "utils/log.h"
 
 #include "c_api.h"
@@ -82,6 +83,27 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
             widget_t *clicked_widget = win->get_widget_at_pos(pos);
             if (clicked_widget) {
                 set_focused_window(clicked);
+                if (clicked_widget->type == widget_type_t::HIERARCHY) {
+                    hierarchy_widget_t &hw = clicked_widget->hierarchy_widget;
+                    float row_h = hw.row_height > 0.0f ? hw.row_height : font.get_font_glyph_height() + 6.0f;
+                    glm::vec2 wp = clicked_widget->get_absolute_position(
+                        glm::vec2(win->position.x, win->position.y + win->title_bar_height), 
+                        glm::vec2(win->size.x, win->size.y - win->title_bar_height));
+                    int row = (int)((pos.y - wp.y) / row_h) + (int)hw.scroll_offset;
+
+                    uint32_t found = 0;
+                    for (uint32_t i = 0; i < SYN_MAX_ENTITY_COUNT; i++) {
+                        entity_t *e = &entity_lib.m_pool[i];
+                        if (!e->is_active) continue;
+                        if ((int)found == row) {
+                            if (hw.selected) *hw.selected = { i + 1 };
+                            break;
+                        }
+                        found++;
+                    }
+                    if (clicked_widget->consumes_click) return;
+                }
+                
                 if (clicked_widget->type == widget_type_t::FLOAT_FIELD) {
                     // start scrub (in case), edit or scrub mode decided on release
                     m_is_scrubbing = true;
@@ -290,7 +312,7 @@ void window_manager_t::on_mouse_move_event(const event_t &_e)
     if (m_is_scrubbing && m_scrub_widget) {
         float_field_t &ff = m_scrub_widget->float_field;
         float delta = m_mouse_pos.x - m_scrub_start_pos.x;
-        float speed = (input.is_key_down(SYN_KEY_LEFT_SHIFT)) ? 0.001f : 0.01f;
+        float speed = (input.is_key_down(SYN_KEY_LEFT_SHIFT)) ? 0.001f : (input.is_key_down(SYN_KEY_LEFT_CTRL)) ? 0.1f : 0.01f;
         float new_val = glm::clamp(m_scrub_start_val + delta * speed, ff.min, ff.max);
         ff.value = new_val;
         if (ff.binding) *ff.binding = new_val;
@@ -341,6 +363,7 @@ void window_manager_t::on_mouse_scroll_event(const event_t &_e)
     widget_t *w = win->get_widget_at_pos(m_mouse_pos);
     if (w && w->on_scroll) {
         w->on_scroll(w, delta);
+        return;
     }
 }
 
@@ -437,11 +460,6 @@ void window_manager_t::on_keydown_event(const event_t &_e)
 // 
 void window_manager_t::on_input_char_event(const event_t &_e)
 {
-    SYN_INFO("on_input_char_event: codepoint=%u, focused_window=%d\n", 
-             _e.as.input_char.codepoint,
-             _e.as.input_char.focused_window_handle.id);
-
-
     if (_e.as.input_char.focused_window_handle.id == 0) return;
     window_t *win = get_window(_e.as.input_char.focused_window_handle);
     if (!win) return;
@@ -451,10 +469,6 @@ void window_manager_t::on_input_char_event(const event_t &_e)
 
     for (uint32_t i = 0; i < win->m_widget_count; i++) {
         widget_t *w = &win->m_widgets[i];
-        SYN_INFO("  widget[%d]: type=%d, editing=%d\n", 
-                 i, (int)w->type, 
-                 w->type == widget_type_t::FLOAT_FIELD ? w->float_field.editing : -1);
-        
         if (w->type != widget_type_t::FLOAT_FIELD || !w->float_field.editing) continue;
 
         float_field_t &ff = w->float_field;
@@ -925,6 +939,26 @@ void window_manager_t::draw_windows()
     m_projection = glm::ortho(0.0f, root_window.get_fwidth(), 
                               root_window.get_fheight(), 0.0f, 
                               m_zfar, m_znear);
+
+    // for now, we hard code syncing the property window at this level
+    window_t *pw = get_window(m_properties_window_handle);
+    if (pw && selected_entity_handle.is_valid()) {
+        entity_t *e = entity_lib.get_entity(selected_entity_handle);
+        if (e) {
+            float vals[9] = {
+                e->t_position.x, e->t_position.y, e->t_position.z,
+                e->t_rotation.x, e->t_rotation.y, e->t_rotation.z,
+                e->t_scale.x,    e->t_scale.y,    e->t_scale.z,
+            };
+            // widgets: 0=close_btn, 1=label, 2=hierarchy, 3=label, 4-12=float_field
+            for (int i = 0; i < 9; i++) {
+                widget_t *w = pw->get_widget(i + 4);
+                if (w && w->type == widget_type_t::FLOAT_FIELD && !w->float_field.editing) {
+                    w->float_field.value = vals[i];
+                } 
+            }
+        }
+    }
     
     // 1. draw all colored geometry
     renderer_2d.batch.begin_batch();

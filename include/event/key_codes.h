@@ -120,11 +120,11 @@
 #define SYN_KEY_KP_ENTER            335
 #define SYN_KEY_KP_EQUAL            336
 #define SYN_KEY_LEFT_SHIFT          340
-#define SYN_KEY_LEFT_CONTROL        341
+#define SYN_KEY_LEFT_CTRL           341
 #define SYN_KEY_LEFT_ALT            342
 #define SYN_KEY_LEFT_SUPER          343
 #define SYN_KEY_RIGHT_SHIFT         344
-#define SYN_KEY_RIGHT_CONTROL       345
+#define SYN_KEY_RIGHT_CTRL          345
 #define SYN_KEY_RIGHT_ALT           346
 #define SYN_KEY_RIGHT_SUPER         347
 #define SYN_KEY_MENU                348

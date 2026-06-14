@@ -13,6 +13,8 @@ class entity_library_t
 {
 public:
     friend class renderer_t;
+    friend class window_manager_t;
+    friend class window_t;
     
 public:
     void init();
