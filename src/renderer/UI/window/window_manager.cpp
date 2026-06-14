@@ -5,6 +5,7 @@
 #include "renderer/UI/window/window_manager.h"
 #include "renderer/entity/entity_types.h"
 #include "utils/log.h"
+#include "utils/scope_timer.h"
 
 #include "c_api.h"
 
@@ -104,14 +105,6 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
                     if (clicked_widget->consumes_click) return;
                 }
                 
-                if (clicked_widget->type == widget_type_t::FLOAT_FIELD) {
-                    // start scrub (in case), edit or scrub mode decided on release
-                    m_is_scrubbing = true;
-                    m_scrub_widget = clicked_widget;
-                    m_scrub_start_pos = pos;
-                    m_scrub_start_val = clicked_widget->float_field.value;
-                    if (clicked_widget->consumes_click) return;
-                }
                 else {
                     if (clicked_widget->on_click) {
                         clicked_widget->on_click(clicked_widget);
@@ -120,6 +113,17 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
                 }
             }
 
+            // viewport entity picking
+            if (m_viewport_window_handle.id > 0 && clicked.id == m_viewport_window_handle.id) {
+                window_t *vp = get_window(m_viewport_window_handle);
+                if (vp && !vp->is_point_in_title_bar(pos)) {
+                    m_viewport_click_pos = pos;
+                    m_viewport_pick_result = _pick_entity(pos);
+                    m_viewport_pick_pending = true;
+                    return;
+                }
+            }
+            
             // check for resize
             resize_handle_t resize_handle = win->get_resize_handle_at_pos(pos);
             if (win->m_is_resizable && resize_handle != resize_handle_t::NONE) {
@@ -166,19 +170,16 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
         }
     
     } else if (action == SYN_MOUSE_BUTTON_RELEASED) {
-        if (m_is_scrubbing) {
-            float dist = glm::abs(pos.x - m_scrub_start_pos.x);
-            if (dist < 3.0f) {
-                float_field_t &ff = m_scrub_widget->float_field;
-                ff.editing = true;
-                snprintf(ff.buf, sizeof(ff.buf), "%.3f", ff.value);
-                ff.cursor = (int)strlen(ff.buf);
-            }
-            // if dragged, value is already updated; just commit
-            m_is_scrubbing = false;
-            m_scrub_widget = nullptr;
-        }
 
+        if (m_viewport_pick_pending) {
+            float dist = glm::length(pos - m_viewport_click_pos);
+            if (dist < 4.0f) {
+                selected_entity_handle = m_viewport_pick_result;
+            }
+            m_viewport_pick_pending = false;
+            m_viewport_pick_result = { 0 };
+        }
+        
         if (m_is_dragging) {
 
             if (m_enable_docking && m_hovered_dock_zone != dock_zone_t::NONE) {
@@ -205,6 +206,13 @@ void window_manager_t::on_mouse_move_event(const event_t &_e)
 {
     m_mouse_pos = _e.as.mouse_move.pos;
 
+    // entity picking through the viewport
+    if (m_viewport_pick_pending) {
+        if (glm::length(m_mouse_pos - m_viewport_click_pos) >= 4.0f) {
+            m_viewport_pick_pending = false;
+        }
+    }
+    
     //  hovering
     m_hovered_window_handle = get_window_at_pos(m_mouse_pos);
     if (m_hovered_window_handle.id > 0) {
@@ -301,25 +309,11 @@ void window_manager_t::on_mouse_move_event(const event_t &_e)
             win->size = new_size;
             win->position = new_pos;
             win->on_resize();
-            // 
-            // win->resize_framebuffer();
-            
+
             return;
         }
     }
 
-    // adjusting float field value
-    if (m_is_scrubbing && m_scrub_widget) {
-        float_field_t &ff = m_scrub_widget->float_field;
-        float delta = m_mouse_pos.x - m_scrub_start_pos.x;
-        float speed = (input.is_key_down(SYN_KEY_LEFT_SHIFT)) ? 0.001f : (input.is_key_down(SYN_KEY_LEFT_CTRL)) ? 0.1f : 0.01f;
-        float new_val = glm::clamp(m_scrub_start_val + delta * speed, ff.min, ff.max);
-        ff.value = new_val;
-        if (ff.binding) *ff.binding = new_val;
-        if (ff.on_change) ff.on_change(new_val);
-        return;
-    }
-    
     // moving windows -- the ui_batch_renderer takes care of the rendering
     if (m_is_dragging && m_drag_window_handle.id > 0) {
         update_dock_zones(m_mouse_pos, m_drag_window_handle);
@@ -361,7 +355,24 @@ void window_manager_t::on_mouse_scroll_event(const event_t &_e)
     if (!win) return;
 
     widget_t *w = win->get_widget_at_pos(m_mouse_pos);
-    if (w && w->on_scroll) {
+    if (!w) return;
+
+    if (w->type == widget_type_t::FLOAT_FIELD) {
+        float_field_t &ff = w->float_field;
+        if (ff.editing) return;
+
+        float speed = 1.0f;
+        if (input.is_key_down(SYN_KEY_LEFT_SHIFT))  speed = 10.0f;
+        if (input.is_key_down(SYN_KEY_LEFT_ALT))    speed = 0.1f;
+        if (input.is_key_down(SYN_KEY_LEFT_CTRL))   speed = 0.01f;
+
+        float new_val = glm::clamp(ff.value - delta * speed, ff.min, ff.max);
+        ff.value = new_val;
+        if (ff.binding) *ff.binding = new_val;
+        if (ff.on_change) ff.on_change(new_val);
+        return;
+    }
+    else if (w->on_scroll) {
         w->on_scroll(w, delta);
         return;
     }
@@ -940,9 +951,11 @@ void window_manager_t::draw_windows()
                               root_window.get_fheight(), 0.0f, 
                               m_zfar, m_znear);
 
-    // for now, we hard code syncing the property window at this level
-    window_t *pw = get_window(m_properties_window_handle);
-    if (pw && selected_entity_handle.is_valid()) {
+    // for now, we hard code syncing the fixed windows at this level
+
+    // sync transform
+    window_t *tw = get_window(m_transform_window_handle);
+    if (tw && selected_entity_handle.is_valid()) {
         entity_t *e = entity_lib.get_entity(selected_entity_handle);
         if (e) {
             float vals[9] = {
@@ -950,12 +963,35 @@ void window_manager_t::draw_windows()
                 e->t_rotation.x, e->t_rotation.y, e->t_rotation.z,
                 e->t_scale.x,    e->t_scale.y,    e->t_scale.z,
             };
-            // widgets: 0=close_btn, 1=label, 2=hierarchy, 3=label, 4-12=float_field
+            // widgets: 0=close_btn, 1-9=float fields
             for (int i = 0; i < 9; i++) {
-                widget_t *w = pw->get_widget(i + 4);
+                widget_t *w = tw->get_widget(i + 1);
                 if (w && w->type == widget_type_t::FLOAT_FIELD && !w->float_field.editing) {
                     w->float_field.value = vals[i];
                 } 
+            }
+        }
+    }
+
+    // sync material
+    window_t *mw = get_window(m_material_window_handle);
+    if (mw && selected_entity_handle.is_valid()) {
+        entity_t *e = entity_lib.get_entity(selected_entity_handle);
+        if (e) {
+            material_internal_t *mat = mat_lib.get_material(e->material_handle);
+            if (mat && mat->data_size >= sizeof(material_pbr_payload_t)) {
+                material_pbr_payload_t *pbr = (material_pbr_payload_t *)mat->data;
+                float vals[7] = {
+                    pbr->albedo_color.r, pbr->albedo_color.g, pbr->albedo_color.b,
+                    pbr->roughness, pbr->metallic, pbr->ao, pbr->tiling_factor
+                };
+                // widgets: 0=close_btn, 1-8=float fields
+                for (int i = 0; i < 7; i++) {
+                    widget_t *w = mw->get_widget(i + 1);
+                    if (w && w->type == widget_type_t::FLOAT_FIELD && !w->float_field.editing) {
+                        w->float_field.value = vals[i];
+                    }
+                }
             }
         }
     }
@@ -973,6 +1009,19 @@ void window_manager_t::draw_windows()
     // 
     draw_dock_zone_overlays();
 
+    // gray out some windows if no entity is selected
+    if (!selected_entity_handle.is_valid()) {
+        auto gray_out = [&](window_handle_t _h) {
+            window_t *win = get_window(_h);
+            if (!win) return;
+            glm::vec2 cp = win->get_content_position();
+            glm::vec2 cs = win->get_content_size();
+            renderer_2d.batch.add_quad(cp, cs, glm::vec4(0.1f, 0.1f, 0.1f, 0.6f), win->depth + m_ddepth_layer_texture);
+        };
+        gray_out(m_transform_window_handle);
+        gray_out(m_material_window_handle);
+    }
+    
     // draw all quads / line_strips
     renderer_2d.batch.end_batch();
 

@@ -40,10 +40,20 @@ entity_handle_t entity_library_t::create_entity(const std::string &_name,
     ent.transform = _transform;
     ent.is_active = true;
 
-    transfrom_components_t tc = decompose_transorm(_transform);
-    ent.t_position = tc.position;
-    ent.t_rotation = tc.rotation;
-    ent.t_scale    = tc.scale;
+    // transfrom_components_t tc = decompose_transorm(_transform);
+    // ent.t_position = tc.position;
+    // ent.t_rotation = tc.rotation;
+    // ent.t_scale    = tc.scale;
+    ent.t_position = glm::vec3(_transform[3]);
+    ent.t_scale = glm::vec3(
+        glm::length(glm::vec3(_transform[0])),
+        glm::length(glm::vec3(_transform[1])),
+        glm::length(glm::vec3(_transform[2])));
+    glm::mat3 rot_matrix = glm::mat3(
+        glm::vec3(_transform[0]) / ent.t_scale.x,
+        glm::vec3(_transform[1]) / ent.t_scale.y,
+        glm::vec3(_transform[2]) / ent.t_scale.z);
+    ent.t_rotation = glm::degrees(glm::eulerAngles(glm::quat_cast(rot_matrix)));
     
     m_active_count++;
     
@@ -69,4 +79,15 @@ entity_t *entity_library_t::get_entity(entity_handle_t _handle)
     }
 
     return &m_pool[idx];
+}
+
+// 
+entity_t *entity_library_t::get_entity_from_index(uint32_t _index)
+{
+    if (_index >= SYN_MAX_ENTITY_COUNT) {
+        SYN_WARNING("invalid index = %d.\n", _index);
+        return nullptr;
+    }
+
+    return &m_pool[_index];
 }

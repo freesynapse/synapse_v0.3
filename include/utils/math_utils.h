@@ -12,16 +12,62 @@
 #define _1_OVER_180		0.00555555555555f
 #define PI_OVER_180		M_PI * _1_OVER_180
 #define _180_OVER_PI	180.0f * _1_OVER_PI
-//#define DEG_TO_RAD(x)	(float)x * PI_OVER_180
-//#define RAD_TO_DEG(x)	(float)x * _180_OVER_PI
-
-//#define MIN(a, b) ((a)<(b)?(a):(b))
-//#define MAX(a, b) ((a)>(b)?(a):(b))
-//#define CLAMP(x, lo, hi) MIN(MAX(x, lo), hi)
-
 #define BIT_SHIFT(x) (1 << (x))
 
+// 
+struct ray_t {
+    glm::vec3 origin;
+    glm::vec3 direction;
+};
 
+// 
+inline ray_t ray_from_screen(const glm::vec2 &_screen_pos,
+                             const glm::vec2 &_viewport_pos,
+                             const glm::vec2 &_viewport_size,
+                             const glm::mat4 &_view_matrix,
+                             const glm::mat4 &_proj_matrix)
+{
+    glm::vec2 ndc = {
+        ((_screen_pos.x - _viewport_pos.x) / _viewport_size.x) * 2.0f - 1.0f,
+        1.0f - ((_screen_pos.y - _viewport_pos.y) / _viewport_size.y) * 2.0f
+    };
+
+    glm::mat4 inv_vp = glm::inverse(_proj_matrix * _view_matrix);
+    glm::vec4 near_p = inv_vp * glm::vec4(ndc.x, ndc.y, -1.0f, 1.0f);
+    glm::vec4 far_p  = inv_vp * glm::vec4(ndc.x, ndc.y, 1.0f, 1.0f);
+    near_p /= near_p.w;
+    far_p  /= far_p.w;
+
+    ray_t ray;
+    ray.origin    = glm::vec3(near_p);
+    ray.direction = glm::normalize(glm::vec3(far_p) - ray.origin);
+    return ray;
+    
+}
+
+// 
+inline bool ray_aabb_intersect(const ray_t &_ray,
+                               const glm::vec3 &_min,
+                               const glm::vec3 &_max,
+                               float &_t_out)
+{
+    glm::vec3 inv_dir = 1.0f / _ray.direction;
+    glm::vec3 t0 = (_min - _ray.origin) * inv_dir;
+    glm::vec3 t1 = (_max - _ray.origin) * inv_dir;
+
+    glm::vec3 tmin = glm::min(t0, t1);
+    glm::vec3 tmax = glm::max(t0, t1);
+
+    float t_enter = glm::max(glm::max(tmin.x, tmin.y), tmin.z);
+    float t_exit  = glm::min(glm::min(tmax.x, tmax.y), tmax.z);
+
+    if (t_exit < 0.0f || t_enter > t_exit) return false;
+    _t_out = t_enter;
+    return true;
+    
+}
+
+// 
 template<class T>
 inline const T& min(const T& _a, const T& _b) { return _a < _b ? _a : _b; }
 template<class T>

@@ -935,8 +935,8 @@ void renderer_t::render_debug_bounding_box_entities(entity_t *_entity)
 
 //
 void renderer_t::render_debug_bounding_boxes(const glm::vec3 &_min,
-                                           const glm::vec3 &_max,
-                                           const glm::mat4 &_transform)
+                                             const glm::vec3 &_max,
+                                             const glm::mat4 &_transform)
 {
     if (!m_debug.show_bounding_boxes) return;
     if (!m_debug_initialized) init_debug_rendering();
@@ -971,7 +971,7 @@ void renderer_t::render_debug_bounding_boxes(const glm::vec3 &_min,
         lines.push_back(corners[b].x); lines.push_back(corners[b].y); lines.push_back(corners[b].z);
         lines.push_back(color.r); lines.push_back(color.g); lines.push_back(color.b); lines.push_back(color.a);
     };
-    
+
     add_line(0, 1); add_line(1, 2); add_line(2, 3); add_line(3, 0);
     add_line(4, 5); add_line(5, 6); add_line(6, 7); add_line(7, 4);
     add_line(0, 4); add_line(1, 5); add_line(2, 6); add_line(3, 7);
@@ -984,7 +984,7 @@ void renderer_t::render_debug_bounding_boxes(const glm::vec3 &_min,
     
     shader->enable();
     shader->set_matrix_4fv("u_view_projection", cam.get_view_projection_matrix());
-    
+
     glLineWidth(2.0f);
     glDrawArrays(GL_LINES, 0, lines.size() / 7);
     glLineWidth(1.0f);

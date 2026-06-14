@@ -25,6 +25,7 @@ public:
                                   const glm::mat4 &_transform);
     entity_handle_t add_entity(const entity_t &_entity);
     entity_t *get_entity(entity_handle_t _handle);
+    entity_t *get_entity_from_index(uint32_t _index);
 
 private:
     entity_t m_pool[SYN_MAX_ENTITY_COUNT];

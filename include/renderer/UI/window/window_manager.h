@@ -45,9 +45,13 @@ public:
     // static window types
     void set_log_window_handle(const window_handle_t &_handle) { m_log_window_handle = _handle; }
     window_handle_t get_log_window_handle() { return m_log_window_handle; }
-    void set_properties_window_handle(const window_handle_t &_handle) { m_properties_window_handle = _handle; }
-    window_handle_t get_properties_window_handle() { return m_properties_window_handle; }
-    
+    void set_hierarchy_window_handle(const window_handle_t &_h) { m_hierarchy_window_handle = _h; }
+    window_handle_t get_hierarchy_window_handle() { return m_hierarchy_window_handle; }
+    void set_transform_window_handle(const window_handle_t &_h) { m_transform_window_handle = _h; }
+    window_handle_t get_transform_window_handle() { return m_transform_window_handle; }
+    void set_material_window_handle(const window_handle_t &_h) { m_material_window_handle = _h; }
+    window_handle_t get_material_window_handle() { return m_material_window_handle; }    
+
     // interaction
     window_handle_t get_window_at_pos(const glm::vec2 _pos);
     window_handle_t get_window_at_pos(const glm::vec2 _pos, const window_handle_t &_exclude_handle);
@@ -82,10 +86,12 @@ private:
     size_t m_active_count = 0;
 
     // static window handles
-    window_handle_t m_viewport_window_handle = { 0 };
-    window_handle_t m_log_window_handle = { 0 };
-    window_handle_t m_properties_window_handle = { 0 };
-
+    window_handle_t m_viewport_window_handle    = { 0 };
+    window_handle_t m_log_window_handle        = { 0 };
+    window_handle_t m_hierarchy_window_handle  = { 0 };
+    window_handle_t m_transform_window_handle  = { 0 };
+    window_handle_t m_material_window_handle   = { 0 };
+    
     shader_handle_t m_window_shader_handle;
 
     shader_handle_t m_tex_quad_shader_handle;
@@ -127,15 +133,13 @@ private:
     dock_zone_t m_hovered_dock_zone = dock_zone_t::NONE;
     window_handle_t m_dock_target_window = { 0 };
 
-    // float filed scrubbing
-    bool m_is_scrubbing = false;
-    widget_t *m_scrub_widget = nullptr;
-    glm::vec2 m_scrub_start_pos = glm::vec2(0.0f, 0.0f);
-    float m_scrub_start_val = 0.0f;
-
     // hierarchy widget
     widget_t *m_hierarchy_widget = nullptr;
-    
+
+    // entity picking
+    bool m_viewport_pick_pending = false;
+    glm::vec2 m_viewport_click_pos = glm::vec2(0.0f, 0.0f);
+    entity_handle_t m_viewport_pick_result = { 0 };
     
 };
 

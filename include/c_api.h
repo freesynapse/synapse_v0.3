@@ -99,7 +99,11 @@ void syn_load_ui_layout(const char *_filepath);
 void syn_save_ui_layout(const char *_filepath);
 void syn_create_viewport_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 void syn_create_log_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
-void syn_create_properties_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
+void syn_create_hierarchy_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
+void syn_create_transform_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
+void syn_create_material_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
+
+entity_handle_t _pick_entity(const glm::vec2 &_screen_pos);
 
 
 //---------------------------------------------------------------------------------------

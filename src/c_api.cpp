@@ -12,6 +12,7 @@
 #include "utils/log.h"
 #include "utils/time_step.h"
 #include "utils/scope_timer.h"
+#include "utils/math_utils.h"
 
 
 //---------------------------------------------------------------------------------------
@@ -198,9 +199,11 @@ void syn_load_ui_layout(const char *_filepath)
         if (strlen(type) == 0) return;
         glm::vec2 abs_pos  = { position.x * sw, position.y * sh };
         glm::vec2 abs_size = { size.x * sw,     size.y * sh     };
-        if (strcmp(type, "viewport") == 0) syn_create_viewport_window(name, abs_pos, abs_size);
-        else if (strcmp(type, "log") == 0) syn_create_log_window(name, abs_pos, abs_size);
-        else if (strcmp(type, "properties") == 0) syn_create_properties_window(name, abs_pos, abs_size);
+        if      (strcmp(type, "viewport") == 0)  syn_create_viewport_window(name, abs_pos, abs_size);
+        else if (strcmp(type, "log") == 0)       syn_create_log_window(name, abs_pos, abs_size);
+        else if (strcmp(type, "hierarchy") == 0) syn_create_hierarchy_window(name, abs_pos, abs_size);
+        else if (strcmp(type, "transform") == 0) syn_create_transform_window(name, abs_pos, abs_size);
+        else if (strcmp(type, "material") == 0)  syn_create_material_window(name, abs_pos, abs_size);            
         else if (strcmp(type, "window") == 0) {
             window_t win;
             win.name = name;
@@ -256,9 +259,11 @@ void syn_save_ui_layout(const char *_filepath)
         if (win->is_tab_child()) continue;
      
         const char *type = "window";
-        if      (win->handle().id == window_manager.get_viewport_window_handle().id) type = "viewport";
-        else if (win->handle().id == window_manager.get_log_window_handle().id) type = "log";
-        else if (win->handle().id == window_manager.get_properties_window_handle().id) type = "properties";
+        if      (win->handle().id == window_manager.get_viewport_window_handle().id)  type = "viewport";
+        else if (win->handle().id == window_manager.get_log_window_handle().id)       type = "log";
+        else if (win->handle().id == window_manager.get_hierarchy_window_handle().id) type = "hierarchy";
+        else if (win->handle().id == window_manager.get_transform_window_handle().id) type = "transform";
+        else if (win->handle().id == window_manager.get_material_window_handle().id)  type = "material";
 
         fprintf(fp, "#%s\n", type);
         fprintf(fp, "name        %s\n", win->name.c_str());
@@ -334,65 +339,59 @@ void syn_create_log_window(const char *_name, const glm::vec2 &_pos, const glm::
 }
 
 // 
-void syn_create_properties_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size)
+void syn_create_hierarchy_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size)
 {
     window_t win;
     win.name = _name;
     win.position = _pos;
     win.size = _size;
     window_handle_t handle = window_manager.add_window(win);
-    window_manager.set_properties_window_handle(handle);
-
-    window_t *pw = window_manager.get_window(handle);
-
-    float w = _size.x;
-    float h = _size.y - pw->title_bar_height;
-    float hier_h = h * 0.4f;
-    float insp_y = hier_h + 4.0f;
-    float field_h = 20.0f;
-    float field_w = w * 0.5f;
-    float label_x = w * 0.1f;
-
-    // label
-    widget_t label0;
-    label0.type             = widget_type_t::LABEL;
-    label0.anchor           = widget_anchor_t::TOP_LEFT;
-    label0.position         = glm::vec2(0.0f, 0.0f);
-    label0.size             = glm::vec2(w, field_h);
-    label0.text             = "Entities";
-    pw->add_widget(label0);
+    window_manager.set_hierarchy_window_handle(handle);
+    window_t *hw = window_manager.get_window(handle);
 
     // entity hierarchy
     widget_t hier;
     hier.type               = widget_type_t::HIERARCHY;
     hier.anchor             = widget_anchor_t::TOP_LEFT;
-    hier.position           = glm::vec2(label_x * 0.5f, field_h);
-    hier.size               = glm::vec2(w, hier_h);
+    hier.position           = glm::vec2(0.0f, 0.0f);
+    hier.size               = glm::vec2(_size.x, _size.y - hw->title_bar_height);
     hier.hierarchy_widget.selected = &selected_entity_handle;
+    hier.on_resize = [](widget_t *_w, const glm::vec2 &_content_size) {
+        _w->size = _content_size;
+    };
     hier.on_scroll = [](widget_t *_w, float _delta) {
         _w->hierarchy_widget.scroll_offset = glm::max(0.0f, _w->hierarchy_widget.scroll_offset - _delta);
     };
-    pw->add_widget(hier);
-
-    // label
-    widget_t sep;
-    sep.type                = widget_type_t::LABEL;
-    sep.anchor              = widget_anchor_t::TOP_LEFT;
-    sep.position            = glm::vec2(0.0f, insp_y);
-    sep.size                = glm::vec2(w, field_h);
-    sep.text                = "Transform";
-    pw->add_widget(sep);
     
-    // transform float fields
-    const char *labels[] = { "px", "py", "pz", "rx", "ry", "rz", "sx", "sy", "sz" };
+    hw->add_widget(hier);
+    hw->on_resize();
+    
+}
+
+// 
+void syn_create_transform_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size)
+{
+    window_t win;
+    win.name = _name;
+    win.position = _pos;
+    win.size = _size;
+    window_handle_t handle = window_manager.add_window(win);
+    window_manager.set_transform_window_handle(handle);
+    window_t *tw = window_manager.get_window(handle);
+
+    float w         = _size.x;
+    float field_h   = 20.0f;
+    float field_w   = w * 0.2f;
+    float label_x   = w * 0.15f;
+
+    const char *labels[] = { "px ", "py ", "pz ", "rx ", "ry ", "rz ", "sx ", "sy ", "sz " };
     for (int i = 0; i < 9; i++) {
         widget_t f;
         f.type              = widget_type_t::FLOAT_FIELD;
         f.anchor            = widget_anchor_t::TOP_LEFT;
-        f.position          = glm::vec2(label_x, insp_y + (i + 1) * (field_h + 2.0f));
+        f.position          = glm::vec2(label_x, i * (field_h + 2.0f));
         f.size              = glm::vec2(field_w, field_h);
         f.text              = labels[i];
-        f.float_field.value = 1.0f;
         f.float_field.min   = (i >= 6) ? 0.001f : -10000.0f;
         f.float_field.max   = 10000.0f;
         f.float_field.on_change = [i](float _v) {
@@ -401,14 +400,105 @@ void syn_create_properties_window(const char *_name, const glm::vec2 &_pos, cons
             if (!e) return;
             if      (i < 3) e->t_position[i % 3] = _v;
             else if (i < 6) e->t_rotation[i % 3] = _v;
-            else            e->t_scale[i % 3]    = _v;
+            else            e->t_scale[i % 3]     = _v;
             e->transform = entity_t::make_transform(e->t_position, e->t_rotation, e->t_scale);
         };
-        pw->add_widget(f);
+        tw->add_widget(f);
+    }
+    tw->on_resize();
+    
+}
+
+// 
+void syn_create_material_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size)
+{
+    window_t win;
+    win.name = _name;
+    win.position = _pos;
+    win.size = _size;
+    window_handle_t handle = window_manager.add_window(win);
+    window_manager.set_material_window_handle(handle);
+    window_t *mw = window_manager.get_window(handle);
+
+    float w       = _size.x;
+    float field_h = 20.0f;
+    float field_w = w * 0.2f;
+    float label_x = w * 0.15f;
+
+    const char *labels[] = { "r", "g", "b", "rough", "metal", "ao", "tiling" };
+    float maxvals[]      = { 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 100.0f };
+
+    for (int i = 0; i < 7; i++) {
+        widget_t f;
+        f.type              = widget_type_t::FLOAT_FIELD;
+        f.anchor            = widget_anchor_t::TOP_LEFT;
+        f.position          = glm::vec2(label_x, i * (field_h + 2.0f));
+        f.size              = glm::vec2(field_w, field_h);
+        f.text              = labels[i];
+        f.float_field.min   = 0.0f;
+        f.float_field.max   = maxvals[i];
+        f.float_field.on_change = [i](float _v) {
+            if (!selected_entity_handle.is_valid()) return;
+            entity_t *e = entity_lib.get_entity(selected_entity_handle);
+            if (!e) return;
+            material_internal_t *mat = mat_lib.get_material(e->material_handle);
+            if (!mat || mat->data_size < sizeof(material_pbr_payload_t)) return;
+            material_pbr_payload_t *pbr = (material_pbr_payload_t *)mat->data;
+            switch (i) {
+                case 0: pbr->albedo_color.r = _v; break;
+                case 1: pbr->albedo_color.g = _v; break;
+                case 2: pbr->albedo_color.b = _v; break;
+                case 3: pbr->roughness      = _v; break;
+                case 4: pbr->metallic       = _v; break;
+                case 5: pbr->ao             = _v; break;
+                case 6: pbr->tiling_factor  = _v; break;
+            }
+        };
+        mw->add_widget(f);
+    }
+    mw->on_resize();
+    
+}
+
+// 
+entity_handle_t _pick_entity(const glm::vec2 &_screen_pos)
+{
+    window_t *vp = window_manager.get_viewport_window();
+    if (!vp) return { 0 };
+
+    glm::vec2 vp_pos  = vp->get_content_position();
+    glm::vec2 vp_size = vp->get_content_size();
+
+    if (_screen_pos.x < vp_pos.x || _screen_pos.x > vp_pos.x + vp_size.x ||
+        _screen_pos.y < vp_pos.y || _screen_pos.y > vp_pos.y + vp_size.y)
+        return { 0 };
+
+    ray_t ray = ray_from_screen(_screen_pos, vp_pos, vp_size, cam.get_view_matrix(), cam.get_projection_matrix());
+    entity_handle_t closest_entity = { 0 };
+    float closest_t = FLT_MAX;
+
+    for (uint32_t i = 0; i < SYN_MAX_ENTITY_COUNT; i++) {
+        entity_t *e = entity_lib.get_entity_from_index(i);
+        if (!e->is_active) continue;
+
+        mesh_internal_t *mesh = mesh_lib.get_mesh(e->mesh_handle);
+        if (!mesh) continue;
+
+        glm::mat4 inv = glm::inverse(e->transform);
+        ray_t local_ray;
+        local_ray.origin    = glm::vec3(inv * glm::vec4(ray.origin, 1.0f));
+        local_ray.direction = glm::normalize(glm::vec3(inv * glm::vec4(ray.direction, 0.0f)));
+
+        float t;
+        if (ray_aabb_intersect(local_ray, mesh->aabb_min, mesh->aabb_max, t)) {
+            if (t < closest_t) {
+                closest_t = t;
+                closest_entity = { i + 1 };
+            }
+        }
     }
 
-    pw->on_resize();
-    
+    return closest_entity;
 }
 
 
@@ -456,6 +546,17 @@ void syn_render_begin_3d()
 //
 void syn_render_end_3d()
 {
+    // render AABB around selected entity
+    if (selected_entity_handle.is_valid()) {
+        entity_t *e = entity_lib.get_entity(selected_entity_handle);
+        if (e) {
+            bool prev = renderer.m_debug.show_bounding_boxes;
+            renderer.m_debug.show_bounding_boxes = true;
+            renderer.render_debug_bounding_box_entities(e);
+            renderer.m_debug.show_bounding_boxes = prev;
+        }
+    }
+    
     //
     renderer.render_debug_orientation_obj();
 
