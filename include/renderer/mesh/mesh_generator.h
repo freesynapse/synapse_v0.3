@@ -5,9 +5,9 @@
 
 // 
 mesh_handle_t generate_cube_mesh();
-mesh_handle_t generate_skybox_cube();
-mesh_handle_t generate_uv_sphere(float _radius, uint32_t _sectors, uint32_t _stacks);
-
+mesh_handle_t generate_skybox_cube_mesh();
+mesh_handle_t generate_uv_sphere_mesh(float _radius=1.0f, uint32_t _sectors=36, uint32_t _stacks=18);
+mesh_handle_t generate_plane_mesh(float _size, uint32_t _subdivisions);
 
 
 

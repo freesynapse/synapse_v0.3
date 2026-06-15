@@ -43,7 +43,7 @@ struct debug_state_t {
     bool show_normals        = false;
     bool show_tangents       = false;
     bool show_bounding_boxes = false;
-    bool show_grid           = false;
+    bool show_grid           = true;
 
     float normal_length      = 0.1f;
     float tangent_length     = 0.1f;

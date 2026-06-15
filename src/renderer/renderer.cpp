@@ -91,8 +91,8 @@ void renderer_t::shutdown()
     shutdown_lighting_ubo();
     
     // cleanup debug
-    if (m_debug.grid_vao_id != 0) {
-        glDeleteVertexArrays(1, &m_debug.grid_vao_id);
+    if (debug.grid_vao_id != 0) {
+        glDeleteVertexArrays(1, &debug.grid_vao_id);
     }
 }
 
@@ -192,7 +192,7 @@ void renderer_t::init_skybox()
     m_skybox.mesh_handle = { 0 };
     m_skybox.shader_handle = { 0 };
     
-    mesh_handle_t mesh_handle = generate_skybox_cube();
+    mesh_handle_t mesh_handle = generate_skybox_cube_mesh();
     shader_handle_t shader_handle = shader_lib.load_from_file("skybox_shader", "../assets/shaders/skybox.glsl");
     
     if (!mesh_handle.is_valid() || !shader_handle.is_valid()) {
@@ -583,7 +583,7 @@ void renderer_t::cmd_flush()
         return;
     
     //
-    if (m_debug.show_wireframe) {
+    if (debug.show_wireframe) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
     }
     
@@ -665,7 +665,7 @@ void renderer_t::cmd_flush()
     
     m_command_count = 0;
     
-    if (m_debug.show_wireframe) {
+    if (debug.show_wireframe) {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
     }
 
@@ -812,28 +812,28 @@ void renderer_t::draw_frame_time_graph(float _x, float _y, float _w, float _h)
 //
 void renderer_t::init_debug_rendering() 
 {
-    m_debug.normal_shader_handle = shader_lib.load_from_file("debug_normal_shader", 
+    debug.normal_shader_handle = shader_lib.load_from_file("debug_normal_shader", 
         "../assets/shaders/debug/debug_mesh_normals.glsl");
     
-    m_debug.line_shader_handle = shader_lib.load_from_file("debug_line_shader", 
+    debug.line_shader_handle = shader_lib.load_from_file("debug_line_shader", 
         "../assets/shaders/debug/debug_lines.glsl");
     
     // shader contains posistion (vec3) and color (vec4)
     size_t max_lines = 10000;
     size_t buffer_size = max_lines * 2 * (sizeof(glm::vec3) + sizeof(glm::vec4));
 
-    m_debug.line_vao.set_buffer_layout({
+    debug.line_vao.set_buffer_layout({
         { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT3 },
         { VERTEX_ATTRIB_LOCATION_COLOR, shader_data_type_t::FLOAT4 }
     });
-    m_debug.line_vao.create_empty_vertices(buffer_size);
+    debug.line_vao.create_empty_vertices(buffer_size);
     
     // grid
-    m_debug.grid_shader_handle = shader_lib.load_from_file("debug_grid_shader", 
+    debug.grid_shader_handle = shader_lib.load_from_file("debug_grid_shader", 
         "../assets/shaders/debug/debug_grid.glsl");
     
     // create a custom vao, since no vbo is needed
-    glGenVertexArrays(1, &m_debug.grid_vao_id);
+    glGenVertexArrays(1, &debug.grid_vao_id);
     
     //
     m_debug_initialized = true;
@@ -880,21 +880,21 @@ void renderer_t::init_orienatation_obj(uint32_t _size)
 }
 
 //
-void renderer_t::toggle_wireframe()      { m_debug.show_wireframe      = !m_debug.show_wireframe;       }
-void renderer_t::toggle_normals()        { m_debug.show_normals        = !m_debug.show_normals;         }
-void renderer_t::toggle_tangents()       { m_debug.show_tangents       = !m_debug.show_tangents;        }
-void renderer_t::toggle_bounding_boxes() { m_debug.show_bounding_boxes = !m_debug.show_bounding_boxes;  }
-void renderer_t::toggle_grid()           { m_debug.show_grid           = !m_debug.show_grid;            }
+void renderer_t::toggle_wireframe()      { debug.show_wireframe      = !debug.show_wireframe;       }
+void renderer_t::toggle_normals()        { debug.show_normals        = !debug.show_normals;         }
+void renderer_t::toggle_tangents()       { debug.show_tangents       = !debug.show_tangents;        }
+void renderer_t::toggle_bounding_boxes() { debug.show_bounding_boxes = !debug.show_bounding_boxes;  }
+void renderer_t::toggle_grid()           { debug.show_grid           = !debug.show_grid;            }
 //
 void renderer_t::render_debug_normals(mesh_handle_t _mesh_handle, const glm::mat4 &_transform)
 {
-    if (!m_debug.show_normals && !m_debug.show_tangents) return;
+    if (!debug.show_normals && !debug.show_tangents) return;
     if (!m_debug_initialized) return;
     
     mesh_internal_t *mesh = mesh_lib.get_mesh(_mesh_handle);
     if (!mesh) return;
     
-    shader_t *shader = shader_lib.get_shader(m_debug.normal_shader_handle);
+    shader_t *shader = shader_lib.get_shader(debug.normal_shader_handle);
     if (!shader) return;
     
     shader->enable();
@@ -905,8 +905,8 @@ void renderer_t::render_debug_normals(mesh_handle_t _mesh_handle, const glm::mat
     shader->set_matrix_4fv("u_model", _transform);
     shader->set_matrix_4fv("u_view_projection", vp);
     shader->set_matrix_3fv("u_normal_matrix", normal_matrix);
-    shader->set_uniform_1f("u_normal_length", m_debug.normal_length);
-    shader->set_uniform_1i("u_show_tangents", m_debug.show_tangents ? 1 : 0);
+    shader->set_uniform_1f("u_normal_length", debug.normal_length);
+    shader->set_uniform_1i("u_show_tangents", debug.show_tangents ? 1 : 0);
     
     mesh->vao.bind();
     glDrawElements(GL_TRIANGLES, mesh->index_count, GL_UNSIGNED_INT, 0);
@@ -938,7 +938,7 @@ void renderer_t::render_debug_bounding_boxes(const glm::vec3 &_min,
                                              const glm::vec3 &_max,
                                              const glm::mat4 &_transform)
 {
-    if (!m_debug.show_bounding_boxes) return;
+    if (!debug.show_bounding_boxes) return;
     if (!m_debug_initialized) init_debug_rendering();
     
     glm::vec4 color(1.0f, 1.0f, 0.0f, 1.0f);
@@ -976,10 +976,10 @@ void renderer_t::render_debug_bounding_boxes(const glm::vec3 &_min,
     add_line(4, 5); add_line(5, 6); add_line(6, 7); add_line(7, 4);
     add_line(0, 4); add_line(1, 5); add_line(2, 6); add_line(3, 7);
     
-    m_debug.line_vao.bind();
-    m_debug.line_vao.update_vertices((void *)&lines[0], lines.size() * sizeof(float));
+    debug.line_vao.bind();
+    debug.line_vao.update_vertices((void *)&lines[0], lines.size() * sizeof(float));
     
-    shader_t *shader = shader_lib.get_shader(m_debug.line_shader_handle);
+    shader_t *shader = shader_lib.get_shader(debug.line_shader_handle);
     if (!shader) return;
     
     shader->enable();
@@ -989,7 +989,7 @@ void renderer_t::render_debug_bounding_boxes(const glm::vec3 &_min,
     glDrawArrays(GL_LINES, 0, lines.size() / 7);
     glLineWidth(1.0f);
     
-    m_debug.line_vao.unbind();
+    debug.line_vao.unbind();
     
     m_perf_stats.draw_calls_per_frame++;
     
@@ -998,12 +998,12 @@ void renderer_t::render_debug_bounding_boxes(const glm::vec3 &_min,
 //
 void renderer_t::render_debug_grid(float _y_level)
 {
-    if (!m_debug.show_grid) return;
+    if (!debug.show_grid) return;
     
-    shader_t *shader = shader_lib.get_shader(m_debug.grid_shader_handle);
+    shader_t *shader = shader_lib.get_shader(debug.grid_shader_handle);
     if (!shader) return;
     
-    glBindVertexArray(m_debug.grid_vao_id);
+    glBindVertexArray(debug.grid_vao_id);
     
     shader->enable();
     

@@ -214,8 +214,8 @@ void window_t::draw_widgets()
                 renderer_2d.batch.add_line_strip(line_vertices, sizeof(line_vertices) / sizeof(line_vertices[0]));
 
                 if (!w->text.empty()) {
-                    float x = p.x + 0.5f * w->size.x - 0.5f * font.get_string_width("%s", w->text.c_str());
-                    float y = p.y + w->size.y - 0.5f * font.get_font_height();
+                    float x = p.x + 0.5f * w->size.x - 0.5f * font.get_string_width(w->text.c_str());
+                    float y = p.y + w->size.y - 0.5f * font.get_font_glyph_height();
                     font.render_text(x, y, "%s", w->text.c_str());
                 }
                 
@@ -227,7 +227,7 @@ void window_t::draw_widgets()
                     float font_depth = depth + window_manager.m_ddepth_layer_text;
                     font.set_depth(font_depth);
                     font.set_color(glm::vec4(1.0f));
-                    font.render_text_clipped(p.x + 4.0f, p.y + s.y * 0.5f + font.get_font_glyph_height() * 0.5f, s.x - 8.0f, "%s", w->text.c_str());
+                    font.render_text_clipped(p.x + 4.0f, p.y + s.y * 0.5f + font.get_font_glyph_height() * 0.5f, s.x - 8.0f, w->text.c_str());
                 }
                 break;
             }
@@ -256,7 +256,7 @@ void window_t::draw_widgets()
                 // render text
                 for (uint32_t j = 0; j < display_count; j++) {
                     font.set_color(lines[start + j].color);
-                    font.render_text_clipped(p.x + 4.0f, p.y + j * line_h + line_h, w->size.x - 8.0f, "%s", lines[start + j].text);
+                    font.render_text_clipped(p.x + 4.0f, p.y + j * line_h + line_h, w->size.x - 8.0f, lines[start + j].text);
                 }
                 font.set_depth(prev_depth);
                 font.set_color(prev_color);

@@ -47,10 +47,13 @@ public:
 	void begin_render_block();
 	void end_render_block(bool _use_depth_test);
 	void render_text(const float &_x, const float &_y, const char *_str, ...);
+	// void render_text(const float &_x, const float &_y, const char *_str);
 	void render_text_clipped(const float &_x, const float &_y, float _max_width, const char *_str, ...);
+	// void render_text_clipped(const float &_x, const float &_y, float _max_width, const char *_str);
 
 	// in pixels
 	float get_string_width(const char *_str, ...);
+	// float get_string_width(const char *_str);
 	void set_color(const glm::vec4 &_color) { m_text_color = _color; }
 	void set_depth(float _depth) { m_current_depth = _depth; }
 	float get_current_depth() { return m_current_depth; }

@@ -5,6 +5,7 @@
 
 #include "glfw_window.h"
 #include "gl_api.h"
+#include "editor.h"
 #include "event/input_manager.h"
 #include "event/event_handler.h"
 #include "renderer/renderer.h"
@@ -65,6 +66,8 @@ extern asset_manager_t              assets;
 extern window_manager_t             window_manager;
 extern random_t                     rng;
 
+extern editor_t                     editor;
+
 // rendering
 extern font_t                       font;
 extern camera_controller_t          cam;
@@ -91,7 +94,7 @@ void syn_shutdown();
 
 
 //---------------------------------------------------------------------------------------
-// accessors and helpers
+// ui creation and ui asset loader
 //
 void syn_set_window_pos_quadrant(int _quadrant);
 void syn_load_assets(const char *_asset_file="assets.syn");
@@ -102,8 +105,7 @@ void syn_create_log_window(const char *_name, const glm::vec2 &_pos, const glm::
 void syn_create_hierarchy_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 void syn_create_transform_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 void syn_create_material_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
-
-entity_handle_t _pick_entity(const glm::vec2 &_screen_pos);
+void syn_create_primitive_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 
 
 //---------------------------------------------------------------------------------------

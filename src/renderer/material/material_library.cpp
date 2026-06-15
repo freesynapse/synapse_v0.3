@@ -4,11 +4,17 @@
 #include "renderer/material/material_library.h"
 #include "utils/log.h"
 
+#include "c_api.h"
+
 // 
 void material_library_t::init()
 {
     memset(m_pool, 0, sizeof(material_internal_t) * SYN_MAX_MATERIAL_COUNT);
     m_active_count = 0;
+
+    create_fallback_material();
+    SYN_INFO("fallback material handle id = %d\n", fallback_material_handle.id);
+    
 }
 
 // 
@@ -71,7 +77,9 @@ material_handle_t material_library_t::create_material(shader_handle_t _shader_ha
 material_internal_t *material_library_t::get_material(material_handle_t _handle)
 {
     if (_handle.id == 0 || _handle.id >= SYN_MAX_MATERIAL_COUNT || !m_pool[_handle.id].is_active) {
-        return nullptr;
+        if (_handle.id == fallback_material_handle.id) return nullptr;
+        
+        return get_material(fallback_material_handle);
     }
     
     return &m_pool[_handle.id];
@@ -87,5 +95,56 @@ void material_library_t::release_material(material_handle_t _handle)
             m_active_count--;
         }
     }
+}
+
+// 
+void material_library_t::create_fallback_material()
+{
+    shader_handle_t pbr_shader = shader_lib.load_from_file("pbr_shader", "../assets/shaders/PBR_IBL.glsl");
+
+    uint8_t checker[] = {
+        255,  20, 147, 255,
+          0,   0,   0, 255,
+          0,   0,   0, 255,
+        255,  20, 147, 255,
+    };
+
+    // create texture
+    GLuint tex_id = 0;
+    glGenTextures(1, &tex_id);
+    glBindTexture(GL_TEXTURE_2D, tex_id);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, checker);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,   GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,   GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);   // nearest = sharp checker
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    texture_internal_t &tex = tex_lib.m_pool[1];
+    tex.opengl_id  = tex_id;
+    tex.width      = 2;
+    tex.height     = 2;
+    tex.channels   = 4;
+    tex.asset_path = "__falback_texture__";
+    tex.is_active  = true;
+    texture_handle_t tex_handle = { 1 };
+    tex_lib.m_active_count++;
+
+    // create material
+    fallback_material_handle = mat_lib.create_material(pbr_shader);
+    material_internal_t *fb_mat = mat_lib.get_material(fallback_material_handle);
+    if (fb_mat) {
+        material_pbr_payload_t *pbr = (material_pbr_payload_t *)fb_mat->data;
+        pbr->albedo_color   = glm::vec4(1.0f);
+        pbr->roughness      = 0.8f;
+        pbr->metallic       = 0.0f;
+        pbr->ao             = 1.0f;
+        pbr->tiling_factor  = 4.0f;
+        pbr->use_albedo_map = 1.0f;
+        fb_mat->textures[(uint32_t)texture_map_type_t::ALBEDO] = tex_handle;
+    }
+
+    SYN_INFO("__fallback__ material created (checkerboard).\n");
+    
 }
 

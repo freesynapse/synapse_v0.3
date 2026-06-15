@@ -4,6 +4,7 @@
 
 entity_handle_t helmet;
 entity_handle_t sphere;
+entity_handle_t test_cube;
 
 void setup_lights();
 void render(float _dt);
@@ -26,16 +27,17 @@ int main()
 
     setup_lights();
 
-    mesh_handle_t sphere_mesh = generate_uv_sphere(1.0f, 36, 18);
-    material_handle_t chrome_mat = assets.get_material("gold");
-    glm::mat4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, -2.0f, 0.0f));
+    mesh_handle_t sphere_mesh = generate_uv_sphere_mesh();
+    material_handle_t sphere_material = assets.get_material("chrome");
+    glm::mat4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.0f, 2.0f));
 
-    sphere = entity_lib.create_entity("test_sphere", sphere_mesh, chrome_mat, transform);
+    sphere = entity_lib.create_entity("test_sphere", sphere_mesh, sphere_material, transform);
 
+    // 
     orbit_camera.m_orbit_speed = 0.5f;
-    orbit_camera.m_x_angle = 23.0f;
-    orbit_camera.m_y_angle = 82.0f;
-    orbit_camera.m_distance = 3.0f;
+    orbit_camera.m_x_angle = 45.0f;
+    orbit_camera.m_y_angle = 60.0f;
+    orbit_camera.m_distance = 14.0f;
     // cam.set_mode(camera_mode_t::ORBIT);
 
     //
@@ -58,6 +60,34 @@ int main()
 
 }
 
+//
+void render(float _dt)
+{
+    // renderer.render_skybox();
+
+    entity_t *pool = entity_lib.get_pool();
+    for (uint32_t i = 0; i < SYN_MAX_ENTITY_COUNT; i++) {
+        if (pool[i].is_active) {
+            renderer.cmd_submit_entity({ i + 1 });
+        }
+    }
+    
+    renderer.cmd_flush();
+
+    if (renderer.debug.show_normals || renderer.debug.show_tangents) {
+        entity_t *e = entity_lib.get_entity(sphere);
+        renderer.render_debug_normals(e->mesh_handle, e->transform);
+    }
+
+    if (renderer.debug.show_bounding_boxes) {
+        renderer.render_debug_bounding_box_entities();
+    }
+
+    if (renderer.debug.show_grid) {
+        renderer.render_debug_grid();
+    }
+
+}
 
 //
 void handle_input()
@@ -104,31 +134,7 @@ void handle_input()
 
 }
 
-// test code
-void render(float _dt)
-{
-    renderer.render_skybox();
-
-    // renderer.cmd_submit_mesh(helmet.mesh_handle, helmet.material_handle, helmet.transform);
-    renderer.cmd_submit_entity(helmet);
-    renderer.cmd_submit_entity(sphere);
-    renderer.cmd_flush();
-
-    if (renderer.m_debug.show_normals || renderer.m_debug.show_tangents) {
-        entity_t *e = entity_lib.get_entity(sphere);
-        renderer.render_debug_normals(e->mesh_handle, e->transform);
-    }
-
-    if (renderer.m_debug.show_bounding_boxes) {
-        renderer.render_debug_bounding_box_entities();
-    }
-
-    if (renderer.m_debug.show_grid) {
-        renderer.render_debug_grid(-2.0f);
-    }
-
-}
-
+// 
 void setup_lights()
 {
     light_t key;

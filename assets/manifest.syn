@@ -94,7 +94,7 @@ entity helmet
 {
     mesh: helmet_mesh
     material: helmet_mat
-    position: 0.0 0.0 0.0
+    position: 0.0 1.0 -2.0
     rotation: 90.0 90.0 0.0
     scale: 1.0 1.0 1.0
 }

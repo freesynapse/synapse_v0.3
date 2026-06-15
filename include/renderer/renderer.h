@@ -129,7 +129,7 @@ public:
 	} m_notification;
 
 	// debug (vaos and shader handles in debug_state_t)
-	debug_state_t m_debug;
+	debug_state_t debug;
 	bool m_debug_initialized = false;
 
 	vertex_array_t m_orientation_obj_vao;

@@ -1,24 +1,30 @@
 #viewport
 name        Viewport
 position    0.00 0.00
-size        0.80 0.80
+size        0.85 0.80
 
 #log
 name        Log
 position    0.00 0.80
-size        0.80 0.20
+size        0.85 0.20
 
 #hierarchy
 name        Hierarchy
-position    0.80 0.00
-size        0.25 0.30
+position    0.85 0.00
+size        0.15 0.30
 
 #transform
 name        Transform
-position    0.80 0.30
-size        0.25 0.30
+position    0.85 0.30
+size        0.15 0.30
 
 #material
 name        Material
-position    0.80 0.60
-size        0.25 0.40
+position    0.85 0.60
+size        0.15 0.40
+
+#creator
+name        Create
+position    0.45 0.45
+size        0.10 0.10
+

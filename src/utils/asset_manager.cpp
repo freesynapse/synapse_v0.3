@@ -128,8 +128,8 @@ material_handle_t asset_manager_t::get_material(const std::string &_name)
 {
     auto it = m_material_map.find(_name);
     if (it == m_material_map.end()) {
-        SYN_ERROR("material '%s' not loaded.\n", _name.c_str());
-        return { 0 };
+        SYN_ERROR("material '%s' not loaded, using fallback material.\n", _name.c_str());
+        return mat_lib.fallback_material_handle;
     }
 
     return it->second;
@@ -738,11 +738,11 @@ void asset_manager_t::render_loading_assets()
     glm::vec4 lc = glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
     renderer_2d.batch.add_quad(pos, size, glm::vec4(0.3f, 0.3f, 0.3f, 1.0f), -1.0f);
     ui_render_vertex_t ls[] = {
-        ui_render_vertex_t({ pos.x, pos.y }, lc, 0.0f),
-        ui_render_vertex_t({ pos.x + size.x, pos.y }, lc, 0.0f),
+        ui_render_vertex_t({ pos.x,          pos.y          }, lc, 0.0f),
+        ui_render_vertex_t({ pos.x + size.x, pos.y          }, lc, 0.0f),
         ui_render_vertex_t({ pos.x + size.x, pos.y + size.y }, lc, 0.0f),
-        ui_render_vertex_t({ pos.x, pos.y + size.y }, lc, 0.0f),
-        ui_render_vertex_t({ pos.x, pos.y }, lc, 0.0f),
+        ui_render_vertex_t({ pos.x,          pos.y + size.y }, lc, 0.0f),
+        ui_render_vertex_t({ pos.x,          pos.y          }, lc, 0.0f),
     };
     renderer_2d.batch.add_line_strip(ls, 5);
     
@@ -752,9 +752,9 @@ void asset_manager_t::render_loading_assets()
     //    
     int percent = (int)(progress * 100.0f);
     float percent_x = bar_x + bar_width * 0.5f - font.get_string_width("%d%%", percent) * 0.5f;
-    float asset_text_y = bar_y - font.get_font_height() * 0.5f;
+    float asset_text_y = bar_y - font.get_font_glyph_height() * 0.5f;
 
-    float percent_y = bar_y + (bar_height + font.get_font_height()) * 0.5f;
+    float percent_y = bar_y + (bar_height + font.get_font_glyph_height()) * 0.5f;
 
     renderer_2d.batch.end_batch();
 

@@ -15,6 +15,7 @@ public:
     friend class renderer_t;
     friend class window_manager_t;
     friend class window_t;
+    friend class editor_t;
     
 public:
     void init();
@@ -26,6 +27,11 @@ public:
     entity_handle_t add_entity(const entity_t &_entity);
     entity_t *get_entity(entity_handle_t _handle);
     entity_t *get_entity_from_index(uint32_t _index);
+
+    void release_entity(entity_handle_t _handle);
+    
+    // 
+    entity_t *get_pool() { return m_pool; }
 
 private:
     entity_t m_pool[SYN_MAX_ENTITY_COUNT];

@@ -168,6 +168,12 @@ void font_t::render_text(const float &_x, const float &_y, const char* _str, ...
 	size_t str_len = vsnprintf(m_tmp_buffer, SYN_FONT_MAX_STRING_LENGTH, _str, arglist);
 	va_end(arglist);
 
+// 	render_text(_x, _y, m_tmp_buffer);
+// }
+
+// // 
+// void font_t::render_text(const float &_x, const float &_y, const char* _str)
+// {
 	// add vertices to the buffer
 	float x = std::round(_x);
 	float y = std::round(_y);

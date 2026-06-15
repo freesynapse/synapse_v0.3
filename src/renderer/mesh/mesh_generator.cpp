@@ -68,7 +68,7 @@ mesh_handle_t generate_cube_mesh()
 }
 
 // only position
-mesh_handle_t generate_skybox_cube()
+mesh_handle_t generate_skybox_cube_mesh()
 {
     glm::vec3 cube_vertices[] = {
         {-0.5f, -0.5f,  0.5f}, 
@@ -97,14 +97,6 @@ mesh_handle_t generate_skybox_cube()
         {-0.5f,  0.5f, -0.5f}, 
     };
 
-    // uint32_t cube_indices[] = {
-    //     0, 1, 2,    0, 2, 3,    // Front
-    //     4, 5, 6,    4, 6, 7,    // Back
-    //     8, 9, 10,   8, 10, 11,  // Top
-    //     12, 13, 14, 12, 14, 15, // Bottom
-    //     16, 17, 18, 16, 18, 19, // Right
-    //     20, 21, 22, 20, 22, 23  // Left
-    // };
     uint32_t cube_indices[] = {
         2, 1, 0,    3, 2, 0,    // Front
         6, 5, 4,    7, 6, 4,    // Back
@@ -128,7 +120,7 @@ mesh_handle_t generate_skybox_cube()
 }
 
 // 
-mesh_handle_t generate_uv_sphere(float _radius, uint32_t _sectors, uint32_t _stacks)
+mesh_handle_t generate_uv_sphere_mesh(float _radius, uint32_t _sectors, uint32_t _stacks)
 {
     std::vector<vertex_data_t> vertices;
     std::vector<uint32_t> indices;
@@ -203,7 +195,55 @@ mesh_handle_t generate_uv_sphere(float _radius, uint32_t _sectors, uint32_t _sta
     });
     vao.create(&vertices[0], vertices.size(), &indices[0], indices.size());
 
-    return mesh_lib.load_mesh_from_vao("uv_spehere", vao, (void *)&vertices[0]);
+    return mesh_lib.load_mesh_from_vao("sphere_uv", vao, (void *)&vertices[0]);
     
 }
 
+// 
+mesh_handle_t generate_plane_mesh(float _size, uint32_t _subdivisions)
+{
+    std::vector<vertex_data_t> vertices;
+    std::vector<uint32_t> indices;
+
+    uint32_t n = _subdivisions + 1;
+    float step = _size / _subdivisions;
+    float uv_step = 1.0f / _subdivisions;
+    float half = _size * 0.5f;
+
+    for (uint32_t row = 0; row <= _subdivisions; row++) {
+        for (uint32_t col = 0; col <= _subdivisions; col++) {
+            vertex_data_t v;
+            v.position  = { -half + col * step, 0.0f, -half + row * step };
+            v.normal    = { 0.0f, 1.0f, 0.0f };
+            v.tangent   = { 1.0f, 0.0f, 0.0f };
+            v.bitangent = { 0.0f, 0.0f, 1.0f };
+            v.uv        = { col * uv_step, row * uv_step };
+            vertices.push_back(v);
+        }
+    }
+
+    for (uint32_t row = 0; row < _subdivisions; row++) {
+        for (uint32_t col = 0; col < _subdivisions; col++) {
+            uint32_t i = row * n + col;
+            indices.push_back(i);
+            indices.push_back(i + n);
+            indices.push_back(i + 1);
+            indices.push_back(i + 1);
+            indices.push_back(i + n);
+            indices.push_back(i + n + 1);
+        }
+    }
+
+    vertex_array_t vao;
+    vao.set_buffer_layout({
+        { VERTEX_ATTRIB_LOCATION_POSITION,  shader_data_type_t::FLOAT3 },
+        { VERTEX_ATTRIB_LOCATION_NORMAL,    shader_data_type_t::FLOAT3 },
+        { VERTEX_ATTRIB_LOCATION_TANGENT,   shader_data_type_t::FLOAT3 },
+        { VERTEX_ATTRIB_LOCATION_BITANGENT, shader_data_type_t::FLOAT3 },
+        { VERTEX_ATTRIB_LOCATION_UV,        shader_data_type_t::FLOAT2 },
+    });
+    vao.create(&vertices[0], vertices.size(), &indices[0], indices.size());
+
+    return mesh_lib.load_mesh_from_vao("primitive_plane", vao, (void *)&vertices[0]);
+    
+}

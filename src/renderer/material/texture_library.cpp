@@ -32,7 +32,7 @@ texture_handle_t texture_library_t::load_texture(const std::string &_filepath)
 {
     // search for duplicates
     for (uint32_t i = 1; i < SYN_MAX_TEXTURE_COUNT; i++) {
-        if (m_pool[i].is_active && strcmp(m_pool[i].asset_path, _filepath.c_str()) == 0) {
+        if (m_pool[i].is_active && m_pool[i].asset_path == _filepath) {
             return { i };
         }
     }
@@ -65,10 +65,10 @@ texture_handle_t texture_library_t::load_texture(const std::string &_filepath)
 
     // register internal struct specs
     texture_internal_t &texture = m_pool[free_slot];
-    texture.width = (uint32_t)width;
-    texture.height = (uint32_t)height;
-    texture.channels = 4;
-    strncpy(texture.asset_path, _filepath.c_str(), MAX_TEXTURE_PATH_LEN - 1);
+    texture.width      = (uint32_t)width;
+    texture.height     = (uint32_t)height;
+    texture.channels   = 4;
+    texture.asset_path = _filepath;
     
     // generate opengl texture
     glCreateTextures(GL_TEXTURE_2D, 1, &texture.opengl_id);
@@ -102,7 +102,7 @@ texture_handle_t texture_library_t::load_texture_hdr(const std::string &_filepat
 {
     // search for duplicates
     for (uint32_t i = 1; i < SYN_MAX_TEXTURE_COUNT; i++) {
-        if (m_pool[i].is_active && strcmp(m_pool[i].asset_path, _filepath.c_str()) == 0) {
+        if (m_pool[i].is_active && m_pool[i].asset_path == _filepath) {
             return { i };
         }
     }
@@ -134,10 +134,10 @@ texture_handle_t texture_library_t::load_texture_hdr(const std::string &_filepat
     }
 
     texture_internal_t &tex = m_pool[free_slot];
-    tex.width = width;
-    tex.height = height;
-    tex.channels = channels;
-    strncpy(tex.asset_path, _filepath.c_str(), MAX_TEXTURE_PATH_LEN - 1);
+    tex.width      = width;
+    tex.height     = height;
+    tex.channels   = channels;
+    tex.asset_path = _filepath;
 
     // create opengl texture
     // generate opengl texture

@@ -104,6 +104,15 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
                     }
                     if (clicked_widget->consumes_click) return;
                 }
+
+                else if (clicked_widget->type == widget_type_t::FLOAT_FIELD) {
+                    float_field_t &ff = clicked_widget->float_field;
+                    ff.editing = true;
+                    // initialize with current value
+                    snprintf(ff.buf, sizeof(ff.buf), "%.4f", ff.value);
+                    ff.cursor = (int)strlen(ff.buf);
+                    if (clicked_widget->consumes_click) return;
+                }
                 
                 else {
                     if (clicked_widget->on_click) {
@@ -118,7 +127,7 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
                 window_t *vp = get_window(m_viewport_window_handle);
                 if (vp && !vp->is_point_in_title_bar(pos)) {
                     m_viewport_click_pos = pos;
-                    m_viewport_pick_result = _pick_entity(pos);
+                    m_viewport_pick_result = editor.pick_entity(pos);
                     m_viewport_pick_pending = true;
                     return;
                 }

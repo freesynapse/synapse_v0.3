@@ -40,18 +40,30 @@ public:
     
     // accessors
     const window_handle_t &handle() { return this_handle; }
+
     const bool &is_active() { return m_is_active; }
     const bool &is_visible() { return m_is_visible; }
     const bool &is_focused() { return m_is_focused; }
-    void set_focused(bool _focused) { m_is_focused = _focused; }
+    const bool &is_movable() { return m_is_movable; }
+    const bool &is_resizable() { return m_is_resizable; }
+
+    void set_active(bool _b) { m_is_active = _b; }
+    void set_visible(bool _b) { m_is_visible = _b; }
+    void set_focused(bool _b) { m_is_focused = _b; }
+    void set_movable(bool _b) { m_is_movable = _b; }
+    void set_resizable(bool _b) { m_is_resizable = _b; }
+    
     const bool &has_frambuffer() { return m_has_framebuffer; }
     const framebuffer_handle_t &get_framebuffer_handle() { return m_framebuffer_handle; }
+
     glm::vec2 get_content_size() { return glm::vec2(size.x, size.y - title_bar_height); }
     glm::vec2 get_content_position() { return glm::vec2(position.x, position.y + title_bar_height); }
+
     // widgets
     void add_widget(const widget_t &_widget);
     widget_t *get_widget(uint32_t _index);
     widget_t *get_widget_at_pos(const glm::vec2 &_pos);
+
     // tabs
     window_handle_t get_active_tab_child_handle();
     int get_tab_index_at_pos(const glm::vec2 &_pos);

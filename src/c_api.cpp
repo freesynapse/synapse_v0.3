@@ -12,7 +12,6 @@
 #include "utils/log.h"
 #include "utils/time_step.h"
 #include "utils/scope_timer.h"
-#include "utils/math_utils.h"
 
 
 //---------------------------------------------------------------------------------------
@@ -35,6 +34,8 @@ time_step_t                 time_step;
 asset_manager_t             assets;
 window_manager_t            window_manager;
 random_t                    rng;
+
+editor_t                    editor;
 
 // rendering
 font_t                      font;
@@ -66,26 +67,16 @@ void syn_init(const char *_name, int _width, int _height, int _mode)
 	    SYN_INFO("GLFW window initialized.\n");
 	}
 
-    //
+    // core systems (cont.)
     input.init();
-
-    // 
     rng.init();
-    
-    //
     api.init();
     api.set_clear_color({ 0.2f, 0.2f, 0.2f, 1.0f });
-
-    //
     renderer.init();
-    // renderer.create_scene_framebuffer();
     renderer_2d.init();
-
-    //
     tex_lib.init();
     mat_lib.init();
     cubemap_lib.init();
-
     font.init("../assets/font/JetBrainsMono-Regular.ttf", 16);
     font.set_color(glm::vec4(1.0f));
 
@@ -97,6 +88,7 @@ void syn_init(const char *_name, int _width, int _height, int _mode)
     }
 
     window_manager.init();
+    editor.init();
 
 }
 
@@ -203,7 +195,8 @@ void syn_load_ui_layout(const char *_filepath)
         else if (strcmp(type, "log") == 0)       syn_create_log_window(name, abs_pos, abs_size);
         else if (strcmp(type, "hierarchy") == 0) syn_create_hierarchy_window(name, abs_pos, abs_size);
         else if (strcmp(type, "transform") == 0) syn_create_transform_window(name, abs_pos, abs_size);
-        else if (strcmp(type, "material") == 0)  syn_create_material_window(name, abs_pos, abs_size);            
+        else if (strcmp(type, "material") == 0)  syn_create_material_window(name, abs_pos, abs_size);
+        else if (strcmp(type, "creator") == 0)   syn_create_primitive_window(name, abs_pos, abs_size);
         else if (strcmp(type, "window") == 0) {
             window_t win;
             win.name = name;
@@ -422,8 +415,8 @@ void syn_create_material_window(const char *_name, const glm::vec2 &_pos, const 
 
     float w       = _size.x;
     float field_h = 20.0f;
-    float field_w = w * 0.2f;
-    float label_x = w * 0.15f;
+    float field_w = w * 0.25f;
+    float label_x = w * 0.20f;
 
     const char *labels[] = { "r", "g", "b", "rough", "metal", "ao", "tiling" };
     float maxvals[]      = { 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 100.0f };
@@ -461,44 +454,47 @@ void syn_create_material_window(const char *_name, const glm::vec2 &_pos, const 
 }
 
 // 
-entity_handle_t _pick_entity(const glm::vec2 &_screen_pos)
+void syn_create_primitive_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size)
 {
-    window_t *vp = window_manager.get_viewport_window();
-    if (!vp) return { 0 };
+    window_t win;
+    win.name     = _name;
+    win.position = _pos;
+    win.size     = _size;
+    window_handle_t handle = window_manager.add_window(win);
+    editor.set_create_window_handle(handle);
+    
+    window_t *pw = window_manager.get_window(handle);
+    pw->set_visible(false);
+    pw->set_resizable(false);
 
-    glm::vec2 vp_pos  = vp->get_content_position();
-    glm::vec2 vp_size = vp->get_content_size();
+    float btn_h = 22.0f;
+    float btn_w = _size.x - 8.0f;
 
-    if (_screen_pos.x < vp_pos.x || _screen_pos.x > vp_pos.x + vp_size.x ||
-        _screen_pos.y < vp_pos.y || _screen_pos.y > vp_pos.y + vp_size.y)
-        return { 0 };
+    struct {
+        const char *label;
+        primitive_type_t type;
+    } primitives[] = {
+        { "Cube", primitive_type_t::CUBE },
+        { "Sphere (UV)", primitive_type_t::SPHERE_UV },
+        { "Plane", primitive_type_t::PLANE },
+    };
 
-    ray_t ray = ray_from_screen(_screen_pos, vp_pos, vp_size, cam.get_view_matrix(), cam.get_projection_matrix());
-    entity_handle_t closest_entity = { 0 };
-    float closest_t = FLT_MAX;
-
-    for (uint32_t i = 0; i < SYN_MAX_ENTITY_COUNT; i++) {
-        entity_t *e = entity_lib.get_entity_from_index(i);
-        if (!e->is_active) continue;
-
-        mesh_internal_t *mesh = mesh_lib.get_mesh(e->mesh_handle);
-        if (!mesh) continue;
-
-        glm::mat4 inv = glm::inverse(e->transform);
-        ray_t local_ray;
-        local_ray.origin    = glm::vec3(inv * glm::vec4(ray.origin, 1.0f));
-        local_ray.direction = glm::normalize(glm::vec3(inv * glm::vec4(ray.direction, 0.0f)));
-
-        float t;
-        if (ray_aabb_intersect(local_ray, mesh->aabb_min, mesh->aabb_max, t)) {
-            if (t < closest_t) {
-                closest_t = t;
-                closest_entity = { i + 1 };
-            }
-        }
+    for (int i = 0; i < 3; i++) {
+        widget_t btn;
+        btn.type = widget_type_t::BUTTON;
+        btn.anchor = widget_anchor_t::TOP_LEFT;
+        btn.position = glm::vec2(4.0f, 4.0f + i * (btn_h + 4.0f));
+        btn.size = glm::vec2(btn_w, btn_h);
+        btn.text = primitives[i].label;
+        primitive_type_t t = primitives[i].type;
+        btn.on_click = [t](widget_t *_w) {
+            editor.spawn_primitive(t);
+        };
+        pw->add_widget(btn);
     }
 
-    return closest_entity;
+    pw->on_resize();
+    
 }
 
 
@@ -550,10 +546,10 @@ void syn_render_end_3d()
     if (selected_entity_handle.is_valid()) {
         entity_t *e = entity_lib.get_entity(selected_entity_handle);
         if (e) {
-            bool prev = renderer.m_debug.show_bounding_boxes;
-            renderer.m_debug.show_bounding_boxes = true;
+            bool prev = renderer.debug.show_bounding_boxes;
+            renderer.debug.show_bounding_boxes = true;
             renderer.render_debug_bounding_box_entities(e);
-            renderer.m_debug.show_bounding_boxes = prev;
+            renderer.debug.show_bounding_boxes = prev;
         }
     }
     

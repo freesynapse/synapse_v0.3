@@ -19,20 +19,19 @@ entity_handle_t entity_library_t::create_entity(const std::string &_name,
                                                 material_handle_t _material_handle,
                                                 const glm::mat4 &_transform)
 {
-    // search for duplicates
+    uint32_t slot = SYN_MAX_ENTITY_COUNT;
     for (uint32_t i = 0; i < SYN_MAX_ENTITY_COUNT; i++) {
-        if (m_pool[i].is_active && _name == m_pool[i].name) {
-            return { i + 1 };
+        if (!m_pool[i].is_active) {
+            slot = i;
+            break;
         }
     }
 
-    // check overflow
-    if (m_active_count >= SYN_MAX_ENTITY_COUNT) {
+    if (slot == SYN_MAX_ENTITY_COUNT) {
         SYN_ERROR("entity count >= SYN_MAX_ENTITY_COUNT.\n");
         return { 0 };
     }
 
-    uint32_t slot = m_active_count;
     entity_t &ent = m_pool[slot];
     ent.name = _name;
     ent.mesh_handle = _mesh_handle;
@@ -40,10 +39,6 @@ entity_handle_t entity_library_t::create_entity(const std::string &_name,
     ent.transform = _transform;
     ent.is_active = true;
 
-    // transfrom_components_t tc = decompose_transorm(_transform);
-    // ent.t_position = tc.position;
-    // ent.t_rotation = tc.rotation;
-    // ent.t_scale    = tc.scale;
     ent.t_position = glm::vec3(_transform[3]);
     ent.t_scale = glm::vec3(
         glm::length(glm::vec3(_transform[0])),
@@ -90,4 +85,16 @@ entity_t *entity_library_t::get_entity_from_index(uint32_t _index)
     }
 
     return &m_pool[_index];
+}
+
+// 
+void entity_library_t::release_entity(entity_handle_t _handle)
+{
+    if (_handle.id > 0 && _handle.id < SYN_MAX_ENTITY_COUNT) {
+        entity_t &ent = m_pool[_handle.id - 1];
+        if (ent.is_active) {
+            ent = entity_t();
+            m_active_count--;
+        }
+    }
 }

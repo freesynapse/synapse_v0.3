@@ -17,6 +17,12 @@ public:
 
     material_internal_t m_pool[SYN_MAX_MATERIAL_COUNT];
     uint32_t m_active_count;
+
+private:
+    void create_fallback_material();
+
+public:
+    material_handle_t fallback_material_handle = { 0 };
     
 };
 
