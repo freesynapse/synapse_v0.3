@@ -34,7 +34,7 @@ time_step_t                 time_step;
 asset_manager_t             assets;
 window_manager_t            window_manager;
 random_t                    rng;
-
+mesh_generator_t            mesh_generator;
 editor_t                    editor;
 
 // rendering
@@ -456,19 +456,19 @@ void syn_create_material_window(const char *_name, const glm::vec2 &_pos, const 
 // 
 void syn_create_primitive_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size)
 {
+    float btn_h = 22.0f;
+    float btn_w = _size.x - 8.0f;
+
     window_t win;
     win.name     = _name;
     win.position = _pos;
-    win.size     = _size;
+    win.size     = { _size.x, glm::max(_size.y, 4.0f + (int)primitive_type_t::COUNT * (btn_h + 4.0f)) };
     window_handle_t handle = window_manager.add_window(win);
     editor.set_create_window_handle(handle);
     
     window_t *pw = window_manager.get_window(handle);
     pw->set_visible(false);
     pw->set_resizable(false);
-
-    float btn_h = 22.0f;
-    float btn_w = _size.x - 8.0f;
 
     struct {
         const char *label;
@@ -477,9 +477,13 @@ void syn_create_primitive_window(const char *_name, const glm::vec2 &_pos, const
         { "Cube", primitive_type_t::CUBE },
         { "Sphere (UV)", primitive_type_t::SPHERE_UV },
         { "Plane", primitive_type_t::PLANE },
+        { "Cone", primitive_type_t::CONE },
+        { "Cylinder", primitive_type_t::CYLINDER },
+        { "Torus", primitive_type_t::TORUS },
     };
 
-    for (int i = 0; i < 3; i++) {
+    int i;
+    for (i = 0; i < (int)(sizeof(primitives)/sizeof(primitives[0])); i++) {
         widget_t btn;
         btn.type = widget_type_t::BUTTON;
         btn.anchor = widget_anchor_t::TOP_LEFT;
@@ -488,7 +492,8 @@ void syn_create_primitive_window(const char *_name, const glm::vec2 &_pos, const
         btn.text = primitives[i].label;
         primitive_type_t t = primitives[i].type;
         btn.on_click = [t](widget_t *_w) {
-            editor.spawn_primitive(t);
+            SYN_INFO("button clicked, type=%d\n", (int)t);
+            editor.create_primitive(t);
         };
         pw->add_widget(btn);
     }

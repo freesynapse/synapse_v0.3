@@ -192,7 +192,7 @@ void renderer_t::init_skybox()
     m_skybox.mesh_handle = { 0 };
     m_skybox.shader_handle = { 0 };
     
-    mesh_handle_t mesh_handle = generate_skybox_cube_mesh();
+    mesh_handle_t mesh_handle = mesh_generator.create_skybox_cube_mesh();
     shader_handle_t shader_handle = shader_lib.load_from_file("skybox_shader", "../assets/shaders/skybox.glsl");
     
     if (!mesh_handle.is_valid() || !shader_handle.is_valid()) {

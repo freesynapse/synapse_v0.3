@@ -8,13 +8,6 @@
 
 
 // 
-enum class primitive_type_t {
-    CUBE,
-    SPHERE_UV,
-    PLANE,
-};
-
-// 
 class editor_t
 {
 public:
@@ -25,7 +18,7 @@ public:
     void toggle_create_menu(const glm::vec2 &_pos);
     void hide_create_menu();
 
-    entity_handle_t spawn_primitive(primitive_type_t _type);
+    entity_handle_t create_primitive(primitive_type_t _type);
     entity_handle_t pick_entity(const glm::vec2 &_screen_pos);
 
     // 

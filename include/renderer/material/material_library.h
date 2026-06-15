@@ -12,6 +12,7 @@ public:
     void shutdown();
 
     material_handle_t create_material(shader_handle_t _shader_handle);
+    material_handle_t create_material_from(material_handle_t _handle);
     material_internal_t *get_material(material_handle_t _handle);
     void release_material(material_handle_t _handle);
 

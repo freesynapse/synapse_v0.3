@@ -25,15 +25,24 @@ void editor_t::on_keydown_event(const event_t &_e)
     int key = _e.as.keydown.key;
     int mods = _e.as.keydown.mods;
 
+    // 
     if (key == SYN_KEY_A && mods & SYN_MOD_SHIFT) {
         toggle_create_menu(input.mouse_position);
     }
 
+    // 
     if (key == SYN_KEY_ESCAPE) {
         if (window_manager.get_focused_window().id == m_create_window_handle.id) {
             hide_create_menu();
         }
     }
+
+    // 
+    if (key == SYN_KEY_DELETE && selected_entity_handle.is_valid()) {
+        entity_lib.release_entity(selected_entity_handle);
+        selected_entity_handle = { 0 };
+    }
+    
 }
 
 // 
@@ -62,27 +71,46 @@ void editor_t::hide_create_menu()
 }
 
 // 
-entity_handle_t editor_t::spawn_primitive(primitive_type_t _type)
+entity_handle_t editor_t::create_primitive(primitive_type_t _type)
 {
     mesh_handle_t mesh;
     std::string name;
 
     switch (_type) {
         case primitive_type_t::CUBE: {
-            mesh = generate_cube_mesh();
+            mesh = mesh_generator.create_cube_mesh();
             name = "cube";
             break;
         }
 
         case primitive_type_t::SPHERE_UV: {
-            mesh = generate_uv_sphere_mesh();
+            mesh = mesh_generator.create_uv_sphere_mesh();
             name = "sphere";
             break;
         }
 
         case primitive_type_t::PLANE: {
-            mesh = generate_plane_mesh(10.0f, 21);
+            mesh = mesh_generator.create_plane_mesh(10.0f, 21);
             name = "plane";
+            break;
+        }
+
+        case primitive_type_t::CONE: {
+            mesh = mesh_generator.create_cone_mesh();
+            name = "cone";
+            break;
+        }
+        
+        case primitive_type_t::CYLINDER: {
+            mesh = mesh_generator.create_cylinder_mesh();
+            name = "cylinder";
+            break;
+        }
+        
+        case primitive_type_t::TORUS: {
+            SYN_INFO("hello.\n");
+            mesh = mesh_generator.create_torus_mesh();
+            name = "torus";
             break;
         }
 

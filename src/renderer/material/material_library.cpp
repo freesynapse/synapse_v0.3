@@ -74,6 +74,22 @@ material_handle_t material_library_t::create_material(shader_handle_t _shader_ha
 }
 
 // 
+material_handle_t material_library_t::create_material_from(material_handle_t _handle)
+{
+    material_internal_t *src = get_material(_handle);
+    material_handle_t new_handle = create_material(src->shader_handle);
+    material_internal_t *dst = get_material(new_handle);
+
+    if (src && dst) {
+        memcpy(dst->data, src->data, src->data_size);
+        dst->data_size = src->data_size;
+        memcpy(dst->textures, src->textures, sizeof(src->textures));
+    }
+
+    return new_handle;
+}
+
+// 
 material_internal_t *material_library_t::get_material(material_handle_t _handle)
 {
     if (_handle.id == 0 || _handle.id >= SYN_MAX_MATERIAL_COUNT || !m_pool[_handle.id].is_active) {

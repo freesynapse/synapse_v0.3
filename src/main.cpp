@@ -27,7 +27,7 @@ int main()
 
     setup_lights();
 
-    mesh_handle_t sphere_mesh = generate_uv_sphere_mesh();
+    mesh_handle_t sphere_mesh = mesh_generator.create_uv_sphere_mesh();
     material_handle_t sphere_material = assets.get_material("chrome");
     glm::mat4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.0f, 2.0f));
 

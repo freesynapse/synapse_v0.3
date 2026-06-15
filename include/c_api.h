@@ -65,7 +65,7 @@ extern time_step_t                  time_step;
 extern asset_manager_t              assets;
 extern window_manager_t             window_manager;
 extern random_t                     rng;
-
+extern mesh_generator_t             mesh_generator;
 extern editor_t                     editor;
 
 // rendering
