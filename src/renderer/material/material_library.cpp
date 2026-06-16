@@ -65,10 +65,6 @@ material_handle_t material_library_t::create_material(shader_handle_t _shader_ha
     mat.is_active = true;
     m_active_count++;
 
-    #ifdef DEBUG_MATERIAL_LIBRARY
-    SYN_INFO("loaded material %d.\n", free_slot);
-    #endif
-    
     return { free_slot };
     
 }
@@ -141,6 +137,7 @@ void material_library_t::create_fallback_material()
     tex.width      = 2;
     tex.height     = 2;
     tex.channels   = 4;
+    tex.name       = "__fallback_texture__";
     tex.asset_path = "__falback_texture__";
     tex.is_active  = true;
     texture_handle_t tex_handle = { 1 };

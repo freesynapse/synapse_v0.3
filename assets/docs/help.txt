@@ -1,0 +1,18 @@
+--- CORE ENGINE SHORTCUTS -------------------------------------------
+  <TAB>          Switch between orbit and perspective camera
+
+
+--- EDITOR SHORTCUTS ------------------------------------------------
+  <Shift> + A    Show primitive creation menu
+
+
+--- DEV TOOLS / HELP ------------------------------------------------
+  <F1>           Show help window
+  <F2>           Toggle wireframe
+  <F3>           Toggle performance overlay (viewport)
+  <F5>           Toggle rendering normals of selected entity
+  <F6>           Toggle rendering tangents of selected entity
+  <F7>           Toggle rendering AABBs of all entities
+  <F8>           Reload all shaders
+  <F10>          Toggle grid
+ 

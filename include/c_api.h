@@ -6,6 +6,7 @@
 #include "glfw_window.h"
 #include "gl_api.h"
 #include "editor.h"
+#include "dev_tools.h"
 #include "event/input_manager.h"
 #include "event/event_handler.h"
 #include "renderer/renderer.h"
@@ -25,6 +26,7 @@
 #include "utils/time_step.h"
 #include "utils/asset_manager.h"
 #include "utils/random.h"
+#include "utils/file_io_handler.h"
 
 
 /*  This file defines the C API style bindings for synapse, to be used from now on.
@@ -55,18 +57,20 @@ extern input_handler_t              input;
 extern events_t                     events;
 extern renderer_t                   renderer;
 extern renderer_2d_t                renderer_2d;
+extern time_step_t                  time_step;
+extern file_io_handler_t            file_io_handler;
 extern shader_library_t             shader_lib;
 extern texture_library_t            tex_lib;
 extern material_library_t           mat_lib;
 extern mesh_library_t               mesh_lib;
 extern cubemap_library_t            cubemap_lib;
 extern entity_library_t             entity_lib;
-extern time_step_t                  time_step;
 extern asset_manager_t              assets;
 extern window_manager_t             window_manager;
 extern random_t                     rng;
 extern mesh_generator_t             mesh_generator;
 extern editor_t                     editor;
+extern dev_tools_t                  dev_tools;
 
 // rendering
 extern font_t                       font;
@@ -106,7 +110,8 @@ void syn_create_hierarchy_window(const char *_name, const glm::vec2 &_pos, const
 void syn_create_transform_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 void syn_create_material_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 void syn_create_primitive_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
-
+void syn_create_texture_select_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
+void syn_create_help_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 
 //---------------------------------------------------------------------------------------
 // rendering loop functions

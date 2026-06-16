@@ -265,7 +265,7 @@ void window_t::draw_widgets()
             }
 
             case widget_type_t::FLOAT_FIELD: {
-                float_field_t &ff = w->float_field;
+                float_field_t &ff = w->float_field_widget;
 
                 renderer_2d.batch.add_quad(p, w->size, fg_c, depth_offset);
 
@@ -347,6 +347,55 @@ void window_t::draw_widgets()
                 break;
             }
 
+            case widget_type_t::LIST: {
+                list_widget_t &lw = w->list_widget;
+                lw.row_height = font.get_font_glyph_height() + 6.0f;
+                font.set_depth(depth + window_manager.m_ddepth_layer_text);
+                font.set_color(fg_color);
+
+                uint32_t max_rows = (uint32_t)s.y / lw.row_height;
+                uint32_t start = (uint32_t)lw.scroll_offset;
+
+                uint32_t drawn = 0;
+
+                for (uint32_t i = start; i < lw.items.size() && drawn < max_rows; i++) {
+                    float row_y = p.y + drawn * lw.row_height;
+                    if (lw.selected_index == (int)i) {
+                        renderer_2d.batch.add_quad({ p.x, row_y }, { s.x, lw.row_height }, w->hover_color, depth_offset);
+                    }
+                    font.render_text_clipped(p.x + 6.0f, row_y + lw.row_height - font.get_font_glyph_height() * 0.5f, s.x - 8.0f, "%s", lw.items[i].c_str());
+                    drawn++;
+                }
+                break;
+            }
+
+            case widget_type_t::TEX_QUAD: {
+                tex_quad_widget_t &tq = w->tex_quad_widget;
+                if (tq.texture_handle.id == 0) break;
+                texture_internal_t *tex = tex_lib.get_texture(tq.texture_handle);
+                if (!tex || tex->opengl_id == 0) break;
+
+                // reuses the shader used for drawing the viewport framebuffer quad
+                shader_t *shader = shader_lib.get_shader(window_manager.m_tex_quad_shader_handle);
+                if (!shader) break;
+
+                shader->enable();
+                shader->set_matrix_4fv("u_projection", window_manager.m_projection);
+                shader->set_uniform_2fv("u_position", p);
+                shader->set_uniform_2fv("u_size", s);
+                shader->set_uniform_1f("u_depth", depth + window_manager.m_ddepth_layer_texture);
+
+                glBindTextureUnit(0, tex->opengl_id);
+
+                window_manager.m_tex_quad_vao.bind();
+                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+                window_manager.m_tex_quad_vao.unbind();
+
+                shader->disable();
+                    
+                break;
+            }
+            
             default:
                 break;
         }
@@ -474,6 +523,18 @@ widget_t *window_t::get_widget_at_pos(const glm::vec2 &_pos)
         widget_t *w = &m_widgets[i];
         if (w->is_visible && w->is_enabled && w->contains_point(position, size, _pos, title_bar_height)) {
             return w;
+        }
+    }
+    
+    return nullptr;
+}
+
+// 
+widget_t *window_t::get_widget_of_type(widget_type_t _type)
+{
+    for (uint32_t i = 0; i < m_widget_count; i++) {
+        if (m_widgets[i].type == _type) {
+            return &m_widgets[i];
         }
     }
     

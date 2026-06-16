@@ -12,8 +12,6 @@
 #include "utils/file_io_handler.h"
 #include "utils/log.h"
 
-// global instance
-file_io_handler_t file_io_handler;
 
 // 
 #ifdef _WIN64
@@ -152,6 +150,23 @@ int file_io_handler_t::read_file_to_buffer(const std::string &_file_path, std::s
 
 	return 0;
 
+}
+
+int file_io_handler_t::read_file_to_lines(const std::string &_file_path, 
+                                          std::vector<std::string> &_out_lines)
+{
+    std::ifstream file(_file_path, std::ios::in);
+    if (!file.is_open()) {
+        SYN_ERROR("file '%s' could not be opened.\n", _file_path.c_str());
+		return -1;
+    }
+
+    std::string line;
+    while (std::getline(file, line)) {
+        _out_lines.push_back(line);
+    }
+
+    return 0;
 }
 
 // 

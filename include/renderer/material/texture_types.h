@@ -21,8 +21,10 @@ struct texture_internal_t {
     uint32_t width = 0;
     uint32_t height = 0;
     uint32_t channels = 0;
+
+    std::string name = "";
     std::string asset_path;
-    // char asset_path[MAX_TEXTURE_PATH_LEN] = { 0 };
+    
     bool is_active = false;
 };
 

@@ -74,65 +74,11 @@ void render(float _dt)
     
     renderer.cmd_flush();
 
-    if (renderer.debug.show_normals || renderer.debug.show_tangents) {
-        entity_t *e = entity_lib.get_entity(sphere);
-        renderer.render_debug_normals(e->mesh_handle, e->transform);
-    }
-
-    if (renderer.debug.show_bounding_boxes) {
-        renderer.render_debug_bounding_box_entities();
-    }
-
-    if (renderer.debug.show_grid) {
-        renderer.render_debug_grid();
-    }
-
 }
 
 //
 void handle_input()
-{
-    if (input.was_key_pressed(SYN_KEY_F)) {
-        event_t e;
-        e.type = event_type_t::WINDOW_TOGGLE_FULLSCREEN;
-        events.dispatch_event(e);
-    }
-
-    // 
-    if (input.was_key_pressed(SYN_KEY_TAB)) {
-        cam.toggle_mode();
-    }
-    
-    // TODO :   refactor and abstract away
-    if (input.was_key_pressed(SYN_KEY_F2)) {
-        renderer.toggle_wireframe();
-    }
-
-    if (input.was_key_pressed(SYN_KEY_F3)) {
-        renderer.toggle_perf_overlay();
-    }
-
-    if (input.was_key_pressed(SYN_KEY_F5)) {
-        renderer.toggle_normals();
-    }
-
-    if (input.was_key_pressed(SYN_KEY_F6)) {
-        renderer.toggle_tangents();
-    }
-
-    if (input.was_key_pressed(SYN_KEY_F7)) {
-        renderer.toggle_bounding_boxes();
-    }
-
-    if (input.was_key_pressed(SYN_KEY_F8)) {
-        shader_lib.reload_shaders();
-    }
-
-    if (input.was_key_pressed(SYN_KEY_F10)) {
-        renderer.toggle_grid();
-    }
-
-}
+{}
 
 // 
 void setup_lights()

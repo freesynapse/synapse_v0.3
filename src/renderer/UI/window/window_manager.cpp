@@ -105,8 +105,24 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
                     if (clicked_widget->consumes_click) return;
                 }
 
+                else if (clicked_widget->type == widget_type_t::LIST) {
+                    list_widget_t &lw = clicked_widget->list_widget;
+                    float row_h = lw.row_height > 0.0f ? lw.row_height : font.get_font_glyph_height();
+                    glm::vec2 wp = clicked_widget->get_absolute_position(
+                        glm::vec2(win->position.x, win->position.y + win->title_bar_height), 
+                        glm::vec2(win->size.x, win->size.y - win->title_bar_height));
+
+                    int row = (int)((pos.y - wp.y) / row_h) + (int)lw.scroll_offset;
+                    if (row >= 0 && row < (int)lw.items.size()) {
+                        lw.selected_index = row;
+                        if (lw.on_select) lw.on_select(row, lw.items[row]);
+                    }
+                    
+                    if (clicked_widget->consumes_click) return;
+                }
+
                 else if (clicked_widget->type == widget_type_t::FLOAT_FIELD) {
-                    float_field_t &ff = clicked_widget->float_field;
+                    float_field_t &ff = clicked_widget->float_field_widget;
                     ff.editing = true;
                     // initialize with current value
                     snprintf(ff.buf, sizeof(ff.buf), "%.4f", ff.value);
@@ -347,6 +363,19 @@ void window_manager_t::on_mouse_move_event(const event_t &_e)
         
         if (hovered) {
             hovered->is_hovered = true;
+
+            if (hovered->type == widget_type_t::LIST) {
+                list_widget_t &lw = hovered->list_widget;
+                float row_h = lw.row_height > 0.0f ? lw.row_height : font.get_font_glyph_height();
+                glm::vec2 wp = hovered->get_absolute_position(
+                    glm::vec2(win->position.x, win->position.y + win->title_bar_height), 
+                    glm::vec2(win->size.x, win->size.y - win->title_bar_height));
+                int row = (int)((m_mouse_pos.y - wp.y) / row_h) + (int)lw.scroll_offset;
+                if (row >= 0 && row < (int)lw.items.size() && lw.on_hover) {
+                    lw.on_hover(row, lw.items[row]);
+                }
+
+            }
         }
     }
     
@@ -367,7 +396,7 @@ void window_manager_t::on_mouse_scroll_event(const event_t &_e)
     if (!w) return;
 
     if (w->type == widget_type_t::FLOAT_FIELD) {
-        float_field_t &ff = w->float_field;
+        float_field_t &ff = w->float_field_widget;
         if (ff.editing) return;
 
         float speed = 1.0f;
@@ -381,6 +410,13 @@ void window_manager_t::on_mouse_scroll_event(const event_t &_e)
         if (ff.on_change) ff.on_change(new_val);
         return;
     }
+
+    else if (w->type == widget_type_t::LIST) {
+        list_widget_t &lw = w->list_widget;
+        float max_scroll = glm::max(0.0f, (float)lw.items.size() - (w->size.y / (lw.row_height > 0.0f ? lw.row_height : 20.0f)));
+        lw.scroll_offset = glm::clamp(lw.scroll_offset - delta, 0.0f, max_scroll);
+    }
+    
     else if (w->on_scroll) {
         w->on_scroll(w, delta);
         return;
@@ -417,9 +453,9 @@ void window_manager_t::on_keydown_event(const event_t &_e)
     // float field keyboard handling
     for (uint32_t i = 0; i < win->m_widget_count; i++) {
         widget_t *w = &win->m_widgets[i];
-        if (w->type != widget_type_t::FLOAT_FIELD || !w->float_field.editing) continue;
+        if (w->type != widget_type_t::FLOAT_FIELD || !w->float_field_widget.editing) continue;
 
-        float_field_t &ff = w->float_field;
+        float_field_t &ff = w->float_field_widget;
         int len = (int)strlen(ff.buf);
 
         switch (key)
@@ -489,9 +525,9 @@ void window_manager_t::on_input_char_event(const event_t &_e)
 
     for (uint32_t i = 0; i < win->m_widget_count; i++) {
         widget_t *w = &win->m_widgets[i];
-        if (w->type != widget_type_t::FLOAT_FIELD || !w->float_field.editing) continue;
+        if (w->type != widget_type_t::FLOAT_FIELD || !w->float_field_widget.editing) continue;
 
-        float_field_t &ff = w->float_field;
+        float_field_t &ff = w->float_field_widget;
         int len = (int)strlen(ff.buf);
         if (len >= 31) return;
 
@@ -843,13 +879,13 @@ void window_manager_t::update_dock_zones(const glm::vec2 &_mouse_pos, const wind
     if (hovered.id != 0 && hovered.id != _dragged_window_handle.id) {
         window_t *target = get_window(hovered);
         if (target) {
+            // size of center zone, at least 300 x (300 / aspect_ratio)
+            float size_x = glm::min(300.0f, target->size.x - margin * 2);
+            float size_y = glm::min(300.0f * root_window.get_fheight() / root_window.get_fwidth(),  target->size.y - margin * 2);
+            float pos_x  = glm::max(target->position.x + target->size.x * 0.5f - size_x * 0.5f, target->position.x + margin);
+            float pos_y  = glm::max(target->position.y + target->size.y * 0.5f - size_y * 0.5f, target->position.y + margin);
             m_dock_zones[4].zone = dock_zone_t::CENTER;
-            m_dock_zones[4].bounds = glm::vec4(
-                target->position.x + margin,
-                target->position.y + margin,
-                target->size.x - margin * 2,
-                target->size.y - margin * 2
-            );
+            m_dock_zones[4].bounds = glm::vec4(pos_x, pos_y, size_x, size_y);
 
             glm::vec4 b = m_dock_zones[4].bounds;
             if (mpos.x >= b.x && mpos.x <= b.x + b.z &&
@@ -975,8 +1011,8 @@ void window_manager_t::draw_windows()
             // widgets: 0=close_btn, 1-9=float fields
             for (int i = 0; i < 9; i++) {
                 widget_t *w = tw->get_widget(i + 1);
-                if (w && w->type == widget_type_t::FLOAT_FIELD && !w->float_field.editing) {
-                    w->float_field.value = vals[i];
+                if (w && w->type == widget_type_t::FLOAT_FIELD && !w->float_field_widget.editing) {
+                    w->float_field_widget.value = vals[i];
                 } 
             }
         }
@@ -997,8 +1033,8 @@ void window_manager_t::draw_windows()
                 // widgets: 0=close_btn, 1-8=float fields
                 for (int i = 0; i < 7; i++) {
                     widget_t *w = mw->get_widget(i + 1);
-                    if (w && w->type == widget_type_t::FLOAT_FIELD && !w->float_field.editing) {
-                        w->float_field.value = vals[i];
+                    if (w && w->type == widget_type_t::FLOAT_FIELD && !w->float_field_widget.editing) {
+                        w->float_field_widget.value = vals[i];
                     }
                 }
             }

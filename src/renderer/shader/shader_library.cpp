@@ -81,10 +81,6 @@ shader_handle_t shader_library_t::load_shader_source(const std::string &_name, c
     m_name_to_handle_map[_name] = handle;
     m_shader_count++;
     
-    #ifdef DEBUG_SHADER_LIBRARY
-    SYN_INFO("loaded shader '%s' [%d].\n", _name.c_str(), handle.id);
-    #endif
-    
     return handle;
     
 }

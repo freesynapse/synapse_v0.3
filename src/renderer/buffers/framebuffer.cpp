@@ -153,11 +153,6 @@ void framebuffer_base_t::resize(const glm::ivec2 &_size)
 		SYN_ERROR("framebuffer incomplete.");
 	}
 
-	#ifdef DEBUG_FRAMEBUFFER
-		SYN_TRACE("Framebuffer '%s' (renderTargets=%d [%d x %d x %d]) created.\n", 
-		          m_name.c_str(), m_color_attachment_count, m_size.x, m_size.y, getPixelFmtChannels(m_format));
-	#endif
-
 	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 }

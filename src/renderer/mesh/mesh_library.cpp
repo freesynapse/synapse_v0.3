@@ -69,10 +69,6 @@ mesh_handle_t mesh_library_t::load_mesh_from_file(const std::string &_filepath)
         return { 0 };
     }
 
-    #ifdef DEBUG_MESH_LIBRARY
-    SYN_INFO("loading model: %s | meshes found: %d\n", _filepath.c_str(), scene->mNumMeshes);
-    #endif
-
     aiMesh *ai_mesh = scene->mMeshes[0];
     std::vector<vertex_data_t> vertices;
     std::vector<uint32_t> indices;

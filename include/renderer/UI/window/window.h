@@ -63,6 +63,7 @@ public:
     void add_widget(const widget_t &_widget);
     widget_t *get_widget(uint32_t _index);
     widget_t *get_widget_at_pos(const glm::vec2 &_pos);
+    widget_t *get_widget_of_type(widget_type_t _type);
 
     // tabs
     window_handle_t get_active_tab_child_handle();

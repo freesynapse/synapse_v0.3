@@ -19,12 +19,6 @@ static void __renderer_on_resize_callback(const event_t &_e) { renderer.on_resiz
 //
 void renderer_t::init() 
 {
-    // debug
-    #ifdef DEBUG_OPENGL_API
-    glDebugMessageCallback(openGLLogMessage, nullptr);
-    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-    #endif
-    
     // rendering and culling
     glFrontFace(GL_CCW);
     glEnable(GL_CULL_FACE);

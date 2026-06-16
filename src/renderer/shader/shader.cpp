@@ -8,7 +8,9 @@
 
 #include "renderer/shader/shader.h"
 #include "utils/log.h"
-#include "utils/file_io_handler.h"
+
+#include "c_api.h"
+
 
 // 
 static GLenum shader_type_from_str(const std::string& _type)
@@ -328,10 +330,6 @@ int shader_t::compile_shader()
 	// create the shader program server side
 	program = glCreateProgram();
 	
-	#ifdef DEBUG_SHADER_SETUP
-	SYN_INFO("creating shader '%s' [%d].\n", m_shader_name.c_str(), program);
-	#endif
-
 	// step through each key-value pair in shader sources
 	for (auto& kv : m_shader_src) {
 		GLenum type = kv.first;
@@ -371,11 +369,7 @@ int shader_t::compile_shader()
 
 	}
 
-	// link the program
-	#ifdef DEBUG_SHADER_SETUP
-	SYN_INFO("linking program %d.\n", program);
-	#endif
-
+	//
 	glLinkProgram(program);
 
 	// error checking

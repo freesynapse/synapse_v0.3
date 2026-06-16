@@ -89,10 +89,6 @@ texture_handle_t texture_library_t::load_texture(const std::string &_filepath)
     texture.is_active = true;
     m_active_count++;
 
-    #ifdef DEBUG_TEXTURE_LIBRARY
-    SYN_INFO("loaded texture %d from '%s'.\n", free_slot, _filepath.c_str());
-    #endif
-    
     return { free_slot };
     
 }

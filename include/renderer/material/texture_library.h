@@ -9,6 +9,10 @@
 class texture_library_t
 {
 public:
+    friend class material_library_t;
+    friend class editor_t;
+    
+public:
     void init();
     void shutdown();
 
@@ -18,6 +22,7 @@ public:
     texture_internal_t *get_texture(texture_handle_t _handle);
     void release_texture(texture_handle_t _handle);
 
+private:
     texture_internal_t m_pool[SYN_MAX_TEXTURE_COUNT];
     uint32_t m_active_count;
     

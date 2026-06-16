@@ -9,8 +9,8 @@
 
 
 // 
-#define SYN_WINDOW_MAX_WIDGET_COUNT  64
-#define SYN_TEXT_AREA_LINE_LEN      512
+#define SYN_WINDOW_MAX_WIDGET_COUNT       64
+#define SYN_TEXT_AREA_LINE_LEN           512
 
 // 
 enum class widget_type_t {
@@ -19,6 +19,8 @@ enum class widget_type_t {
     TEXT_AREA,
     FLOAT_FIELD,
     HIERARCHY,
+    LIST,
+    TEX_QUAD,
 };
 
 // 
@@ -37,14 +39,6 @@ struct text_area_line_t {
 };
 
 // 
-struct hierarchy_widget_t {
-    entity_handle_t *selected;
-    float row_height = 0.0f;
-    float scroll_offset = 0.0f;
-
-};
-
-// 
 struct float_field_t {
     float  value    =  0.0f;
     float *binding  =  nullptr;
@@ -54,6 +48,29 @@ struct float_field_t {
     char   buf[32]  =  {};
     int    cursor   =  0;
     std::function<void(float)> on_change;
+};
+
+// 
+struct hierarchy_widget_t {
+    entity_handle_t *selected;
+    float row_height = 0.0f;
+    float scroll_offset = 0.0f;
+
+};
+
+// 
+struct list_widget_t {
+    std::vector<std::string> items;
+    int selected_index = -1;
+    float row_height = 0.0f;
+    float scroll_offset = 0.0f;
+    std::function<void(int, const std::string &)> on_select;
+    std::function<void(int, const std::string &)> on_hover;
+};
+
+// 
+struct tex_quad_widget_t {
+    texture_handle_t texture_handle = { 0 };
 };
 
 // 
@@ -82,8 +99,10 @@ struct widget_t {
     float scroll_offset         = 0.0f;
     uint32_t scroll_max_lines   = 0;
 
-    float_field_t float_field;
+    float_field_t float_field_widget;
     hierarchy_widget_t hierarchy_widget;
+    list_widget_t list_widget;
+    tex_quad_widget_t tex_quad_widget;
     
     // 
     widget_t() = default;

@@ -71,6 +71,80 @@ void editor_t::hide_create_menu()
 }
 
 // 
+void editor_t::open_texture_select()
+{
+    window_t *pw = window_manager.get_window(m_tex_picker_window_handle);
+    if (!pw) return;
+
+    widget_t *lw = pw->get_widget_of_type(widget_type_t::LIST);
+    if (!lw) return;
+
+    lw->list_widget.items.clear();
+    lw->list_widget.selected_index = -1;
+
+    for (uint32_t i = 0; i < SYN_MAX_TEXTURE_COUNT; i++) {
+        texture_internal_t &tex = tex_lib.m_pool[i];
+        if (tex.is_active && !tex.name.empty()) {
+            lw->list_widget.items.push_back(tex.name);
+        }
+    }
+
+    pw->set_visible(true);
+    window_manager.set_focused_window(m_tex_picker_window_handle);
+    
+}
+
+// 
+void editor_t::assign_texture_to_selected(const std::string &_name)
+{
+    if (!selected_entity_handle.is_valid()) {
+        SYN_WARNING("trying to assign texture '%s' but no entity selected.\n", _name.c_str());
+        return;
+    }
+
+    entity_t *e = entity_lib.get_entity(selected_entity_handle);
+    if (!e) return;
+
+    material_internal_t *mat = mat_lib.get_material(e->material_handle);
+    if (!mat) return;
+
+    // 
+    for (uint32_t i = 0; i < SYN_MAX_TEXTURE_COUNT; i++) {
+        texture_internal_t &tex = tex_lib.m_pool[i];
+        if (tex.is_active && tex.name == _name) {
+            mat->textures[(uint32_t)texture_map_type_t::ALBEDO] = { i };
+            material_pbr_payload_t *pbr = (material_pbr_payload_t *)mat->data;
+            pbr->use_albedo_map = 1.0f;
+            break;
+        }
+    }
+
+    // close after select
+    window_t *pw = window_manager.get_window(m_tex_picker_window_handle);
+    pw->set_visible(false);
+    
+}
+
+// 
+void editor_t::set_texture_select_preview(const std::string &_name)
+{
+    window_t *pw = window_manager.get_window(m_tex_picker_window_handle);
+    if (!pw) return;
+    widget_t *preview = pw->get_widget_of_type(widget_type_t::TEX_QUAD);
+    if (!preview) return;
+
+    for (uint32_t i = 0; i < SYN_MAX_TEXTURE_COUNT; i++) {
+        texture_internal_t &tex = tex_lib.m_pool[i];
+        if (tex.is_active && tex.name == _name) {
+            preview->tex_quad_widget.texture_handle = { i };
+            return;
+        }
+    }
+    preview->tex_quad_widget.texture_handle = { 0 };
+    
+}
+
+// 
 entity_handle_t editor_t::create_primitive(primitive_type_t _type)
 {
     mesh_handle_t mesh;

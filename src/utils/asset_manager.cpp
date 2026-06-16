@@ -248,6 +248,8 @@ void asset_manager_t::parse_texture(const std::vector<std::string> &_tokens)
     update_load_progress("texture", name);
 
     texture_handle_t handle = tex_lib.load_texture(path);
+    texture_internal_t *tex = tex_lib.get_texture(handle);
+    if (tex) tex->name = name;
     m_texture_map[name] = handle;
 
     SYN_INFO("loaded texture '%s' from '%s'.\n", name.c_str(), path.c_str());
