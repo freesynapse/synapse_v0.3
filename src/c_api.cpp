@@ -671,7 +671,7 @@ void syn_render_end_3d()
     }
     
     //
-    renderer.render_debug_orientation_obj();
+    renderer.render_orientation_obj();
 
     // draw_perf_overlay does NOT contain font.start_/.end_render_block()
     renderer.record_frame_time(time_step.dt * 1000.0f);

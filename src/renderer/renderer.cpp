@@ -470,24 +470,6 @@ cubemap_handle_t renderer_t::convert_equirect_to_cubemap(const texture_handle_t 
 
 }
 
-
-//
-// void renderer_t::create_scene_framebuffer() 
-// {
-//     m_scene_fbuffer_handle = api.fbo_handler.create_framebuffer(color_format_t::RGBA16F, glm::ivec2(0), 1, true, "scene_fbuffer");
-//     framebuffer_t *fbo = api.fbo_handler.get_framebuffer(m_scene_fbuffer_handle);
-
-//     SYN_INFO("created framebuffer '%s' (%dx%d).\n", fbo->get_name().c_str(), fbo->get_width(), fbo->get_height());
-    
-//     // create the shader
-//     m_scene_fbuffer_shader_handle = shader_lib.load_from_file("scene_buffer_shader", 
-//         "../assets/shaders/scene_fbuffer.glsl");
-
-//     // create the vertex array, no vertex data needed
-//     glCreateVertexArrays(1, &m_scene_fbuffer_vao);
-    
-// }
-
 //
 void renderer_t::bind_scene_fbuffer()
 {
@@ -1015,7 +997,7 @@ void renderer_t::render_debug_grid(float _y_level)
 }
 
 //
-void renderer_t::render_debug_orientation_obj()
+void renderer_t::render_orientation_obj()
 {
     api.set_viewport({0, 0}, { m_orientation_obj_size, m_orientation_obj_size });
     

@@ -30,8 +30,12 @@ void gl_api_t::on_resize(const event_t &_e)
 
     // set main viewport
     if (vp.x > 0 && vp.y > 0) {
-        m_viewport = vp;
         set_viewport(glm::ivec2(0, 0), vp);
+
+        GLint vp[4];
+        glGetIntegerv(GL_VIEWPORT, vp);
+        m_viewport = { vp[2], vp[3] };
+        m_viewport_offset = { vp[0], vp[1] };
 
     } else {
         SYN_WARNING("viewport not set : new viewport = [%d, %d]\n", vp.x, vp.y);
@@ -179,7 +183,7 @@ void gl_api_t::set_scene_viewport(const glm::ivec2 &_size)
 //
 void gl_api_t::reset_viewport()
 {
-    glViewport(0, 0, m_viewport.x, m_viewport.y);
+    glViewport(m_viewport_offset.x, m_viewport_offset.y, m_viewport.x, m_viewport.y);
 
 }
 

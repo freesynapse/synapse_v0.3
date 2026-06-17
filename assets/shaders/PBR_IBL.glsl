@@ -153,8 +153,8 @@ void main()
     vec3 radiance;
     float attenuation = 1.0;
 
-    // int light_count = int(u_light_count);
-    int light_count = 0;
+    int light_count = int(u_light_count);
+    // int light_count = 0;
     for (int i = 0; i < light_count; i++) {
 
         float type = lights[i].position.w;

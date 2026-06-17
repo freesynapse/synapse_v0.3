@@ -23,9 +23,12 @@ public:
     void release_texture(texture_handle_t _handle);
 
 private:
+    void create_fallback_texture();
+    
+private:
     texture_internal_t m_pool[SYN_MAX_TEXTURE_COUNT];
     uint32_t m_active_count;
-    
+
 };
 
 #endif // __TEXTURE_LIBRARY_H

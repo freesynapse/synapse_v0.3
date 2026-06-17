@@ -90,7 +90,7 @@ public:
 	void render_debug_bounding_boxes(const glm::vec3 &_min, const glm::vec3 &_max, const glm::mat4 &_transform);
 	void render_debug_bounding_boxes(entity_t *_entity=nullptr);
 	void render_debug_grid(float _y_level=0.0f);
-	void render_debug_orientation_obj();
+	void render_orientation_obj();
 
 
 public:

@@ -114,50 +114,19 @@ void material_library_t::create_fallback_material()
 {
     shader_handle_t pbr_shader = shader_lib.load_from_file("pbr_shader", "../assets/shaders/PBR_IBL.glsl");
 
-    uint8_t checker[] = {
-        255,  20, 147, 255,
-          0,   0,   0, 255,
-          0,   0,   0, 255,
-        255,  20, 147, 255,
-    };
-
-    // create texture
-    GLuint tex_id = 0;
-    glGenTextures(1, &tex_id);
-    glBindTexture(GL_TEXTURE_2D, tex_id);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, checker);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,   GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,   GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);   // nearest = sharp checker
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
-    texture_internal_t &tex = tex_lib.m_pool[1];
-    tex.opengl_id  = tex_id;
-    tex.width      = 2;
-    tex.height     = 2;
-    tex.channels   = 4;
-    tex.name       = "__fallback_texture__";
-    tex.asset_path = "__falback_texture__";
-    tex.is_active  = true;
-    texture_handle_t tex_handle = { 1 };
-    tex_lib.m_active_count++;
-
     // create material
     fallback_material_handle = mat_lib.create_material(pbr_shader);
     material_internal_t *fb_mat = mat_lib.get_material(fallback_material_handle);
+
     if (fb_mat) {
         material_pbr_payload_t *pbr = (material_pbr_payload_t *)fb_mat->data;
-        pbr->albedo_color   = glm::vec4(1.0f);
-        pbr->roughness      = 0.8f;
+        pbr->albedo_color   = glm::vec4(0.6f, 0.6f, 0.6f, 1.0f);
+        pbr->roughness      = 0.7f;
         pbr->metallic       = 0.0f;
         pbr->ao             = 1.0f;
-        pbr->tiling_factor  = 4.0f;
-        pbr->use_albedo_map = 1.0f;
-        fb_mat->textures[(uint32_t)texture_map_type_t::ALBEDO] = tex_handle;
+        pbr->tiling_factor  = 1.0f;
+        pbr->use_albedo_map = 0.0f;
     }
-
-    SYN_INFO("__fallback__ material created (checkerboard).\n");
     
 }
 

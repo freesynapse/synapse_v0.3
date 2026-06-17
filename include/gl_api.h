@@ -78,6 +78,7 @@ public:
 private:
     // renderer variables
 	glm::ivec2 m_viewport = { 0, 0 };
+	glm::ivec2 m_viewport_offset = { 0, 0 };
 	glm::ivec2 m_scene_viewport = { 0, 0 };
 	glm::vec4 m_clear_color = glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
 	bool m_is_blending = true;

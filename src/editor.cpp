@@ -81,6 +81,7 @@ void editor_t::open_texture_select()
 
     lw->list_widget.items.clear();
     lw->list_widget.selected_index = -1;
+    lw->list_widget.items.push_back("(no texture)");
 
     for (uint32_t i = 0; i < SYN_MAX_TEXTURE_COUNT; i++) {
         texture_internal_t &tex = tex_lib.m_pool[i];
@@ -109,13 +110,19 @@ void editor_t::assign_texture_to_selected(const std::string &_name)
     if (!mat) return;
 
     // 
-    for (uint32_t i = 0; i < SYN_MAX_TEXTURE_COUNT; i++) {
-        texture_internal_t &tex = tex_lib.m_pool[i];
-        if (tex.is_active && tex.name == _name) {
-            mat->textures[(uint32_t)texture_map_type_t::ALBEDO] = { i };
-            material_pbr_payload_t *pbr = (material_pbr_payload_t *)mat->data;
-            pbr->use_albedo_map = 1.0f;
-            break;
+    if (_name == "(no texture)") {
+        mat->textures[(uint32_t)texture_map_type_t::ALBEDO] = { 0 };
+        material_pbr_payload_t *pbr = (material_pbr_payload_t *)mat->data;
+        pbr->use_albedo_map = 0.0f;
+    } else {
+        for (uint32_t i = 0; i < SYN_MAX_TEXTURE_COUNT; i++) {
+            texture_internal_t &tex = tex_lib.m_pool[i];
+            if (tex.is_active && tex.name == _name) {
+                mat->textures[(uint32_t)texture_map_type_t::ALBEDO] = { i };
+                material_pbr_payload_t *pbr = (material_pbr_payload_t *)mat->data;
+                pbr->use_albedo_map = 1.0f;
+                break;
+            }
         }
     }
 
@@ -133,6 +140,11 @@ void editor_t::set_texture_select_preview(const std::string &_name)
     widget_t *preview = pw->get_widget_of_type(widget_type_t::TEX_QUAD);
     if (!preview) return;
 
+    if (_name == "(no texture)") {
+        preview->tex_quad_widget.texture_handle = { 0 };
+        return;
+    }
+    
     for (uint32_t i = 0; i < SYN_MAX_TEXTURE_COUNT; i++) {
         texture_internal_t &tex = tex_lib.m_pool[i];
         if (tex.is_active && tex.name == _name) {

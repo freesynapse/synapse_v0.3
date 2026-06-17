@@ -83,26 +83,27 @@ void handle_input()
 // 
 void setup_lights()
 {
-    light_t key;
-    key.position = glm::vec4(2.0f, 4.0f, 2.0f, 0.0f);   // .w = 0 --> point light
-    key.color = glm::vec4(1.0f, 0.9f, 0.8f, 150.0f);
-    renderer.set_light(0, key);
+    // light_t key;
+    // key.position = glm::vec4(2.0f, 4.0f, 2.0f, 0.0f);   // .w = 0 --> point light
+    // key.color = glm::vec4(1.0f, 0.9f, 0.8f, 150.0f);
+    // renderer.set_light(0, key);
 
-    light_t fill;
-    fill.position = glm::vec4(-3.0f, 2.0f, 1.0f, 0.0f); // .w = 0 --> point light
-    fill.color = glm::vec4(0.8f, 0.9f, 1.0f, 50.0f);
-    renderer.set_light(1, fill);
+    // light_t fill;
+    // fill.position = glm::vec4(-3.0f, 2.0f, 1.0f, 0.0f); // .w = 0 --> point light
+    // fill.color = glm::vec4(0.8f, 0.9f, 1.0f, 50.0f);
+    // renderer.set_light(1, fill);
 
-    light_t rim;
-    rim.position = glm::vec4(0.0f, 2.0f, -4.0f, 0.0f);  // .w = 0 --> point light
-    rim.color = glm::vec4(1.0f, 1.0f, 1.0f, 200.0f);
-    renderer.set_light(2, rim);
+    // light_t rim;
+    // rim.position = glm::vec4(0.0f, 2.0f, -4.0f, 0.0f);  // .w = 0 --> point light
+    // rim.color = glm::vec4(1.0f, 1.0f, 1.0f, 200.0f);
+    // renderer.set_light(2, rim);
 
     light_t sun;
     sun.position = glm::vec4(0, 0, 0, 1.0f);            // .w = 1 --> directional light
     sun.direction = glm::vec4(-1.0f, -1.0f, -1.0f, 0.0f); // Top-down angle
     sun.color = glm::vec4(1.0f, 1.0f, 0.9f, 1.0f); // Sun doesn't need 100+ intensity
-    renderer.set_light(3, sun);
+    // renderer.set_light(3, sun);
+    renderer.set_light(0, sun);
 
     renderer.update_lighting_ubo();
 

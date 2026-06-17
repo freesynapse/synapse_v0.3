@@ -14,7 +14,8 @@ void texture_library_t::init()
 {
     memset(m_pool, 0, sizeof(texture_internal_t) * SYN_MAX_TEXTURE_COUNT);
     m_active_count = 0;
-    
+
+    create_fallback_texture();
 }
 
 // 
@@ -50,7 +51,7 @@ texture_handle_t texture_library_t::load_texture(const std::string &_filepath)
 
     if (free_slot == 0) {
         SYN_WARNING("SYN_MAX_TEXTURE_COUNT reached. Texture from '%s' not loaded.\n", _filepath.c_str());
-        return { 0 };
+        return { 1 };
     }
 
     // load into memory (stbi)
@@ -60,7 +61,7 @@ texture_handle_t texture_library_t::load_texture(const std::string &_filepath)
 
     if (!data) {
         SYN_WARNING("failed to load texture from '%s'.\n", _filepath.c_str());
-        return { 0 };
+        return { 1 };
     }
 
     // register internal struct specs
@@ -116,7 +117,7 @@ texture_handle_t texture_library_t::load_texture_hdr(const std::string &_filepat
 
     if (free_slot == 0) {
         SYN_WARNING("SYN_MAX_TEXTURE_COUNT reached. Texture from '%s' not loaded.\n", _filepath.c_str());
-        return { 0 };
+        return { 1 };
     }
 
     // load HDR texture using stbi:s float version
@@ -126,7 +127,7 @@ texture_handle_t texture_library_t::load_texture_hdr(const std::string &_filepat
 
     if (!data) {
         SYN_WARNING("failed to load HDR texture from '%s'.\n", _filepath.c_str());
-        return { 0 };
+        return { 1 };
     }
 
     texture_internal_t &tex = m_pool[free_slot];
@@ -179,4 +180,39 @@ void texture_library_t::release_texture(texture_handle_t _handle)
             m_active_count--;
         }
     }
+}
+
+// 
+void texture_library_t::create_fallback_texture()
+{
+    uint8_t checker[] = {
+        255,  20, 147, 255,
+          0,   0,   0, 255,
+          0,   0,   0, 255,
+        255,  20, 147, 255,
+    };
+
+    // create texture
+    GLuint tex_id = 0;
+    glGenTextures(1, &tex_id);
+    glBindTexture(GL_TEXTURE_2D, tex_id);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 2, 2, 0, GL_RGBA, GL_UNSIGNED_BYTE, checker);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S,   GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T,   GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);   // nearest = sharp checker
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    texture_internal_t &tex = m_pool[1];
+    tex.opengl_id  = tex_id;
+    tex.width      = 2;
+    tex.height     = 2;
+    tex.channels   = 4;
+    tex.name       = "__fallback_texture__";
+    tex.asset_path = "__falback_texture__";
+    tex.is_active  = true;
+    m_active_count++;
+
+    SYN_INFO("fallback texture created (checkerboard).\n");
+    
 }
