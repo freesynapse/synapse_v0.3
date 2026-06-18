@@ -65,6 +65,21 @@ void camera_controller_t::toggle_mode()
 }
 
 // 
+void camera_controller_t::enable()
+{
+    if (m_mode == camera_mode_t::ORBIT) { m_orbit_ptr->set_active(true); } 
+    else { m_perspective_ptr->set_active(true); }
+}
+
+// 
+void camera_controller_t::disable()
+{
+    if (m_mode == camera_mode_t::ORBIT) { m_orbit_ptr->set_active(false); }
+    else { m_perspective_ptr->set_active(false); }
+}
+
+
+// 
 void camera_controller_t::update_projection_matrix()
 {
     m_orbit_ptr->update_projection_matrix();

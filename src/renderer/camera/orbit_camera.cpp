@@ -2,6 +2,7 @@
 #include "renderer/camera/orbit_camera.h"
 #include "event/key_codes.h"
 #include "utils/math_utils.h"
+#include "utils/log.h"
 
 #include "c_api.h"
 
@@ -116,6 +117,8 @@ void orbit_camera_t::on_cursor_freeze(const event_t &_e)
 //
 void orbit_camera_t::on_mouse_scroll(const event_t &_e)
 {
+    if (!m_do_update_camera) return;
+    
     window_handle_t vp = window_manager.get_viewport_window_handle();
     if (vp.id == 0 || vp.id != _e.as.mouse_scroll.window_handle.id) return;
     
@@ -130,24 +133,12 @@ void orbit_camera_t::on_mouse_move(const event_t &_e)
 {
     glm::vec2 mouse_position = _e.as.mouse_move.pos;
 
-    #if 0
-    static bool once = false;
-    if (!once) {
-        once = true;
-        SYN_INFO("ORBIT move: active=%d interaction=%d pos=(%.1f, %.1f) prev=(%.1f, %.1f)\n",
-            m_do_update_camera, m_is_interaction_active,
-            mouse_position.x, mouse_position.y,
-            m_prev_mouse_position.x, m_prev_mouse_position.y);
-    }
-    #endif
-    if (!m_do_update_camera || !m_is_interaction_active) {
+    if (!m_do_update_camera) return;
+    
+    if (!m_is_interaction_active) {
         m_prev_mouse_position = mouse_position;
         return;
     }
-
-    #if 0
-    SYN_INFO("passed the m_do_update_camera check..\n");
-    #endif
 
     if (m_first_mouse_input) {
         m_prev_mouse_position = mouse_position;
@@ -172,6 +163,8 @@ void orbit_camera_t::on_mouse_move(const event_t &_e)
 void orbit_camera_t::on_mouse_button(const event_t &_e)
 {
     if (_e.as.mouse_button.button != SYN_MOUSE_BUTTON_1) return;
+    
+    if (!m_do_update_camera) return;
 
     window_handle_t vp = window_manager.get_viewport_window_handle();
     if (vp.id == 0) return;

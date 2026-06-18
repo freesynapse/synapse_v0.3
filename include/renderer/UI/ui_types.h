@@ -3,6 +3,22 @@
 
 #include <glm/glm.hpp>
 
+
+// 
+enum class ui_transform_mode_t { 
+    TRANSLATE,
+    ROTATE,
+    SCALE
+};
+
+// 
+enum class ui_transform_axis_t { 
+    NONE,
+    X,
+    Y,
+    Z 
+};
+
 // 
 struct ui_render_vertex_t {
     glm::vec2 pos;

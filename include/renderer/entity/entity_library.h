@@ -28,6 +28,7 @@ public:
     entity_t *get_entity(entity_handle_t _handle);
     entity_t *get_entity_from_index(uint32_t _index);
 
+    std::string generate_unique_name(const std::string &_base_name);
     void release_entity(entity_handle_t _handle);
     
     // 

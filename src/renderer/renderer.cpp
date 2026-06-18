@@ -10,6 +10,7 @@
 #include "renderer/renderer.h"
 #include "renderer/shader/shader_library.h"
 #include "utils/log.h"
+#include "utils/math_utils.h"
 
 #include "c_api.h"
 
@@ -785,6 +786,101 @@ void renderer_t::draw_frame_time_graph(float _x, float _y, float _w, float _h)
     
 }
 
+// 
+void renderer_t::render_ui_transform(const glm::vec3 &_world_pos)
+{
+    ui_transform_axis_t hovered_axis = editor.m_hovered_ui_transform_axis;
+    
+    float dist = glm::length(cam.get_position() - _world_pos);
+    float axis_length = dist * 0.15f;
+
+    entity_t *e = entity_lib.get_entity(selected_entity_handle);
+    if (!e) return;
+
+    ui_transform_mode_t mode = editor.get_ui_transform_mode();
+    glm::vec3 axes[3];
+    if (mode == ui_transform_mode_t::ROTATE) {
+        axes[0] = glm::normalize(glm::vec3(e->transform[0]));
+        axes[1] = glm::normalize(glm::vec3(e->transform[1]));
+        axes[2] = glm::normalize(glm::vec3(e->transform[2]));
+    } else {
+        axes[0] = { 1.0f, 0.0f, 0.0f };
+        axes[1] = { 0.0f, 1.0f, 0.0f };
+        axes[2] = { 0.0f, 0.0f, 1.0f };
+    }
+
+    glm::vec4 colors[3] = {
+        { 1.0f, 0.0f, 0.0f, 1.0f },
+        { 0.0f, 1.0f, 0.0f, 1.0f },
+        { 0.0f, 0.0f, 1.0f, 1.0f },
+    };
+
+    int hovered_index = (int)hovered_axis - 1;
+    if (hovered_index >= 0 && hovered_index < 3) {
+        colors[hovered_index] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    }
+    
+    std::vector<float> lines;
+    auto add_line = [&](const glm::vec3 &a, const glm::vec3 &b, const glm::vec4 &c) {
+        lines.push_back(a.x); lines.push_back(a.y); lines.push_back(a.z);
+        lines.push_back(c.r); lines.push_back(c.g); lines.push_back(c.b); lines.push_back(c.a);
+        lines.push_back(b.x); lines.push_back(b.y); lines.push_back(b.z);
+        lines.push_back(c.r); lines.push_back(c.g); lines.push_back(c.b); lines.push_back(c.a);
+    };
+
+    for (int i = 0; i < 3; i++) add_line(_world_pos, _world_pos + axes[i] * axis_length, colors[i]);
+
+    debug.line_vao.bind();
+    debug.line_vao.update_vertices((void *)&lines[0], lines.size() * sizeof(float));
+
+    shader_t *shader = shader_lib.get_shader(debug.line_shader_handle);
+    if (!shader) return;
+
+    shader->enable();
+    shader->set_matrix_4fv("u_view_projection", cam.get_view_projection_matrix());
+
+    api.disable_depth_test();
+    glLineWidth(3.0f);
+    glDrawArrays(GL_LINES, 0, lines.size() / 7);
+    glLineWidth(1.0f);
+    api.enable_depth_test();
+
+    debug.line_vao.unbind();
+
+    m_perf_stats.draw_calls_per_frame++;
+
+    // label
+    window_t *vp = window_manager.get_viewport_window();
+    if (!vp) return;
+    glm::vec2 vp_pos = vp->get_content_position();
+    glm::vec2 vp_size = vp->get_content_size();
+    glm::vec2 origin_ss = world_to_screen_fbo(e->t_position, 
+                                              vp_pos, 
+                                              vp_size, 
+                                              cam.get_view_matrix(), 
+                                              cam.get_projection_matrix());
+    debug_vector(__func__, "origin_ss", origin_ss);
+    debug_vector(__func__, "mouse pos", input.mouse_position);
+    
+    const char *mode_label = nullptr;
+    switch (mode) {
+        case ui_transform_mode_t::TRANSLATE:    mode_label = "[G] translate"; break;
+        case ui_transform_mode_t::ROTATE:       mode_label = "[R] rotate"; break;
+        case ui_transform_mode_t::SCALE:        mode_label = "[S] scale"; break;
+    }
+    
+    // 
+    if (mode_label) {
+        float prev_depth = font.get_current_depth();
+        glm::vec4 prev_color = font.get_color();
+        font.set_depth(window_manager.get_znear());
+        font.set_color(glm::vec4(1.0f));
+        font.render_text(origin_ss.x + 10.0f, root_window.get_fheight() - origin_ss.y, "%s", mode_label);
+        font.set_depth(prev_depth);
+        font.set_color(prev_color);
+    }
+}
+
 //
 void renderer_t::init_debug_rendering() 
 {
@@ -917,7 +1013,8 @@ void renderer_t::render_debug_bounding_boxes(const glm::vec3 &_min,
     if (!debug.show_bounding_boxes) return;
     if (!m_debug_initialized) init_debug_rendering();
     
-    glm::vec4 color(1.0f, 1.0f, 0.0f, 1.0f);
+    // glm::vec4 color(1.0f, 1.0f, 0.0f, 1.0f);
+    glm::vec4 color(1.0f, 0.7f, 0.05f, 1.0f);
     
     // local coordinate corners
     glm::vec3 corners[8] = {
@@ -961,9 +1058,9 @@ void renderer_t::render_debug_bounding_boxes(const glm::vec3 &_min,
     shader->enable();
     shader->set_matrix_4fv("u_view_projection", cam.get_view_projection_matrix());
 
-    glLineWidth(2.0f);
+    // glLineWidth(1.0f);
     glDrawArrays(GL_LINES, 0, lines.size() / 7);
-    glLineWidth(1.0f);
+    // glLineWidth(1.0f);
     
     debug.line_vao.unbind();
     

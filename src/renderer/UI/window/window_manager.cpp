@@ -5,7 +5,6 @@
 #include "renderer/UI/window/window_manager.h"
 #include "renderer/entity/entity_types.h"
 #include "utils/log.h"
-#include "utils/scope_timer.h"
 
 #include "c_api.h"
 
@@ -122,6 +121,17 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
                 }
 
                 else if (clicked_widget->type == widget_type_t::FLOAT_FIELD) {
+                    // clear focus from all other float fields
+                    for (uint32_t i = 0; i < SYN_MAX_WINDOW_COUNT; i++) {
+                        window_t &win = m_pool[i];
+                        if (!win.is_active()) continue;
+                        for (uint32_t j = 0; j < win.m_widget_count; j++) {
+                            if (win.m_widgets[j].type == widget_type_t::FLOAT_FIELD) {
+                                win.m_widgets[j].float_field_widget.editing = false;
+                            }
+                        }
+                    }
+                    // focus the clicked one
                     float_field_t &ff = clicked_widget->float_field_widget;
                     ff.editing = true;
                     // initialize with current value
@@ -138,10 +148,18 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
                 }
             }
 
+            // ui transform
+            if (clicked.id == m_viewport_window_handle.id) {
+                if (editor.get_hovered_ui_transform_axis() != ui_transform_axis_t::NONE) {
+                    editor.begin_ui_transform_drag();
+                }
+            }
+            
             // viewport entity picking
             if (m_viewport_window_handle.id > 0 && clicked.id == m_viewport_window_handle.id) {
                 window_t *vp = get_window(m_viewport_window_handle);
                 if (vp && !vp->is_point_in_title_bar(pos)) {
+                    set_focused_window(clicked);
                     m_viewport_click_pos = pos;
                     m_viewport_pick_result = editor.pick_entity(pos);
                     m_viewport_pick_pending = true;
@@ -204,6 +222,19 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
             m_viewport_pick_pending = false;
             m_viewport_pick_result = { 0 };
         }
+
+        if (editor.get_grabbed_ui_transform_axis() != ui_transform_axis_t::NONE) {
+            cam.enable();
+            editor.set_grabbed_ui_transform_axis(ui_transform_axis_t::NONE);
+
+            if (editor.get_ui_transform_mode() == ui_transform_mode_t::ROTATE) {
+                entity_t *e = entity_lib.get_entity(selected_entity_handle);
+                if (e) {
+                    glm::quat final_rot = glm::quat_cast(e->transform);
+                    e->t_rotation = glm::degrees(glm::eulerAngles(final_rot));
+                }
+            }
+        }
         
         if (m_is_dragging) {
 
@@ -230,19 +261,20 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
 void window_manager_t::on_mouse_move_event(const event_t &_e)
 {
     m_mouse_pos = _e.as.mouse_move.pos;
+    glm::vec2 pos = m_mouse_pos;
 
     // entity picking through the viewport
     if (m_viewport_pick_pending) {
-        if (glm::length(m_mouse_pos - m_viewport_click_pos) >= 4.0f) {
+        if (glm::length(pos - m_viewport_click_pos) >= 4.0f) {
             m_viewport_pick_pending = false;
         }
     }
     
     //  hovering
-    m_hovered_window_handle = get_window_at_pos(m_mouse_pos);
+    m_hovered_window_handle = get_window_at_pos(pos);
     if (m_hovered_window_handle.id > 0) {
         window_t *win = &m_pool[m_hovered_window_handle.id - 1];
-        resize_handle_t handle = win->get_resize_handle_at_pos(m_mouse_pos);
+        resize_handle_t handle = win->get_resize_handle_at_pos(pos);
 
         switch (handle) {
             case resize_handle_t::LEFT:
@@ -278,7 +310,7 @@ void window_manager_t::on_mouse_move_event(const event_t &_e)
     if (m_is_resizing && m_resize_window_handle.id > 0) {
         window_t *win = &m_pool[m_resize_window_handle.id - 1];
         if (win->m_is_resizable) {
-            glm::vec2 delta = m_mouse_pos - m_resize_start_pos;
+            glm::vec2 delta = pos - m_resize_start_pos;
             glm::vec2 new_size = m_resize_start_size;
             glm::vec2 new_pos = m_resize_start_window_pos;
     
@@ -341,13 +373,23 @@ void window_manager_t::on_mouse_move_event(const event_t &_e)
 
     // moving windows -- the ui_batch_renderer takes care of the rendering
     if (m_is_dragging && m_drag_window_handle.id > 0) {
-        update_dock_zones(m_mouse_pos, m_drag_window_handle);
+        update_dock_zones(pos, m_drag_window_handle);
 
         window_t *win = &m_pool[m_drag_window_handle.id - 1];
-        win->position = m_mouse_pos - m_drag_offset;
+        win->position = pos - m_drag_offset;
 
         return;
     }
+
+    // if an axis is already grabbed, update
+    if (editor.get_grabbed_ui_transform_axis() != ui_transform_axis_t::NONE) {
+        cam.disable();
+        editor.update_ui_transform_drag(pos);
+        return;
+    }
+    
+    // detect hovering the ui transform object
+    editor.set_hovered_ui_transform_axis(editor.pick_transform_axis(pos));
     
     // widgets
     for (uint32_t i = 0; i < SYN_MAX_WINDOW_COUNT; i++) {
@@ -359,7 +401,7 @@ void window_manager_t::on_mouse_move_event(const event_t &_e)
             win->m_widgets[j].is_hovered = false;
         }
 
-        widget_t *hovered = win->get_widget_at_pos(m_mouse_pos);
+        widget_t *hovered = win->get_widget_at_pos(pos);
         
         if (hovered) {
             hovered->is_hovered = true;
@@ -370,7 +412,7 @@ void window_manager_t::on_mouse_move_event(const event_t &_e)
                 glm::vec2 wp = hovered->get_absolute_position(
                     glm::vec2(win->position.x, win->position.y + win->title_bar_height), 
                     glm::vec2(win->size.x, win->size.y - win->title_bar_height));
-                int row = (int)((m_mouse_pos.y - wp.y) / row_h) + (int)lw.scroll_offset;
+                int row = (int)((pos.y - wp.y) / row_h) + (int)lw.scroll_offset;
                 if (row >= 0 && row < (int)lw.items.size() && lw.on_hover) {
                     lw.on_hover(row, lw.items[row]);
                 }

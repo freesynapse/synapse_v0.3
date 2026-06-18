@@ -65,6 +65,7 @@ public:
 	void set_move_speed(float _s) { m_move_speed = _s; 	}
 
 	void set_active(bool _do_update_camera) { m_do_update_camera = _do_update_camera; }
+	void set_interactive(bool _interactive) { m_is_interaction_active = _interactive; }
 	
 // protected:
 	glm::mat4 m_projection_matrix = glm::mat4(1.0f);

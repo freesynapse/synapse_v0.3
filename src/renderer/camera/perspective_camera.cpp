@@ -187,17 +187,6 @@ void perspective_camera_t::on_mouse_move(const event_t &_e)
 {
     glm::vec2 mouse_pos = _e.as.mouse_move.pos;
 
-    #if 0
-    static bool once = false;
-    if (!once && m_do_update_camera) {
-        once = true;
-        SYN_INFO("FPS first move: pos=(%.1f, %.1f) prev=(%.1f, %.1f) first=%d\n",
-            mouse_pos.x, mouse_pos.y,
-            m_prev_mouse_position.x, m_prev_mouse_position.y,
-            m_first_mouse_input);
-    }
-    #endif
-    
     if (!m_do_update_camera) {
         m_prev_mouse_position = mouse_pos;
         return;

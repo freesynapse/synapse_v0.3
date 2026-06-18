@@ -4,6 +4,20 @@
 #include "renderer/entity/entity_library.h"
 #include "utils/log.h"
 
+// strips a trailing ".001" style suffix, returns the root name
+static std::string strip_name_suffix(const std::string &_name)
+{
+    size_t dot = _name.find_last_of('.');
+    if (dot == std::string::npos) return _name;
+
+    std::string suffix = _name.substr(dot + 1);
+    if (suffix.size() != 3) return _name;   // not our suffix format
+    for (char c : suffix) {
+        if (!isdigit((unsigned char)c)) return _name;
+    }
+    return _name.substr(0, dot);
+}
+
 // 
 void entity_library_t::init()
 {
@@ -85,6 +99,31 @@ entity_t *entity_library_t::get_entity_from_index(uint32_t _index)
     }
 
     return &m_pool[_index];
+}
+
+// 
+std::string entity_library_t::generate_unique_name(const std::string &_base_name)
+{
+    std::string name = strip_name_suffix(_base_name);
+    std::string unique_name = name;
+    
+    uint32_t suffix = 1;
+    while (true) {
+        bool taken = false;
+        for (uint32_t i = 0; i < SYN_MAX_ENTITY_COUNT; i++) {
+            if (m_pool[i].is_active && m_pool[i].name == unique_name) {
+                taken = true;
+                break;
+            }
+        }
+        if (!taken) break;
+        char buf[32];
+        snprintf(buf, sizeof(buf), ".%03d", suffix++);
+        unique_name = name + buf;
+    }
+
+    return unique_name;
+    
 }
 
 // 

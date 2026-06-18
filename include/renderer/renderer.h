@@ -3,12 +3,13 @@
 
 #include "event/event.h"
 #include "renderer/buffers/vertex_array.h"
-#include "renderer/buffers/framebuffer.h"
 #include "renderer/renderer_types.h"
 #include "renderer/buffers/framebuffer_types.h"
 #include "renderer/lighting/lighting_types.h"
 #include "renderer/material/cubemap_types.h"
 #include "renderer/entity/entity_types.h"
+#include "renderer/UI/ui_types.h"
+
 
 //
 #define SYN_MAX_RENDER_COMMANDS     1024
@@ -72,6 +73,9 @@ public:
 	void draw_perf_stats();
 	void draw_frame_time_graph(float _x, float _y, float _w, float _h);
 
+	// ui transform rendering
+	void render_ui_transform(const glm::vec3 &_world_pos);
+	
 	// debug functions
 private:
     void init_debug_rendering();

@@ -121,11 +121,11 @@ void material_library_t::create_fallback_material()
     if (fb_mat) {
         material_pbr_payload_t *pbr = (material_pbr_payload_t *)fb_mat->data;
         pbr->albedo_color   = glm::vec4(0.6f, 0.6f, 0.6f, 1.0f);
-        pbr->roughness      = 0.7f;
-        pbr->metallic       = 0.0f;
-        pbr->ao             = 1.0f;
-        pbr->tiling_factor  = 1.0f;
-        pbr->use_albedo_map = 0.0f;
+        pbr->roughness      = 0.26f;
+        pbr->metallic       = 0.25f;
+        pbr->ao             = 1.00f;
+        pbr->tiling_factor  = 1.00f;
+        pbr->use_albedo_map = 0.00f;
     }
     
 }

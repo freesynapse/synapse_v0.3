@@ -83,15 +83,15 @@ void syn_init(const char *_name, int _width, int _height, int _mode)
     font.init("../assets/font/JetBrainsMono-Regular.ttf", 16);
     font.set_color(glm::vec4(1.0f));
 
+    window_manager.init();
+    editor.init();
+
     // select main rendering mode
     switch (_mode) {
         case SYN_MODE_2D: syn_mode_2d(); SYN_INFO("SYN_MODE_2D enabled.\n"); break;
         case SYN_MODE_3D: syn_mode_3d(); SYN_INFO("SYN_MODE_3D enabled.\n"); break;
         default: SYN_FATAL_ERROR("unknown rendering mode selected.\n");
     }
-
-    window_manager.init();
-    editor.init();
 
 }
 
@@ -263,7 +263,7 @@ void syn_save_ui_layout(const char *_filepath)
         else if (win->handle().id == window_manager.get_transform_window_handle().id) type = "transform";
         else if (win->handle().id == window_manager.get_material_window_handle().id)  type = "material";
         else if (win->handle().id == editor.get_create_window_handle().id)            type = "create";
-        else if (win->handle().id == editor.get_tex_picker_window_handle().id)        type = "texture_select";
+        else if (win->handle().id == editor.get_texture_select_window_handle().id)    type = "texture_select";
         else if (win->handle().id == window_manager.get_help_window_handle().id)      type = "help";
         
         fprintf(fp, "#%s\n", type);
@@ -531,7 +531,7 @@ void syn_create_texture_select_window(const char *_name, const glm::vec2 &_pos, 
     win.size     = _size;
 
     window_handle_t handle = window_manager.add_window(win);
-    editor.set_tex_picker_window_handle(handle);
+    editor.set_texture_select_window_handle(handle);
 
     window_t *pw = window_manager.get_window(handle);
     pw->set_visible(false);
@@ -667,6 +667,8 @@ void syn_render_end_3d()
             renderer.debug.show_bounding_boxes = true;
             renderer.render_debug_bounding_box_entities(e);
             renderer.debug.show_bounding_boxes = prev;
+
+            renderer.render_ui_transform(e->t_position);
         }
     }
     

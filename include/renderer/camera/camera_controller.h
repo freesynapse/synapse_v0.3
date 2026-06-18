@@ -19,6 +19,9 @@ public:
     void set_mode(camera_mode_t _mode);
     void toggle_mode();
 
+    void enable();
+    void disable();
+    
     void update_projection_matrix();
     void set_aspect_ratio(float _ar);
     

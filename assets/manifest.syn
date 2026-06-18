@@ -40,8 +40,9 @@ material helmet_mat
 }
 
 # SKYBOX
-skybox main_sky ../assets/textures/skybox/Lycksele2/posx.jpg ../assets/textures/skybox/Lycksele2/negx.jpg ../assets/textures/skybox/Lycksele2/posy.jpg ../assets/textures/skybox/Lycksele2/negy.jpg ../assets/textures/skybox/Lycksele2/posz.jpg ../assets/textures/skybox/Lycksele2/negz.jpg
+#skybox main_sky ../assets/textures/skybox/Lycksele2/posx.jpg ../assets/textures/skybox/Lycksele2/negx.jpg ../assets/textures/skybox/Lycksele2/posy.jpg ../assets/textures/skybox/Lycksele2/negy.jpg ../assets/textures/skybox/Lycksele2/posz.jpg ../assets/textures/skybox/Lycksele2/negz.jpg
 #skybox main_sky ../assets/textures/skybox/sky/posx.png ../assets/textures/skybox/sky/negx.png ../assets/textures/skybox/sky/posy.png ../assets/textures/skybox/sky/negy.png ../assets/textures/skybox/sky/posz.png ../assets/textures/skybox/sky/negz.png
+skybox main_sky ../assets/textures/skybox/ocean/posx.png ../assets/textures/skybox/ocean/negx.png ../assets/textures/skybox/ocean/posy.png ../assets/textures/skybox/ocean/negy.png ../assets/textures/skybox/ocean/posz.png ../assets/textures/skybox/ocean/negz.png
 
 
 # -----------------------------------------------------------------------------
