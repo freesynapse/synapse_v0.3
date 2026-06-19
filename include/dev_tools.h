@@ -22,7 +22,7 @@ public:
     
     
 private:
-    int m_fullscreen_toggle_key = SYN_KEY_F;
+    int m_fullscreen_toggle_key = SYN_KEY_F11;
     std::vector<std::string> m_help_content;
 };
 

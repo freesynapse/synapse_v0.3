@@ -2,7 +2,7 @@
 #define __VERTEX_ARRAY_H
 
 #include <string.h>
-#include <vector>
+#include <vector>   // for std::initializer_list
 #include <stdio.h>
 
 #include <glm/glm.hpp>

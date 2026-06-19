@@ -33,11 +33,11 @@ bool ray_aabb_intersect(const ray_t &_ray,
                         float &_t_out);
 
 // 
-glm::vec2 world_to_screen(const glm::vec3 &_world_pos,
-                          const glm::vec2 &_viewport_pos,
-                          const glm::vec2 &_viewport_size,
-                          const glm::mat4 &_view,
-                          const glm::mat4 &_projection);
+glm::vec2 world_to_screen_ui(const glm::vec3 &_world_pos,
+                             const glm::vec2 &_viewport_pos,
+                             const glm::vec2 &_viewport_size,
+                             const glm::mat4 &_view,
+                             const glm::mat4 &_projection);
 
 glm::vec2 world_to_screen_fbo(const glm::vec3 &_world_pos,
                               const glm::vec2 &_viewport_pos,

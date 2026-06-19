@@ -10,7 +10,7 @@
 // 
 void dev_tools_t::handle_input()
 {
-    if (input.was_key_pressed(SYN_KEY_F)) {
+    if (input.was_key_pressed(m_fullscreen_toggle_key)) {
         event_t e;
         e.type = event_type_t::WINDOW_TOGGLE_FULLSCREEN;
         events.dispatch_event(e);

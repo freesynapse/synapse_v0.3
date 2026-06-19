@@ -76,7 +76,13 @@ void renderer_t::init()
     
     // debug geometry
     init_debug_rendering();
-    
+
+    // orientation object
+    init_orienatation_obj(100);
+
+    // ui transform -- entity manipulation ui
+    init_ui_transform_rendering();
+
 }
 
 //
@@ -815,53 +821,79 @@ void renderer_t::render_ui_transform(const glm::vec3 &_world_pos)
         { 0.0f, 0.0f, 1.0f, 1.0f },
     };
 
-    int hovered_index = (int)hovered_axis - 1;
-    if (hovered_index >= 0 && hovered_index < 3) {
-        colors[hovered_index] = { 1.0f, 1.0f, 1.0f, 1.0f };
-    }
-    
-    std::vector<float> lines;
-    auto add_line = [&](const glm::vec3 &a, const glm::vec3 &b, const glm::vec4 &c) {
-        lines.push_back(a.x); lines.push_back(a.y); lines.push_back(a.z);
-        lines.push_back(c.r); lines.push_back(c.g); lines.push_back(c.b); lines.push_back(c.a);
-        lines.push_back(b.x); lines.push_back(b.y); lines.push_back(b.z);
-        lines.push_back(c.r); lines.push_back(c.g); lines.push_back(c.b); lines.push_back(c.a);
-    };
-
-    for (int i = 0; i < 3; i++) add_line(_world_pos, _world_pos + axes[i] * axis_length, colors[i]);
-
-    debug.line_vao.bind();
-    debug.line_vao.update_vertices((void *)&lines[0], lines.size() * sizeof(float));
-
-    shader_t *shader = shader_lib.get_shader(debug.line_shader_handle);
-    if (!shader) return;
-
-    shader->enable();
-    shader->set_matrix_4fv("u_view_projection", cam.get_view_projection_matrix());
-
-    api.disable_depth_test();
-    glLineWidth(3.0f);
-    glDrawArrays(GL_LINES, 0, lines.size() / 7);
-    glLineWidth(1.0f);
-    api.enable_depth_test();
-
-    debug.line_vao.unbind();
-
-    m_perf_stats.draw_calls_per_frame++;
-
     // label
     window_t *vp = window_manager.get_viewport_window();
     if (!vp) return;
     glm::vec2 vp_pos = vp->get_content_position();
     glm::vec2 vp_size = vp->get_content_size();
+    glm::mat4 view = cam.get_view_matrix();
+    glm::mat4 proj = cam.get_projection_matrix();
     glm::vec2 origin_ss = world_to_screen_fbo(e->t_position, 
-                                              vp_pos, 
+                                              glm::vec2(0.0f), 
                                               vp_size, 
-                                              cam.get_view_matrix(), 
-                                              cam.get_projection_matrix());
-    debug_vector(__func__, "origin_ss", origin_ss);
-    debug_vector(__func__, "mouse pos", input.mouse_position);
+                                              view, 
+                                              proj);
+
+    float line_half_width = 2.5f;
+
+    std::vector<ui_transform_vertex_t> vertices;
+    std::vector<uint32_t> indices;
+
+    auto to_ndc = [&](const glm::vec2 &p) -> glm::vec2 {
+        return glm::vec2(
+            p.x / vp_size.x * 2.0f - 1.0f,
+            p.y / vp_size.y * 2.0f - 1.0f
+        );
+    };
     
+    auto add_line_quad = [&](const glm::vec2 &p0, const glm::vec2 &p1, const glm::vec4 &color) {
+        glm::vec2 dir = p1 - p0;
+        float len = glm::length(dir);
+        if (len < 0.0001f) return;
+        glm::vec2 n = glm::vec2(-dir.y, dir.x) / len * line_half_width;
+
+        glm::vec2 a0 = to_ndc(p0 - n), a1 = to_ndc(p0 + n);
+        glm::vec2 b0 = to_ndc(p1 - n), b1 = to_ndc(p1 + n);
+        
+        uint32_t base = (uint32_t)vertices.size();
+
+        vertices.push_back({ a0, { 0.0f, -1.0f }, color });
+        vertices.push_back({ b0, { 1.0f, -1.0f }, color });
+        vertices.push_back({ b1, { 1.0f,  1.0f }, color });
+        vertices.push_back({ a1, { 0.0f,  1.0f }, color });
+
+        indices.push_back(base + 0); indices.push_back(base + 1); indices.push_back(base + 2);
+        indices.push_back(base + 0); indices.push_back(base + 2); indices.push_back(base + 3);
+    };
+
+    for (int i = 0; i < 3; i++) {
+        glm::vec3 tip_world = _world_pos + axes[i] * axis_length;
+        glm::vec2 tip_ss = world_to_screen_fbo(tip_world, glm::vec2(0.0f), vp_size, view, proj);
+
+        glm::vec4 color = colors[i];
+        if ((int)hovered_axis == i + 1) {
+            color = glm::vec4(1.0f);
+        }
+
+        add_line_quad(origin_ss, tip_ss, color);
+    }
+
+    shader_t *shader = shader_lib.get_shader(m_ui_transform_shader_handle);
+    if (!shader) return;
+
+    api.disable_depth_test();
+    shader->enable();
+
+    m_ui_transform_vao.bind();
+    m_ui_transform_vao.update_vertices((void *)&vertices[0], vertices.size() * sizeof(ui_transform_vertex_t));
+    m_ui_transform_vao.update_indices((void *)&indices[0], indices.size() * sizeof(uint32_t));
+    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, nullptr);
+    m_ui_transform_vao.unbind();
+
+    shader->disable();
+    api.enable_depth_test();
+
+    // label
     const char *mode_label = nullptr;
     switch (mode) {
         case ui_transform_mode_t::TRANSLATE:    mode_label = "[G] translate"; break;
@@ -910,8 +942,6 @@ void renderer_t::init_debug_rendering()
     //
     m_debug_initialized = true;
 
-    init_orienatation_obj(100);
-    
 }
 
 //
@@ -950,6 +980,28 @@ void renderer_t::init_orienatation_obj(uint32_t _size)
     SYN_INFO("orientation visualizer created.\n");
   
 }
+
+void renderer_t::init_ui_transform_rendering()
+{
+    m_ui_transform_shader_handle = shader_lib.load_from_file("ui_transform_shader", 
+        "../assets/shaders/ui_transform.glsl");
+
+    size_t max_lines = 64;
+    size_t vertices_size = max_lines * 4 * sizeof(ui_transform_vertex_t);
+    size_t indices_size = max_lines * 6 * sizeof(uint32_t);
+    
+
+    m_ui_transform_vao.set_buffer_layout({
+        { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT2 },
+        { VERTEX_ATTRIB_LOCATION_UV, shader_data_type_t::FLOAT2 },
+        { VERTEX_ATTRIB_LOCATION_COLOR, shader_data_type_t::FLOAT4 }
+    });
+    m_ui_transform_vao.create_empty_vertices(vertices_size);
+    m_ui_transform_vao.create_empty_indices(indices_size);
+    
+}
+
+
 
 //
 void renderer_t::toggle_wireframe()      { debug.show_wireframe      = !debug.show_wireframe;       }

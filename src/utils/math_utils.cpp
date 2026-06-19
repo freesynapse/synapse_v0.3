@@ -1,5 +1,6 @@
 
 #include "utils/math_utils.h"
+#include "utils/log.h"
 
 // 
 ray_t ray_from_screen(const glm::vec2 &_screen_pos,
@@ -49,11 +50,11 @@ bool ray_aabb_intersect(const ray_t &_ray,
 }
 
 // 
-glm::vec2 world_to_screen(const glm::vec3 &_world_pos,
-                          const glm::vec2 &_viewport_pos,
-                          const glm::vec2 &_viewport_size,
-                          const glm::mat4 &_view,
-                          const glm::mat4 &_projection)
+glm::vec2 world_to_screen_ui(const glm::vec3 &_world_pos,
+                             const glm::vec2 &_viewport_pos,
+                             const glm::vec2 &_viewport_size,
+                             const glm::mat4 &_view,
+                             const glm::mat4 &_projection)
 {
     glm::vec4 clip = _projection * _view * glm::vec4(_world_pos, 1.0f);
     if (clip.w <= 0.0001f) return { -1.0f, -1.0f };
@@ -62,7 +63,6 @@ glm::vec2 world_to_screen(const glm::vec3 &_world_pos,
     glm::vec2 screen;
     screen.x = _viewport_pos.x + (ndc.x * 0.5f + 0.5f) * _viewport_size.x;
     screen.y = _viewport_pos.y + (1.0f - (ndc.y * 0.5f + 0.5f)) * _viewport_size.y;
-    screen.y = _viewport_pos.y + (ndc.y * 0.5f + 0.5f) * _viewport_size.y;  // no flip
     return screen;
 }
 
@@ -73,6 +73,7 @@ glm::vec2 world_to_screen_fbo(const glm::vec3 &_world_pos,
                               const glm::mat4 &_view,
                               const glm::mat4 &_projection)
 {
+    // SYN_DEBUG("viewport_pos passed in: %.2f %.2f\n", _viewport_pos.x, _viewport_pos.y);
     glm::vec4 clip = _projection * _view * glm::vec4(_world_pos, 1.0f);
     if (clip.w <= 0.0001f) return { -1.0f, -1.0f };
 

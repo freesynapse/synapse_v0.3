@@ -75,6 +75,22 @@ void editor_t::on_keydown_event(const event_t &_e)
         if (key == SYN_KEY_S) m_ui_transform_mode = ui_transform_mode_t::SCALE;
     }
 
+    // focus camera on entity
+    if (key == SYN_KEY_F && action == SYN_KEY_PRESSED) {
+        if (selected_entity_handle.is_valid()) {
+            entity_t *e = entity_lib.get_entity(selected_entity_handle);
+            if (e) {
+                mesh_internal_t *mesh = mesh_lib.get_mesh(e->mesh_handle);
+                float radius = 1.0f;
+                if (mesh) {
+                    glm::vec3 extent = (mesh->aabb_max - mesh->aabb_min) * 0.5f;
+                    radius = glm::length(extent * e->t_scale);
+                }
+                float target_distance = radius * 5.5f;
+                cam.focus_on(e->t_position, target_distance);
+            }
+        }
+    }
 }
 
 // 
@@ -295,7 +311,7 @@ entity_handle_t editor_t::pick_entity(const glm::vec2 &_screen_pos)
 }
 
 // 
-ui_transform_axis_t editor_t::pick_transform_axis(const glm::vec2 &_screen_pos)
+ui_transform_axis_t editor_t::pick_ui_transform_axis(const glm::vec2 &_screen_pos)
 {
     if (!selected_entity_handle.is_valid()) return ui_transform_axis_t::NONE;
 
@@ -325,14 +341,16 @@ ui_transform_axis_t editor_t::pick_transform_axis(const glm::vec2 &_screen_pos)
         axes[2] = { 0.0f, 0.0f, 1.0f };
     }
 
-    glm::vec2 origin_screen = world_to_screen(e->t_position, vp_pos, vp_size, view, proj);
-
-    float best_dist = 12.0f;    // pixel hit threshold
     ui_transform_axis_t best_axis = ui_transform_axis_t::NONE;
+    float best_dist = 20.0f;    // pixel hit threshold
+
+    glm::vec2 origin_screen = world_to_screen_ui(e->t_position, vp_pos, vp_size, view, proj);
+
+    if (glm::length(_screen_pos - origin_screen) < 15.0f) return best_axis;
 
     for (int i = 0; i < 3; i++) {
         glm::vec3 tip_world = e->t_position + axes[i] * axis_length;
-        glm::vec tip_screen = world_to_screen(tip_world, vp_pos, vp_size, view, proj);
+        glm::vec tip_screen = world_to_screen_ui(tip_world, vp_pos, vp_size, view, proj);
 
         // point-to-segment distance in screen space
         glm::vec2 seg = tip_screen - origin_screen;
@@ -367,16 +385,25 @@ void editor_t::begin_ui_transform_drag()
     if (!vp) return;
     glm::vec2 vp_pos  = vp->get_content_position();
     glm::vec2 vp_size = vp->get_content_size();
-    glm::vec2 origin_ss = world_to_screen(e->t_position,
-                                          vp_pos,
-                                          vp_size,
-                                          cam.get_view_matrix(),
-                                          cam.get_projection_matrix());
-    m_drag_start_vec = input.mouse_position - origin_ss;
+    m_drag_origin_ss = world_to_screen_ui(e->t_position,
+                                       vp_pos,
+                                       vp_size,
+                                       cam.get_view_matrix(),
+                                       cam.get_projection_matrix());
+    m_drag_start_vec = input.mouse_position - m_drag_origin_ss;
 
     // 
     if (m_ui_transform_mode == ui_transform_mode_t::ROTATE) {
-        m_drag_start_quat = glm::quat(glm::radians(e->t_rotation));
+        // Extract rotation from the actual transform matrix, bypassing t_rotation
+        glm::mat3 rot_mat = glm::mat3(e->transform);
+        // Remove scale
+        rot_mat[0] = glm::normalize(rot_mat[0]);
+        rot_mat[1] = glm::normalize(rot_mat[1]);
+        rot_mat[2] = glm::normalize(rot_mat[2]);
+        m_drag_start_quat = glm::quat_cast(rot_mat);
+        
+        // m_drag_start_quat = glm::quat(glm::radians(e->t_rotation));
+        m_drag_start_quat = glm::quat_cast(rot_mat);
     }
 
     // 
@@ -411,8 +438,8 @@ void editor_t::update_ui_transform_drag(glm::vec2 &_screen_pos)
         // project axis endpoints into screen space to get screen-space axis direction
         glm::mat4 view = cam.get_view_matrix();
         glm::mat4 proj = cam.get_projection_matrix();
-        glm::vec2 origin_ss = world_to_screen(m_drag_start_world, vp_pos, vp_size, view, proj);
-        glm::vec2 tip_ss    = world_to_screen(m_drag_start_world + axis, vp_pos, vp_size, view, proj);
+        glm::vec2 origin_ss = world_to_screen_ui(m_drag_start_world, vp_pos, vp_size, view, proj);
+        glm::vec2 tip_ss    = world_to_screen_ui(m_drag_start_world + axis, vp_pos, vp_size, view, proj);
         glm::vec2 axis_ss   = tip_ss - origin_ss;
     
         float axis_ss_len = glm::length(axis_ss);
@@ -435,12 +462,7 @@ void editor_t::update_ui_transform_drag(glm::vec2 &_screen_pos)
 
     // 
     else if (m_ui_transform_mode == ui_transform_mode_t::ROTATE) {
-        glm::vec2 origin_ss = world_to_screen(e->t_position,
-                                              vp_pos,
-                                              vp_size,
-                                              cam.get_view_matrix(),
-                                              cam.get_projection_matrix());
-        glm::vec2 current_vec = _screen_pos - origin_ss;
+        glm::vec2 current_vec = _screen_pos - m_drag_origin_ss;
         if (glm::length(m_drag_start_vec) < 0.0001f || glm::length(current_vec) < 0.0001f) return;
 
         float angle = glm::degrees(
@@ -472,12 +494,7 @@ void editor_t::update_ui_transform_drag(glm::vec2 &_screen_pos)
 
     // 
     else if (m_ui_transform_mode == ui_transform_mode_t::SCALE) {
-        glm::vec2 origin_ss = world_to_screen(e->t_position,
-                                              vp_pos,
-                                              vp_size,
-                                              cam.get_view_matrix(),
-                                              cam.get_projection_matrix());
-        glm::vec2 current_vec = _screen_pos - origin_ss;
+        glm::vec2 current_vec = _screen_pos - m_drag_origin_ss;
 
         float start_len = glm::length(m_drag_start_vec);
         float current_len = glm::length(current_vec);

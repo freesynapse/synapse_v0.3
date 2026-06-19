@@ -16,6 +16,8 @@ public:
 
 	virtual void update(float _dt) override;
 	virtual void update_view_matrix() override;
+
+	void focus_on(const glm::vec3 &_target, float _target_distance);
 	
 	void on_window_resize(const event_t &_e);
 	void on_viewport_resize(const event_t &_e);
@@ -31,7 +33,7 @@ public:
 	void set_distance(float _r) { m_distance = _r; }
 	float get_distance() const { return m_distance; }
 	const glm::vec3 &get_focus_point() { return m_focus_point; }
-
+	
 // private:
 	glm::vec2 m_prev_mouse_position = { 0.0f, 0.0f };
 	glm::vec2 m_mouse_delta   	    = { 0.0f, 0.0f };
@@ -47,8 +49,16 @@ public:
 	glm::vec3 m_up_vector 		= { 0.0f, 0.0f, 0.0f };
 	glm::vec3 m_right_vector  	= { 0.0f, 0.0f, 0.0f };
 	glm::vec3 m_forward_vector  = { 0.0f, 0.0f, 0.0f };
-	// look-at vector is inherited from Camera
 
+	bool m_is_focusing = false;
+	float m_focus_t = 0.0f; // animation time [0..1]
+	float m_focus_duration = 0.4f; // seconds
+	glm::vec3 m_focus_start_point;
+	glm::vec3 m_focus_target_point;
+	float m_focus_start_dist;
+	float m_focus_target_dist;
+	
+	
 };
 
 

@@ -55,6 +55,18 @@ void orbit_camera_t::init(float _fov_deg,
 // 
 void orbit_camera_t::update(float _dt)
 {
+    if (m_is_focusing) {
+        m_focus_t += _dt / m_focus_duration;
+        if (m_focus_t >= 1.0f) {
+            m_focus_t = 1.0f;
+            m_is_focusing = false;
+        }
+
+        float t = glm::smoothstep(0.0f, 1.0f, m_focus_t);
+        m_focus_point = glm::mix(m_focus_start_point, m_focus_target_point, t);
+        m_distance    = glm::mix(m_focus_start_dist,  m_focus_target_dist,  t);
+    }
+    
     update_view_matrix();
 }
 
@@ -81,6 +93,17 @@ void orbit_camera_t::update_view_matrix()
 
     m_view_matrix            = glm::lookAt(m_position, m_focus_point, m_up_vector);
     m_view_projection_matrix = m_projection_matrix * m_view_matrix;
+}
+
+// 
+void orbit_camera_t::focus_on(const glm::vec3 &_target, float _target_distance)
+{
+    m_focus_start_point  = m_focus_point;
+    m_focus_start_dist   = m_distance;
+    m_focus_target_point = _target;
+    m_focus_target_dist  = _target_distance;
+    m_focus_t            = 0.0f;
+    m_is_focusing        = true;    
 }
 
 //

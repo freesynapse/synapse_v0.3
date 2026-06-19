@@ -389,7 +389,7 @@ void window_manager_t::on_mouse_move_event(const event_t &_e)
     }
     
     // detect hovering the ui transform object
-    editor.set_hovered_ui_transform_axis(editor.pick_transform_axis(pos));
+    editor.set_hovered_ui_transform_axis(editor.pick_ui_transform_axis(pos));
     
     // widgets
     for (uint32_t i = 0; i < SYN_MAX_WINDOW_COUNT; i++) {

@@ -19,6 +19,8 @@ public:
     void set_mode(camera_mode_t _mode);
     void toggle_mode();
 
+    void focus_on(const glm::vec3 &_target, float _target_distance);
+    
     void enable();
     void disable();
     

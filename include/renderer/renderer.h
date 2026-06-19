@@ -76,10 +76,12 @@ public:
 	// ui transform rendering
 	void render_ui_transform(const glm::vec3 &_world_pos);
 	
-	// debug functions
+	// element inits
 private:
     void init_debug_rendering();
     void init_orienatation_obj(uint32_t _size);
+    void init_ui_transform_rendering();
+    
 public:
 	void toggle_wireframe();
 	void toggle_normals();
@@ -114,6 +116,7 @@ public:
 
 	// skybox
 	skybox_t m_skybox;
+
 	// IBL maps
 	cubemap_handle_t m_irradiance_map;
 	cubemap_handle_t m_prefilter_map;
@@ -132,6 +135,10 @@ public:
 		float duration = 2.0f;
 	} m_notification;
 
+	// ui transform
+	shader_handle_t m_ui_transform_shader_handle;
+	vertex_array_t m_ui_transform_vao;
+	
 	// debug (vaos and shader handles in debug_state_t)
 	debug_state_t debug;
 	bool m_debug_initialized = false;

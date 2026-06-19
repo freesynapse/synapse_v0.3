@@ -28,7 +28,7 @@ public:
     
     entity_handle_t create_primitive(primitive_type_t _type);
     entity_handle_t pick_entity(const glm::vec2 &_screen_pos);
-    ui_transform_axis_t pick_transform_axis(const glm::vec2 &_screen_pos);
+    ui_transform_axis_t pick_ui_transform_axis(const glm::vec2 &_screen_pos);
     void begin_ui_transform_drag();
     void update_ui_transform_drag(glm::vec2 &_screen_pos);
     
@@ -58,6 +58,7 @@ private:
 
     glm::vec2 m_drag_start_screen;
     glm::vec3 m_drag_start_world;
+    glm::vec2 m_drag_origin_ss;
 
     ui_transform_mode_t m_ui_transform_mode = ui_transform_mode_t::TRANSLATE;
 

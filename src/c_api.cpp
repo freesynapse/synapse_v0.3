@@ -285,6 +285,8 @@ void syn_create_viewport_window(const char *_name, const glm::vec2 &_pos, const 
     win.name = _name;
     win.position = _pos;
     win.size = _size;
+    win.set_resizable(false);
+
     window_handle_t handle = window_manager.add_window(win);
     window_manager.set_viewport_window(handle);    
     window_t *w = window_manager.get_window(handle);
@@ -299,6 +301,7 @@ void syn_create_log_window(const char *_name, const glm::vec2 &_pos, const glm::
     win.name = _name;
     win.position = _pos;
     win.size = _size;
+    win.set_resizable(false);
 
     widget_t text_area;
     text_area.type = widget_type_t::TEXT_AREA;
@@ -346,6 +349,7 @@ void syn_create_hierarchy_window(const char *_name, const glm::vec2 &_pos, const
     win.name = _name;
     win.position = _pos;
     win.size = _size;
+
     window_handle_t handle = window_manager.add_window(win);
     window_manager.set_hierarchy_window_handle(handle);
     window_t *hw = window_manager.get_window(handle);

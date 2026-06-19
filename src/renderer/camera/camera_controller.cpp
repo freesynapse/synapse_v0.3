@@ -64,6 +64,12 @@ void camera_controller_t::toggle_mode()
     
 }
 
+void camera_controller_t::focus_on(const glm::vec3 &_target, float _target_distance)
+{
+    if (m_mode == camera_mode_t::ORBIT) m_orbit_ptr->focus_on(_target, _target_distance);
+    
+}
+
 // 
 void camera_controller_t::enable()
 {
