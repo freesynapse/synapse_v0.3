@@ -2,8 +2,23 @@
 #include "editor.h"
 #include "utils/math_utils.h"
 #include "utils/log.h"
+#include "renderer/mesh/mesh_generator.h"
 
 #include "c_api.h"
+
+// 
+static const char *primitive_type_to_str(primitive_type_t _type)
+{
+    switch (_type) {
+        case primitive_type_t::CUBE:      return "CUBE";
+        case primitive_type_t::SPHERE_UV: return "SPHERE_UV";
+        case primitive_type_t::PLANE:     return "PLANE";
+        case primitive_type_t::CONE:      return "CONE";
+        case primitive_type_t::CYLINDER:  return "CYLINDER";
+        case primitive_type_t::TORUS:     return "TORUS";
+        default:                          return "NONE";
+    }
+}
 
 // 
 static void __editor_on_keydown_callback(const event_t &_e) { editor.on_keydown_event(_e); }
@@ -14,6 +29,271 @@ void editor_t::init()
 {
     events.register_callback(event_type_t::INPUT_KEYDOWN, __editor_on_keydown_callback);
     
+}
+
+// 
+void editor_t::save_scene(const std::string &_path)
+{
+    FILE *f = fopen(_path.c_str(), "w");
+    if (!f) {
+        SYN_ERROR("could not open '%s' for writing.\n", _path.c_str());
+        return;
+    }
+
+    fprintf(f, "# synapse scene file\n\n");
+
+    for (uint32_t i = 0; i < SYN_MAX_ENTITY_COUNT; i++) {
+        entity_t &e = entity_lib.m_pool[i];
+        if (!e.is_active) continue;
+
+        fprintf(f, "entity %s\n", e.name.c_str());
+
+        // mesh
+        if (e.mesh_primitive_type == primitive_type_t::NONE) {
+            // asset mesh -- save by mesh name
+            entity_handle_t this_handle = { i + 1 };
+            std::string asset_name = assets.get_entity_name(this_handle);
+            fprintf(f, "    mesh_type   ASSET\n");
+            fprintf(f, "    mesh_name   %s\n", asset_name.empty() ? "unknown" : asset_name.c_str());
+        } else {
+            fprintf(f, "    mesh_type   PRIMITIVE\n");
+            fprintf(f, "    mesh_name   %s\n", primitive_type_to_str(e.mesh_primitive_type));
+            if (e.mesh_param_count > 0) {
+                fprintf(f, "    mesh_params");
+                for (uint32_t p = 0; p < e.mesh_param_count; p++)
+                    fprintf(f, " %g", e.mesh_params[p]);
+                fprintf(f, "\n");
+            }
+        }
+
+        // transform
+        fprintf(f, "    position    %.4f %.4f %.4f\n", e.t_position.x, e.t_position.y, e.t_position.z);
+        fprintf(f, "    rotation    %.4f %.4f %.4f\n", e.t_rotation.x, e.t_rotation.y, e.t_rotation.z);
+        fprintf(f, "    scale       %.4f %.4f %.4f\n", e.t_scale.x,    e.t_scale.y,    e.t_scale.z);
+
+        // material
+        std::string mat_name = assets.get_material_name(e.material_handle);
+        if (!mat_name.empty()) {
+            fprintf(f, "    manifest_material  %s\n", mat_name.c_str());
+        } else {
+            material_internal_t *mat = mat_lib.get_material(e.material_handle);
+            if (mat) {
+                material_pbr_payload_t *pbr = (material_pbr_payload_t *)mat->data;
+                fprintf(f, "    material\n");
+                fprintf(f, "        albedo      %.4f %.4f %.4f %.4f\n",
+                        pbr->albedo_color.r, pbr->albedo_color.g,
+                        pbr->albedo_color.b, pbr->albedo_color.a);
+                fprintf(f, "        roughness   %.4f\n", pbr->roughness);
+                fprintf(f, "        metallic    %.4f\n", pbr->metallic);
+                fprintf(f, "        ao          %.4f\n", pbr->ao);
+                fprintf(f, "        tiling      %.4f\n", pbr->tiling_factor);
+                texture_handle_t tex_h = mat->textures[(uint32_t)texture_map_type_t::ALBEDO];
+                texture_internal_t *tex = tex_lib.get_texture(tex_h);
+                if (pbr->use_albedo_map > 0.5f && tex && !tex->name.empty())
+                    fprintf(f, "        albedo_tex  %s\n", tex->name.c_str());
+                else
+                    fprintf(f, "        albedo_tex  none\n");
+                fprintf(f, "    end_material\n");
+            }
+        }
+        
+        fprintf(f, "end_entity\n\n");
+    }
+
+    fclose(f);
+    SYN_INFO("scene saved to '%s'.\n", _path.c_str());
+}
+
+// 
+void editor_t::load_scene(const std::string &_path)
+{
+    FILE *f = fopen(_path.c_str(), "r");
+    if (!f) {
+        SYN_ERROR("could not open '%s' for reading.\n", _path.c_str());
+        return;
+    }
+
+    // clear existing scene
+    for (uint32_t i = 0; i < SYN_MAX_ENTITY_COUNT; i++) {
+        entity_t &e = entity_lib.m_pool[i];
+        if (!e.is_active) continue;
+
+        std::string mat_name = assets.get_material_name(e.material_handle);
+        if (mat_name.empty())
+            mat_lib.release_material(e.material_handle);
+        entity_lib.release_entity({ i + 1 });
+    }
+    selected_entity_handle = { 0 };
+
+    char line[512];
+
+    // per-entity state
+    std::string             ent_name;
+    std::string             mesh_type_str;
+    std::string             mesh_name_str;
+    std::string             manifest_mat_name;
+    float                   mesh_params[4]  = {};
+    uint32_t                mesh_param_count = 0;
+    glm::vec3               position        = {};
+    glm::vec3               rotation        = {};
+    glm::vec3               scale           = { 1.0f, 1.0f, 1.0f };
+    material_pbr_payload_t  pbr             = {};
+    std::string             albedo_tex_name;
+    bool                    in_entity       = false;
+    bool                    in_material     = false;
+
+    auto reset = [&]() {
+        ent_name.clear();
+        mesh_type_str.clear();
+        mesh_name_str.clear();
+        manifest_mat_name.clear();
+        albedo_tex_name.clear();
+        memset(mesh_params, 0, sizeof(mesh_params));
+        mesh_param_count = 0;
+        position  = {};
+        rotation  = {};
+        scale     = { 1.0f, 1.0f, 1.0f };
+        pbr       = {};
+        in_entity   = false;
+        in_material = false;
+    };
+
+    while (fgets(line, sizeof(line), f)) {
+        // tokenize
+        std::vector<std::string> tokens;
+        char *tok = strtok(line, " \t\r\n");
+        while (tok) { tokens.push_back(tok); tok = strtok(nullptr, " \t\r\n"); }
+        if (tokens.empty() || tokens[0][0] == '#') continue;
+
+        if (tokens[0] == "entity") {
+            reset();
+            ent_name  = tokens[1];
+            in_entity = true;
+        }
+        else if (in_entity) {
+            if      (tokens[0] == "mesh_type") mesh_type_str = tokens[1];
+            else if (tokens[0] == "mesh_name") mesh_name_str = tokens[1];
+            else if (tokens[0] == "mesh_params") {
+                mesh_param_count = (uint32_t)(tokens.size() - 1);
+                for (uint32_t p = 0; p < mesh_param_count; p++)
+                    mesh_params[p] = std::stof(tokens[p + 1]);
+            }
+            else if (tokens[0] == "position")
+                position = { std::stof(tokens[1]), std::stof(tokens[2]), std::stof(tokens[3]) };
+            else if (tokens[0] == "rotation")
+                rotation = { std::stof(tokens[1]), std::stof(tokens[2]), std::stof(tokens[3]) };
+            else if (tokens[0] == "scale")
+                scale    = { std::stof(tokens[1]), std::stof(tokens[2]), std::stof(tokens[3]) };
+            else if (tokens[0] == "manifest_material")
+                manifest_mat_name = tokens[1];
+            else if (tokens[0] == "material")
+                in_material = true;
+            else if (in_material) {
+                if (tokens[0] == "albedo")
+                    pbr.albedo_color = { std::stof(tokens[1]), std::stof(tokens[2]),
+                                         std::stof(tokens[3]), std::stof(tokens[4]) };
+                else if (tokens[0] == "roughness")   pbr.roughness     = std::stof(tokens[1]);
+                else if (tokens[0] == "metallic")    pbr.metallic      = std::stof(tokens[1]);
+                else if (tokens[0] == "ao")          pbr.ao            = std::stof(tokens[1]);
+                else if (tokens[0] == "tiling")      pbr.tiling_factor = std::stof(tokens[1]);
+                else if (tokens[0] == "albedo_tex")  albedo_tex_name   = tokens[1];
+                else if (tokens[0] == "end_material") in_material = false;
+            }
+            else if (tokens[0] == "end_entity") {
+                // --- resolve mesh ---
+                mesh_handle_t    mesh      = { 0 };
+                primitive_type_t prim_type = primitive_type_t::NONE;
+
+                if (mesh_type_str == "ASSET") {
+                    mesh = assets.get_entity_mesh(mesh_name_str);
+                }
+                else if (mesh_type_str == "PRIMITIVE") {
+                    if (mesh_name_str == "CUBE") {
+                        prim_type = primitive_type_t::CUBE;
+                        mesh = mesh_generator.create_cube_mesh();
+                    }
+                    else if (mesh_name_str == "SPHERE_UV") {
+                        prim_type = primitive_type_t::SPHERE_UV;
+                        mesh = mesh_generator.create_uv_sphere_mesh(
+                            1.0f, (uint32_t)mesh_params[0], (uint32_t)mesh_params[1]);
+                    }
+                    else if (mesh_name_str == "PLANE") {
+                        prim_type = primitive_type_t::PLANE;
+                        mesh = mesh_generator.create_plane_mesh(mesh_params[0], (uint32_t)mesh_params[1]);
+                    }
+                    else if (mesh_name_str == "CONE") {
+                        prim_type = primitive_type_t::CONE;
+                        mesh = mesh_generator.create_cone_mesh(
+                            mesh_params[0], mesh_params[1], (uint32_t)mesh_params[2]);
+                    }
+                    else if (mesh_name_str == "CYLINDER") {
+                        prim_type = primitive_type_t::CYLINDER;
+                        mesh = mesh_generator.create_cylinder_mesh(
+                            mesh_params[0], mesh_params[1], (uint32_t)mesh_params[2]);
+                    }
+                    else if (mesh_name_str == "TORUS") {
+                        prim_type = primitive_type_t::TORUS;
+                        mesh = mesh_generator.create_torus_mesh(
+                            mesh_params[0], mesh_params[1],
+                            (uint32_t)mesh_params[2], (uint32_t)mesh_params[3]);
+                    }
+                    else {
+                        SYN_WARNING("unknown primitive type '%s'.\n", mesh_name_str.c_str());
+                    }
+                }
+
+                if (!mesh.id) {
+                    SYN_ERROR("could not resolve mesh for entity '%s', skipping.\n", ent_name.c_str());
+                    reset();
+                    continue;
+                }
+
+                // --- resolve material ---
+                material_handle_t mat = { 0 };
+
+                if (!manifest_mat_name.empty()) {
+                    mat = assets.get_material(manifest_mat_name);
+                } else {
+                    mat = mat_lib.create_material_from(mat_lib.fallback_material_handle);
+                    material_internal_t *mat_ptr = mat_lib.get_material(mat);
+                    if (mat_ptr) {
+                        memcpy(mat_ptr->data, &pbr, sizeof(material_pbr_payload_t));
+                        mat_ptr->data_size = sizeof(material_pbr_payload_t);
+
+                        if (albedo_tex_name != "none" && !albedo_tex_name.empty()) {
+                            texture_handle_t tex = assets.get_texture(albedo_tex_name);
+                            if (tex.id != 0) {
+                                mat_ptr->textures[(uint32_t)texture_map_type_t::ALBEDO] = tex;
+                                material_pbr_payload_t *pbr_ptr = (material_pbr_payload_t *)mat_ptr->data;
+                                pbr_ptr->use_albedo_map = 1.0f;
+                            }
+                        }
+                    }
+                }
+                
+
+                // --- create entity ---
+                glm::mat4 transform = entity_t::make_transform(position, rotation, scale);
+                entity_handle_t handle = entity_lib.create_entity(ent_name, mesh, mat, transform);
+                entity_t *ent = entity_lib.get_entity(handle);
+                if (ent) {
+                    ent->t_position            = position;
+                    ent->t_rotation            = rotation;
+                    ent->t_scale               = scale;
+                    ent->mesh_primitive_type   = prim_type;
+                    ent->mesh_param_count      = mesh_param_count;
+                    memcpy(ent->mesh_params, mesh_params, sizeof(mesh_params));
+                    ent->manifest_material_name = manifest_mat_name;
+                }
+
+                SYN_INFO("loaded entity '%s'.\n", ent_name.c_str());
+                reset();
+            }
+        }
+    }
+
+    fclose(f);
+    SYN_INFO("scene loaded from '%s'.\n", _path.c_str());
 }
 
 // 
@@ -47,7 +327,9 @@ void editor_t::on_keydown_event(const event_t &_e)
         if (selected_entity_handle.is_valid()) {
             entity_t *e = entity_lib.get_entity(selected_entity_handle);
             if (e) {
-                mat_lib.release_material(e->material_handle);
+                std::string mat_name = assets.get_material_name(e->material_handle);
+                if (mat_name.empty())
+                    mat_lib.release_material(e->material_handle);
                 entity_lib.release_entity(selected_entity_handle);
             }
         }
@@ -91,6 +373,16 @@ void editor_t::on_keydown_event(const event_t &_e)
             }
         }
     }
+
+    // save/load scene
+    if (key == SYN_KEY_S && (mods & SYN_MOD_CTRL) && action == SYN_KEY_PRESSED) {
+        save_scene("../assets/scene.syn");
+    }
+
+    if (key == SYN_KEY_O && (mods & SYN_MOD_CTRL) && action == SYN_KEY_PRESSED) {
+        load_scene("../assets/scene.syn");
+    }
+    
 }
 
 // 
@@ -242,7 +534,6 @@ entity_handle_t editor_t::create_primitive(primitive_type_t _type)
         }
         
         case primitive_type_t::TORUS: {
-            SYN_INFO("hello.\n");
             mesh = mesh_generator.create_torus_mesh();
             name = "torus";
             break;
@@ -259,6 +550,53 @@ entity_handle_t editor_t::create_primitive(primitive_type_t _type)
     glm::mat4 transform = glm::mat4(1.0f);
     entity_handle_t handle = entity_lib.create_entity(unique_name, mesh, mat_lib.fallback_material_handle, transform);
     selected_entity_handle = handle;
+
+    // store mesh parameters
+    entity_t *e = entity_lib.get_entity(handle);
+    if (e) {
+        e->mesh_primitive_type = _type;
+        switch (_type) {
+            case primitive_type_t::CUBE: {
+                e->mesh_param_count = 0;
+                break;
+            }
+    
+            case primitive_type_t::SPHERE_UV: {
+                e->mesh_params[0] = 36.0f;
+                e->mesh_params[1] = 18.0f;
+                e->mesh_param_count = 2;
+                break;
+            }
+    
+            case primitive_type_t::PLANE: {
+                e->mesh_params[0] = 10.0;
+                e->mesh_params[1] = 21.0f;
+                e->mesh_param_count = 2;
+                break;
+            }
+    
+            case primitive_type_t::CONE:
+            case primitive_type_t::CYLINDER: {
+                e->mesh_params[0] = 1.0f;
+                e->mesh_params[1] = 2.0f;
+                e->mesh_params[2] = 32.0f;
+                e->mesh_param_count = 3;
+                break;
+            }
+            
+            case primitive_type_t::TORUS: {
+                e->mesh_params[0] = 1.0f;
+                e->mesh_params[1] = 0.3f;
+                e->mesh_params[2] = 36.0f;
+                e->mesh_params[3] = 18.0f;
+                e->mesh_param_count = 4;
+                break;
+            }
+
+            default: break;
+            
+        }
+    }
 
     // close menu window
     window_t *pw = window_manager.get_window(m_create_window_handle);

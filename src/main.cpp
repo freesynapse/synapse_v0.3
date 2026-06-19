@@ -30,9 +30,20 @@ int main()
     mesh_handle_t sphere_mesh = mesh_generator.create_uv_sphere_mesh();
     material_handle_t sphere_material = assets.get_material("chrome");
     glm::mat4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.0f, 2.0f));
-
     sphere = entity_lib.create_entity("test_sphere", sphere_mesh, sphere_material, transform);
-
+    
+    entity_t *e = entity_lib.get_entity(sphere);
+    if (e) {
+        e->t_position = { 0.0f, 1.0f, 2.0f };
+        e->t_rotation = { 0.0f, 0.0f, 0.0f };
+        e->t_scale    = { 1.0f, 1.0f, 1.0f };
+        e->mesh_primitive_type = primitive_type_t::SPHERE_UV;
+        e->mesh_params[0] = 36.0f;
+        e->mesh_params[1] = 18.0f;
+        e->mesh_param_count = 2;
+        e->manifest_material_name = "chrome";
+    }
+    
     // 
     orbit_camera.m_orbit_speed = 0.5f;
     orbit_camera.m_x_angle = 45.0f;

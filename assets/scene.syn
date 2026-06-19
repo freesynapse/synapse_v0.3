@@ -1,0 +1,21 @@
+# synapse scene file
+
+entity helmet
+    mesh_type   ASSET
+    mesh_name   helmet
+    position    -0.9735 1.0000 -2.0000
+    rotation    -270.0000 90.0000 0.0000
+    scale       1.0000 1.0000 1.0000
+    manifest_material  helmet_mat
+end_entity
+
+entity test_sphere
+    mesh_type   PRIMITIVE
+    mesh_name   SPHERE_UV
+    mesh_params 36 18
+    position    0.0000 1.0000 2.0000
+    rotation    0.0000 0.0000 0.0000
+    scale       1.0000 1.0000 1.0000
+    manifest_material  chrome
+end_entity
+

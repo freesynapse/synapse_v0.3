@@ -23,7 +23,11 @@ struct entity_handle_t {
 struct entity_t {
     std::string name;
     mesh_handle_t mesh_handle;
+    primitive_type_t mesh_primitive_type = primitive_type_t::NONE;
+    float mesh_params[4] = { 0.0f };
+    uint32_t mesh_param_count = 0;
     material_handle_t material_handle;
+    std::string manifest_material_name;
     glm::mat4 transform = glm::mat4(1.0f);
 
     glm::vec3 t_position = glm::vec3(0.0f);

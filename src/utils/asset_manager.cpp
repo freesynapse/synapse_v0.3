@@ -137,6 +137,15 @@ material_handle_t asset_manager_t::get_material(const std::string &_name)
 }
 
 //
+std::string asset_manager_t::get_material_name(material_handle_t _handle)
+{
+    for (auto &pair : m_material_map)
+        if (pair.second.id == _handle.id)
+            return pair.first;
+    return "";
+}
+
+//
 mesh_handle_t asset_manager_t::get_mesh(const std::string &_name)
 {
     auto it = m_mesh_map.find(_name);
@@ -166,6 +175,30 @@ entity_handle_t asset_manager_t::get_entity(const std::string &_name)
     auto it = m_entity_map.find(_name);
     if (it == m_entity_map.end()) {
         SYN_ERROR("entity '%s' not loaded.\n", _name.c_str());
+        return { 0 };
+    }
+    return it->second;
+}
+
+// 
+std::string asset_manager_t::get_entity_name(entity_handle_t _handle)
+{
+    for (auto &pair : m_entity_map) {
+        if (pair.second.id == _handle.id) {
+            return pair.first;
+        }
+    }
+    return "";
+    
+}
+
+// 
+mesh_handle_t asset_manager_t::get_entity_mesh(const std::string &_name)
+{
+    // look up entity descriptor's mesh name, then get mesh handle
+    auto it = m_entity_mesh_map.find(_name);
+    if (it == m_entity_mesh_map.end()) {
+        SYN_ERROR("no mesh found for entity '%s'.\n", _name.c_str());
         return { 0 };
     }
     return it->second;
@@ -598,6 +631,7 @@ void asset_manager_t::create_entity_from_descriptor(const std::string &_name,
     auto mesh_it = m_mesh_map.find(_desc.mesh_name);
     if (mesh_it != m_mesh_map.end()) {
         entity.mesh_handle = mesh_it->second;
+        m_entity_mesh_map[_name] = entity.mesh_handle;
     } else {
         SYN_ERROR("entity '%s' references unknown mesh '%s'.\n", _name.c_str(), _desc.mesh_name.c_str());
         return;

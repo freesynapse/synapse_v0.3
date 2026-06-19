@@ -70,9 +70,12 @@ public:
     shader_handle_t   get_shader(const std::string &_name);
     texture_handle_t  get_texture(const std::string &_name);
     material_handle_t get_material(const std::string &_name);
+    std::string       get_material_name(material_handle_t _handle);
     mesh_handle_t     get_mesh(const std::string &_name);
     cubemap_handle_t  get_skybox(const std::string &_name);
     entity_handle_t   get_entity(const std::string &_name);
+    std::string       get_entity_name(entity_handle_t _handle);
+    mesh_handle_t     get_entity_mesh(const std::string &_name);
 
 private:
     void parse_line(const std::string &_line, size_t _pass);
@@ -114,7 +117,8 @@ private:
     std::unordered_map<std::string, mesh_handle_t>     m_mesh_map;
     std::unordered_map<std::string, cubemap_handle_t>  m_cubemap_map;
     std::unordered_map<std::string, entity_handle_t>   m_entity_map;
-
+    std::unordered_map<std::string, mesh_handle_t>     m_entity_mesh_map;
+    
     std::string m_current_manifest_path;
     
     struct {

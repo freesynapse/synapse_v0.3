@@ -16,6 +16,7 @@
 #include "renderer/material/material_library.h"
 #include "renderer/material/cubemap_library.h"
 #include "renderer/mesh/mesh_library.h"
+#include "renderer/mesh/mesh_generator.h"
 #include "renderer/entity/entity_library.h"
 #include "renderer/font/font.h"
 #include "renderer/camera/camera_controller.h"

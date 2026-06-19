@@ -6,6 +6,19 @@
 
 #include "renderer/buffers/vertex_array.h"
 
+
+// 
+enum class primitive_type_t {
+    NONE = 0,
+    CUBE,
+    SPHERE_UV,
+    PLANE,
+    CONE,
+    CYLINDER,
+    TORUS,
+    COUNT,
+};
+
 // 
 struct vertex_data_t
 {
