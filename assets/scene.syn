@@ -3,7 +3,7 @@
 entity helmet
     mesh_type   ASSET
     mesh_name   helmet
-    position    -0.9735 1.0000 -2.0000
+    position    0.0000 1.0000 -2.0000
     rotation    -270.0000 90.0000 0.0000
     scale       1.0000 1.0000 1.0000
     manifest_material  helmet_mat
@@ -16,6 +16,13 @@ entity test_sphere
     position    0.0000 1.0000 2.0000
     rotation    0.0000 0.0000 0.0000
     scale       1.0000 1.0000 1.0000
-    manifest_material  chrome
+    material
+        albedo      0.6161 0.6161 0.9643 1.0000
+        roughness   0.0500
+        metallic    1.0000
+        ao          1.0000
+        tiling      1.0000
+        albedo_tex  none
+    end_material
 end_entity
 

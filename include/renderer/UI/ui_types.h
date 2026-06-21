@@ -20,6 +20,12 @@ enum class ui_transform_axis_t {
 };
 
 // 
+struct ui_color_picker_vertex_t {
+    glm::vec2 pos;
+    glm::vec2 uv;
+};
+
+// 
 struct ui_transform_vertex_t {
     glm::vec2 pos;
     glm::vec2 uv;

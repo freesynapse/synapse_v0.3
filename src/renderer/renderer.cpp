@@ -65,6 +65,9 @@ void renderer_t::init()
     
     // create skybox shader and mesh
     init_skybox();
+
+    // setup shadow map -- off by default
+    init_shadow_map();
     
     // bake_irradiance_hdr(); <- cannot be called unless m_skybox is intialized
     
@@ -80,16 +83,17 @@ void renderer_t::init()
     // orientation object
     init_orienatation_obj(100);
 
-    // ui transform -- entity manipulation ui
-    init_ui_transform_rendering();
+    // ui elements
+    init_ui_transform();    // viewport entity manipulation ui
 
 }
 
 //
 void renderer_t::shutdown()
 {
-    shutdown_material_ubo();
-    shutdown_lighting_ubo();
+    release_material_ubo();
+    release_lighting_ubo();
+    release_shadow_map();
     
     // cleanup debug
     if (debug.grid_vao_id != 0) {
@@ -129,7 +133,7 @@ void renderer_t::init_material_ubo()
 }
 
 //
-void renderer_t::shutdown_material_ubo()
+void renderer_t::release_material_ubo()
 {
     if (m_material_ubo.opengl_id != 0) {
         glDeleteBuffers(1, &m_material_ubo.opengl_id);
@@ -156,7 +160,7 @@ void renderer_t::init_lighting_ubo()
 }
 
 //
-void renderer_t::shutdown_lighting_ubo()
+void renderer_t::release_lighting_ubo()
 {
     if (m_lighting_ubo.opengl_id != 0) {
         glDeleteBuffers(1, &m_lighting_ubo.opengl_id);
@@ -477,15 +481,148 @@ cubemap_handle_t renderer_t::convert_equirect_to_cubemap(const texture_handle_t 
 
 }
 
-//
-void renderer_t::bind_scene_fbuffer()
+// 
+void renderer_t::init_shadow_map()
 {
-    if (m_scene_fbuffer_handle.id == 0) {
-        SYN_WARNING("invalid m_scene_fbuffer_handle: was the 3d scene bufffer created?\n"); 
+    m_shadow_shader_handle = shader_lib.load_from_file("shadow_map_shader", "../assets/shaders/shadow_map.glsl");
+    if (!m_shadow_shader_handle.is_valid()) {
+        SYN_WARNING("shadow map shader failed to load.\n");
         return;
     }
+
+    // depth texture
+    glCreateTextures(GL_TEXTURE_2D, 1, &m_shadow_map.depth_id);
+    glTextureStorage2D(m_shadow_map.depth_id, 1, GL_DEPTH_COMPONENT32F, SYN_SHADOW_MAP_SIZE, SYN_SHADOW_MAP_SIZE);
+    glTextureParameteri(m_shadow_map.depth_id, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTextureParameteri(m_shadow_map.depth_id, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTextureParameteri(m_shadow_map.depth_id, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
+    glTextureParameteri(m_shadow_map.depth_id, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
+    float border_color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    glTextureParameterfv(m_shadow_map.depth_id, GL_TEXTURE_BORDER_COLOR, border_color);
+    glTextureParameteri(m_shadow_map.depth_id, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+    glTextureParameteri(m_shadow_map.depth_id, GL_TEXTURE_COMPARE_FUNC, GL_LEQUAL);
+
+    // depth-only fbo
+    glCreateFramebuffers(1, &m_shadow_map.fbo_id);
+    glNamedFramebufferTexture(m_shadow_map.fbo_id, GL_DEPTH_ATTACHMENT, m_shadow_map.depth_id, 0);
+    glNamedFramebufferDrawBuffer(m_shadow_map.fbo_id, GL_NONE);
+    glNamedFramebufferReadBuffer(m_shadow_map.fbo_id, GL_NONE);
+
+    if (glCheckNamedFramebufferStatus(m_shadow_map.fbo_id, GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+        SYN_ERROR("shadow map framebuffer incomplete.\n");
+        return;
+    }
+
+    SYN_INFO("shadow map initialized (%dx%d).\n", SYN_SHADOW_MAP_SIZE, SYN_SHADOW_MAP_SIZE);
+    
+}
+
+// 
+void renderer_t::release_shadow_map()
+{
+    if (m_shadow_map.fbo_id != 0) {
+        glDeleteFramebuffers(1, &m_shadow_map.fbo_id);
+        m_shadow_map.fbo_id = 0;
+    }
+
+    if (m_shadow_map.depth_id != 0) {
+        glDeleteTextures(1, &m_shadow_map.depth_id);
+        m_shadow_map.depth_id = 0;
+    }
+    
+}
+
+// 
+void renderer_t::render_shadow_pass()
+{
+    if (!m_shadow_map.is_active) return;
+    if (m_command_count == 0)    return;
+
+    shader_t *shader = shader_lib.get_shader(m_shadow_shader_handle);
+    if (!shader) return;
+
+    // build light-space matrix from lights[0] (directional ligth)
+    glm::vec3 light_dir = glm::normalize(glm::vec3(m_lighting_state.lights[0].direction));
+    float cam_dist = m_shadow_map.ortho_size;
+    //glm::vec3 light_pos = -light_dir * cam_dist;
+    glm::vec3 scene_center = cam.get_position();
+    scene_center.y = 0.0f;
+    glm::vec3 light_pos = scene_center - light_dir * cam_dist;
+    
+    // glm::mat4 light_view = glm::lookAt(light_pos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+    glm::mat4 light_view = glm::lookAt(light_pos, scene_center, glm::vec3(0.0f, 1.0f, 0.0f));
+    float s = m_shadow_map.ortho_size;
+    glm::mat4 light_proj = glm::ortho(-s, s, -s, s, m_shadow_map.z_near, m_shadow_map.z_far);
+
+    m_shadow_map.light_space_matrix = light_proj * light_view;
+
+    // shadow pass
+    glBindFramebuffer(GL_FRAMEBUFFER, m_shadow_map.fbo_id);
+    glViewport(0, 0, SYN_SHADOW_MAP_SIZE, SYN_SHADOW_MAP_SIZE);
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glCullFace(GL_FRONT);
+
+    shader->enable();
+    shader->set_matrix_4fv("u_light_space_matrix", m_shadow_map.light_space_matrix);
+
+    GLint current_fbo;
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &current_fbo);
+    
+    for (uint32_t i = 0; i < m_command_count; i++) {
+        const render_command_t &cmd = m_command_queue[i];
+        mesh_internal_t *mesh = mesh_lib.get_mesh(cmd.mesh);
+        if (!mesh) continue;
+        shader->set_matrix_4fv("u_model", cmd.transform);
+        mesh->vao.bind();
+        glDrawElements(GL_TRIANGLES, mesh->index_count, GL_UNSIGNED_INT, nullptr);
+        mesh->vao.unbind();
+    }
+
+    // restore state
+    glCullFace(GL_BACK);
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+    window_t *vp = window_manager.get_viewport_window();
+    if (vp) {
+        glm::vec2 sz = vp->get_content_size();
+        glViewport(0, 0, sz.x, sz.y);
+    }
+
+}
+
+// 
+void renderer_t::set_shadow_ortho(float _size, float _z_near, float _z_far)
+{
+    m_shadow_map.ortho_size = _size;
+    m_shadow_map.z_near     = _z_near;
+    m_shadow_map.z_far      = _z_far;
+    
+}
+
+//
+void renderer_t::bind_scene_fbuffer(bool _update_viewport)
+{
+    window_t *vp = window_manager.get_viewport_window();
+    if (!vp || !vp->has_frambuffer()) {
+        SYN_WARNING("no viewport window framebuffer.\n");
+        return;
+    }
+
+    m_scene_fbuffer_handle = vp->get_framebuffer_handle();
+    
     framebuffer_t *fbo = api.fbo_handler.get_framebuffer(m_scene_fbuffer_handle);
-    fbo->bind(); 
+    if (!fbo) {
+        SYN_WARNING("invalid framebuffer.\n");
+        return;
+    }
+
+    fbo->bind(_update_viewport);
+    if (!_update_viewport) {
+        glm::vec2 sz = vp->get_content_size();
+        glViewport(0, 0, (GLsizei)sz.x, (GLsizei)sz.y);
+    }
+    // api clear color has to be set before this
+    api.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 }
 
@@ -564,6 +701,9 @@ void renderer_t::cmd_flush()
 {
     if (m_command_count == 0)
         return;
+
+    render_shadow_pass();
+    bind_scene_fbuffer();
     
     //
     if (debug.show_wireframe) {
@@ -592,7 +732,13 @@ void renderer_t::cmd_flush()
         if (shader && shader->get_id() != current_active_shader_id) {
             shader->enable();
             current_active_shader_id = shader->get_id();
-        
+
+            shader->set_uniform_1i("u_shadows_enabled", m_shadow_map.is_active ? 1 : 0);
+            if (m_shadow_map.is_active) {
+                shader->set_matrix_4fv("u_light_space_matrix", m_shadow_map.light_space_matrix);
+                shader->set_uniform_1i("u_shadow_map", 8);
+            }
+            
             shader->set_matrix_4fv("u_view_projection", mat_vp);
             shader->set_uniform_3fv("u_view_pos", cam.get_position());
         }
@@ -630,6 +776,9 @@ void renderer_t::cmd_flush()
             glActiveTexture(GL_TEXTURE7);
             glBindTexture(GL_TEXTURE_CUBE_MAP, prefilter_map->opengl_id);
         }
+
+        // bind shadow map unconditionally
+        glBindTextureUnit(8, m_shadow_map.depth_id);
     
         // upload transforms (per object)
         glm::mat3 mat_normal = glm::transpose(glm::inverse(glm::mat3(cmd.transform)));
@@ -981,7 +1130,7 @@ void renderer_t::init_orienatation_obj(uint32_t _size)
   
 }
 
-void renderer_t::init_ui_transform_rendering()
+void renderer_t::init_ui_transform()
 {
     m_ui_transform_shader_handle = shader_lib.load_from_file("ui_transform_shader", 
         "../assets/shaders/ui_transform.glsl");
@@ -1000,8 +1149,6 @@ void renderer_t::init_ui_transform_rendering()
     m_ui_transform_vao.create_empty_indices(indices_size);
     
 }
-
-
 
 //
 void renderer_t::toggle_wireframe()      { debug.show_wireframe      = !debug.show_wireframe;       }

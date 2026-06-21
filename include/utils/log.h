@@ -39,11 +39,13 @@
 #define SYN_MSG(msg, ...) do { zero_log_buffer(); sprintf(__tmp_log_buffer, "" msg "", ##__VA_ARGS__); syn_log(INFO_COLOR); } while(0)
 
 //
-inline char __tmp_fnc_buffer[128];
+#define SYN_TMP_FNC_BUFFER_SIZE 128
+inline char __tmp_fnc_buffer[SYN_TMP_FNC_BUFFER_SIZE];
 char *prettify_fnc_signature(const char *f);
 
 // output log to file
-inline char __tmp_log_buffer[512];
+#define SYN_TMP_LOG_BUFFER_SIZE 65536
+inline char __tmp_log_buffer[SYN_TMP_LOG_BUFFER_SIZE];
 extern FILE *__log_fp;
 void zero_log_buffer();
 int syn_open_log();
@@ -53,7 +55,8 @@ void syn_log(const char *_color);
 // TODO : test these functions!
 //
 // Debug matrices and vectors
-inline char __tmp_debug_buffer[1024];
+#define SYN_TMP_DEBUG_BUFFER_SIZE 1024
+inline char __tmp_debug_buffer[SYN_TMP_DEBUG_BUFFER_SIZE];
 void fmt_debug_func(const char *_func);
 const char* ff(float _f);
 const char* fi(int _i);

@@ -1,18 +1,26 @@
---- CORE ENGINE SHORTCUTS -------------------------------------------
-  <TAB>          Switch between orbit and perspective camera
+CORE
+  TAB           Switch between orbit and perspective camera
 
 
---- EDITOR SHORTCUTS ------------------------------------------------
-  <Shift> + A    Show primitive creation menu
+EDITOR
+  Shift + A     Show primitive creation menu
+  DEL           Delete selected entity
+  Ctrl + D      Duplicate selected entity
+  F             Focus camera on selected entity
+  G             Translate mode
+  R             Rotate mode
+  S (+ Shift)   Scale mode (shift scales all axes)
+  Ctrl + S      Save scene
+  Ctrl + O      Load scene
 
 
---- DEV TOOLS / HELP ------------------------------------------------
-  <F1>           Show help window
-  <F2>           Toggle wireframe
-  <F3>           Toggle performance overlay (viewport)
-  <F5>           Toggle rendering normals of selected entity
-  <F6>           Toggle rendering tangents of selected entity
-  <F7>           Toggle rendering AABBs of all entities
-  <F8>           Reload all shaders
-  <F10>          Toggle grid
+ DEV TOOLS / HELP
+  F1            Show help window
+  F2            Toggle wireframe
+  F3            Toggle performance overlay (viewport)
+  F5            Toggle rendering normals of selected entity
+  F6            Toggle rendering tangents of selected entity
+  F7            Toggle rendering AABBs of all entities
+  F8            Reload all shaders
+  F10           Toggle grid
  

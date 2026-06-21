@@ -112,7 +112,9 @@ void syn_create_transform_window(const char *_name, const glm::vec2 &_pos, const
 void syn_create_material_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 void syn_create_primitive_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 void syn_create_texture_select_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
+void syn_create_color_picker_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 void syn_create_help_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
+
 
 //---------------------------------------------------------------------------------------
 // rendering loop functions
@@ -123,6 +125,7 @@ void syn_render_end_3d();
 void syn_render_end();
 
 extern bool __was_prerender_called; 
+
 
 //---------------------------------------------------------------------------------------
 // rendering functions

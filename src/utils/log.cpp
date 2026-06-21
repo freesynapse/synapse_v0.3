@@ -10,7 +10,7 @@ log_ring_buffer_t syn_log_buffer;
 // 
 char *prettify_fnc_signature(const char *f)
 {
-    memset(__tmp_fnc_buffer, '\0', 128);
+    memset(__tmp_fnc_buffer, '\0', SYN_TMP_FNC_BUFFER_SIZE);
     size_t i = 0;
 
     // chop type specifier
@@ -40,7 +40,7 @@ char *prettify_fnc_signature(const char *f)
 //
 void zero_log_buffer() 
 {
-    memset(__tmp_log_buffer, 0, 512); 
+    memset(__tmp_log_buffer, 0, SYN_TMP_LOG_BUFFER_SIZE); 
 }
 
 // 
@@ -86,7 +86,7 @@ void syn_log(const char *_color)
 // 
 void fmt_debug_func(const char *_func)
 {
-	memset(__tmp_fnc_buffer, 0, 128);
+	memset(__tmp_fnc_buffer, 0, SYN_TMP_FNC_BUFFER_SIZE);
 	sprintf(__tmp_fnc_buffer, "%s", _func);
 }
 
@@ -98,7 +98,7 @@ const char* fi(int _i) { return (_i < 0 ? "-" : " "); }
 void debug_matrix(const char* _func, const char* _mat_name, const glm::mat4& _m4)
 {
 	fmt_debug_func(_func);
-	memset(__tmp_debug_buffer, 0, 1024);
+	memset(__tmp_debug_buffer, 0, SYN_TMP_DEBUG_BUFFER_SIZE);
 	int c = 0;
 	c += std::sprintf(__tmp_debug_buffer, "%s\n", _mat_name);
 	c += std::sprintf(__tmp_debug_buffer + c, "|  %s%.2f  %s%.2f  %s%.2f  %s%.2f  |\n", ff(_m4[0][0]), fabs(_m4[0][0]), ff(_m4[0][1]), fabs(_m4[0][1]), ff(_m4[0][2]), fabs(_m4[0][2]), ff(_m4[0][3]), fabs(_m4[0][3]));
@@ -114,7 +114,7 @@ void debug_matrix(const char* _func, const char* _mat_name, const glm::mat4& _m4
 void debug_matrix(const char* _func, const char* _mat_name, const glm::mat3& _m3)
 {
 	fmt_debug_func(_func);
-	memset(__tmp_debug_buffer, 0, 1024);
+	memset(__tmp_debug_buffer, 0, SYN_TMP_DEBUG_BUFFER_SIZE);
 	int c = 0;
 
 	c += std::sprintf(__tmp_debug_buffer, "%s\n", _mat_name);
@@ -129,7 +129,7 @@ void debug_matrix(const char* _func, const char* _mat_name, const glm::mat3& _m3
 void debug_vector(const char* _func, const char* _vec_name, const glm::vec4& _v4)
 {
 	fmt_debug_func(_func);
-	memset(__tmp_debug_buffer, 0, 1024);
+	memset(__tmp_debug_buffer, 0, SYN_TMP_DEBUG_BUFFER_SIZE);
 	int c = 0;
 
 	c += std::sprintf(__tmp_debug_buffer, "%s  ", _vec_name);
@@ -142,7 +142,7 @@ void debug_vector(const char* _func, const char* _vec_name, const glm::vec4& _v4
 void debug_vector(const char* _func, const char* _vec_name, const glm::vec3& _v3)
 {
 	fmt_debug_func(_func);
-	memset(__tmp_debug_buffer, 0, 1024);
+	memset(__tmp_debug_buffer, 0, SYN_TMP_DEBUG_BUFFER_SIZE);
 	int c = 0;
 
 	c += std::sprintf(__tmp_debug_buffer, "%s  ", _vec_name);
@@ -155,7 +155,7 @@ void debug_vector(const char* _func, const char* _vec_name, const glm::vec3& _v3
 void debug_vector(const char* _func, const char* _vec_name, const glm::vec2& _v2)
 {
 	fmt_debug_func(_func);
-	memset(__tmp_debug_buffer, 0, 1024);
+	memset(__tmp_debug_buffer, 0, SYN_TMP_DEBUG_BUFFER_SIZE);
 	int c = 0;
 
 	c += std::sprintf(__tmp_debug_buffer, "%s  ", _vec_name);
@@ -167,7 +167,7 @@ void debug_vector(const char* _func, const char* _vec_name, const glm::vec2& _v2
 void debug_vector(const char* _func, const char* _vec_name, const glm::ivec4& _iv4)
 {
 	fmt_debug_func(_func);
-	memset(__tmp_debug_buffer, 0, 1024);
+	memset(__tmp_debug_buffer, 0, SYN_TMP_DEBUG_BUFFER_SIZE);
 	int c = 0;
 
 	c += std::sprintf(__tmp_debug_buffer, "%s  ", _vec_name);
@@ -180,7 +180,7 @@ void debug_vector(const char* _func, const char* _vec_name, const glm::ivec4& _i
 void debug_vector(const char* _func, const char* _vec_name, const glm::ivec3& _iv3)
 {
 	fmt_debug_func(_func);
-	memset(__tmp_debug_buffer, 0, 1024);
+	memset(__tmp_debug_buffer, 0, SYN_TMP_DEBUG_BUFFER_SIZE);
 	int c = 0;
 
 	c += std::sprintf(__tmp_debug_buffer, "%s  ", _vec_name);
@@ -193,7 +193,7 @@ void debug_vector(const char* _func, const char* _vec_name, const glm::ivec3& _i
 void debug_vector(const char* _func, const char* _vec_name, const glm::ivec2& _iv2)
 {
 	fmt_debug_func(_func);
-	memset(__tmp_debug_buffer, 0, 1024);
+	memset(__tmp_debug_buffer, 0, SYN_TMP_DEBUG_BUFFER_SIZE);
 	int c = 0;
 
 	c += std::sprintf(__tmp_debug_buffer, "%s  ", _vec_name);

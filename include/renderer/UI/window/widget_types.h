@@ -21,6 +21,9 @@ enum class widget_type_t {
     HIERARCHY,
     LIST,
     TEX_QUAD,
+    COLOR_PICKER_SV,
+    COLOR_PICKER_HUE,
+    COLOR_SWATCH,
 };
 
 // 
@@ -74,6 +77,21 @@ struct tex_quad_widget_t {
 };
 
 // 
+struct color_picker_sv_widget_t {
+    float *hue = nullptr;
+    float *saturation = nullptr;
+    float *value = nullptr;
+    std::function<void(float, float)> on_change; // called with s, v
+    
+};
+
+// 
+struct color_picker_hue_widget_t {
+    float *hue = nullptr;
+    std::function<void(float)> on_change;   // called with h
+};
+
+// 
 struct widget_t {
     widget_type_t type;
     widget_anchor_t anchor;
@@ -103,6 +121,8 @@ struct widget_t {
     hierarchy_widget_t hierarchy_widget;
     list_widget_t list_widget;
     tex_quad_widget_t tex_quad_widget;
+    color_picker_sv_widget_t color_picker_sv_widget;
+    color_picker_hue_widget_t color_picker_hue_widget;
     
     // 
     widget_t() = default;

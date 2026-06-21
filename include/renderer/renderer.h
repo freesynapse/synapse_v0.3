@@ -8,7 +8,7 @@
 #include "renderer/lighting/lighting_types.h"
 #include "renderer/material/cubemap_types.h"
 #include "renderer/entity/entity_types.h"
-#include "renderer/UI/ui_types.h"
+#include "renderer/shadow/shadow_types.h"
 
 
 //
@@ -30,12 +30,12 @@ public:
 	// material ubo
 private:
 	void init_material_ubo();
-	void shutdown_material_ubo();
+	void release_material_ubo();
 
 	// lighting
 private:
 	void init_lighting_ubo();
-	void shutdown_lighting_ubo();
+	void release_lighting_ubo();
 public:
 	void update_lighting_ubo();
 	void set_light(uint32_t _index, const light_t &_light);
@@ -52,10 +52,16 @@ public:
 	void bake_specular_hdr();
 	cubemap_handle_t convert_equirect_to_cubemap(const texture_handle_t &_hdr_tex_handle);
 
-	// framebuffer functions
-	// void create_scene_framebuffer();
+	// shadow map
+	void init_shadow_map();
+	void release_shadow_map();
+	void render_shadow_pass();
+	void enable_shadows(bool _enable) { m_shadow_map.is_active = _enable; }
+	void set_shadow_ortho(float _size, float _z_near, float _z_far);
+	
+	// scene framebuffer functions
 	void set_scene_framebuffer(const framebuffer_handle_t &_handle) { m_scene_fbuffer_handle = _handle; }
-	void bind_scene_fbuffer();
+	void bind_scene_fbuffer(bool _update_viewport=true);
 	void unbind_scene_fbuffer();
 	void render_scene_fbuffer();
 
@@ -73,14 +79,14 @@ public:
 	void draw_perf_stats();
 	void draw_frame_time_graph(float _x, float _y, float _w, float _h);
 
-	// ui transform rendering
+	// ui elements
 	void render_ui_transform(const glm::vec3 &_world_pos);
 	
 	// element inits
 private:
     void init_debug_rendering();
     void init_orienatation_obj(uint32_t _size);
-    void init_ui_transform_rendering();
+    void init_ui_transform();
     
 public:
 	void toggle_wireframe();
@@ -121,6 +127,10 @@ public:
 	cubemap_handle_t m_irradiance_map;
 	cubemap_handle_t m_prefilter_map;
 
+	// shadow map
+	shadow_map_t m_shadow_map;
+	shader_handle_t m_shadow_shader_handle;
+	
 	// render command
 	render_command_t m_command_queue[SYN_MAX_RENDER_COMMANDS];
 	uint32_t m_command_count;
@@ -138,7 +148,7 @@ public:
 	// ui transform
 	shader_handle_t m_ui_transform_shader_handle;
 	vertex_array_t m_ui_transform_vao;
-	
+
 	// debug (vaos and shader handles in debug_state_t)
 	debug_state_t debug;
 	bool m_debug_initialized = false;

@@ -19,41 +19,27 @@ int main()
     // syn_set_window_pos_quadrant(UPPER_RIGHT);
 
     syn_load_assets("../assets/manifest.syn");
-    helmet = assets.get_entity("helmet");
-
+    syn_load_ui_layout("../assets/layout.syn");
+    
     //
     time_step.fps_limit = 60.0f;
     perspective_camera.m_position = { 0.0f, 2.0f, 20.0f };
 
     setup_lights();
-
-    mesh_handle_t sphere_mesh = mesh_generator.create_uv_sphere_mesh();
-    material_handle_t sphere_material = assets.get_material("chrome");
-    glm::mat4 transform = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 1.0f, 2.0f));
-    sphere = entity_lib.create_entity("test_sphere", sphere_mesh, sphere_material, transform);
+    renderer.enable_shadows(true);
+    renderer.set_shadow_ortho(20.0f, 0.1f, 100.0f);
     
-    entity_t *e = entity_lib.get_entity(sphere);
-    if (e) {
-        e->t_position = { 0.0f, 1.0f, 2.0f };
-        e->t_rotation = { 0.0f, 0.0f, 0.0f };
-        e->t_scale    = { 1.0f, 1.0f, 1.0f };
-        e->mesh_primitive_type = primitive_type_t::SPHERE_UV;
-        e->mesh_params[0] = 36.0f;
-        e->mesh_params[1] = 18.0f;
-        e->mesh_param_count = 2;
-        e->manifest_material_name = "chrome";
-    }
+    // get/create entities
+    helmet = assets.get_entity("helmet");
+    sphere = editor.create_entity_from_primitive(primitive_type_t::SPHERE_UV, "test_sphere", { 0.0f, 1.0f, 2.0f }, "chrome");
+    editor.create_entity_from_primitive(primitive_type_t::PLANE, "ground", { 0.0f, 0.0f, 0.0f }, "chrome");
     
     // 
     orbit_camera.m_orbit_speed = 0.5f;
     orbit_camera.m_x_angle = 45.0f;
     orbit_camera.m_y_angle = 60.0f;
     orbit_camera.m_distance = 14.0f;
-    // cam.set_mode(camera_mode_t::ORBIT);
 
-    //
-    syn_load_ui_layout("../assets/layout.syn");
-    
     //
     while (!root_window.should_close()) {
 
@@ -76,9 +62,9 @@ void render(float _dt)
 {
     // renderer.render_skybox();
 
-    entity_t *pool = entity_lib.get_pool();
+    entity_t *ent_pool = entity_lib.get_pool();
     for (uint32_t i = 0; i < SYN_MAX_ENTITY_COUNT; i++) {
-        if (pool[i].is_active) {
+        if (ent_pool[i].is_active) {
             renderer.cmd_submit_entity({ i + 1 });
         }
     }

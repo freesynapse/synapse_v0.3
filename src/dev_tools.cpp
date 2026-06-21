@@ -21,9 +21,11 @@ void dev_tools_t::handle_input()
     }
 
     if (input.was_key_pressed(SYN_KEY_F1)) {
-        window_t *hw = window_manager.get_window(window_manager.get_help_window_handle());
+        window_handle_t hw_handle = window_manager.get_help_window_handle();
+        window_t *hw = window_manager.get_window(hw_handle);
         if (hw) {
-            hw->set_visible(!hw->is_visible());            
+            window_manager.bring_window_to_front(hw_handle);
+            hw->set_visible(!hw->is_visible());
         }
     }
     

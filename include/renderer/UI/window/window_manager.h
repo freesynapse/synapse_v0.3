@@ -35,6 +35,7 @@ public:
     window_handle_t add_window(const window_desc_t &_desc);
     void release_window(window_handle_t _handle);    
     window_t *get_window(const window_handle_t &_handle);
+    void bring_window_to_front(const window_handle_t &_handle);
 
     // viewports
     void set_viewport_window(const window_handle_t &_handle);
@@ -100,6 +101,9 @@ private:
 
     shader_handle_t m_tex_quad_shader_handle;
     vertex_array_t m_tex_quad_vao;
+
+    shader_handle_t m_ui_color_picker_shader_handle;
+    
     
     glm::mat4 m_projection;
     
@@ -144,6 +148,10 @@ private:
     bool m_viewport_pick_pending = false;
     glm::vec2 m_viewport_click_pos = glm::vec2(0.0f, 0.0f);
     entity_handle_t m_viewport_pick_result = { 0 };
+
+    // window widget interacion
+    widget_t *m_dragging_widget = nullptr;
+    window_t *m_dragging_window = nullptr;
     
 };
 

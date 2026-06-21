@@ -1,6 +1,5 @@
 
 #include "renderer/camera/camera_controller.h"
-#include "utils/log.h"
 
 #include "c_api.h"
 

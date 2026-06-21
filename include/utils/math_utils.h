@@ -45,6 +45,8 @@ glm::vec2 world_to_screen_fbo(const glm::vec3 &_world_pos,
                               const glm::mat4 &_view,
                               const glm::mat4 &_projection);
 
+glm::vec3 hsv_to_rgb(const glm::vec3 &_hsv);
+glm::vec3 rgb_to_hsv(const glm::vec3 &_rgb);
 
 // 
 template<class T>

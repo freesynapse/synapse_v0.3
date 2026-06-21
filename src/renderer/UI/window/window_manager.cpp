@@ -37,7 +37,10 @@ void window_manager_t::init()
     uint32_t is[] = { 0, 1, 2, 2, 3, 0 };
     m_tex_quad_vao.set_buffer_layout({ { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT2 } });
     m_tex_quad_vao.create(vs, 4, is, 6);
-    
+
+    // 
+    m_ui_color_picker_shader_handle = shader_lib.load_from_file("ui_color_picker_shader", 
+        "../assets/shaders/ui_color_picker.glsl");
     //
     events.register_callback(event_type_t::INPUT_MOUSE_BUTTON, __window_manager_on_mouse_button_callback);
     events.register_callback(event_type_t::INPUT_MOUSE_MOVE, __window_manager_on_mouse_move_callback);
@@ -120,6 +123,30 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
                     if (clicked_widget->consumes_click) return;
                 }
 
+                else if (clicked_widget->type == widget_type_t::COLOR_PICKER_HUE) {
+                    glm::vec2 wp = clicked_widget->get_absolute_position(
+                        glm::vec2(win->position.x, win->position.y + win->title_bar_height), 
+                        glm::vec2(win->size.x, win->size.y - win->title_bar_height));
+                    float t = glm::clamp(1.0f - (pos.y - wp.y) / clicked_widget->size.y, 0.0f, 1.0f);
+                    if (clicked_widget->color_picker_hue_widget.hue) { *clicked_widget->color_picker_hue_widget.hue = t; }
+                    if (clicked_widget->color_picker_hue_widget.on_change) { clicked_widget->color_picker_hue_widget.on_change(t); }
+                    m_dragging_widget = clicked_widget;
+                    m_dragging_window = win;
+                    if (clicked_widget->consumes_click) return;
+                }
+                
+                else if (clicked_widget->type == widget_type_t::COLOR_PICKER_SV) {
+                    glm::vec2 wp = clicked_widget->get_absolute_position(
+                        glm::vec2(win->position.x, win->position.y + win->title_bar_height), 
+                        glm::vec2(win->size.x, win->size.y - win->title_bar_height));
+                    float s = glm::clamp((pos.x - wp.x) / clicked_widget->size.x, 0.0f, 1.0f);
+                    float v = glm::clamp(1.0f - (pos.y - wp.y) / clicked_widget->size.y, 0.0f, 1.0f);
+                    if (clicked_widget->color_picker_sv_widget.on_change) { clicked_widget->color_picker_sv_widget.on_change(s, v); }
+                    m_dragging_widget = clicked_widget;
+                    m_dragging_window = win;
+                    if (clicked_widget->consumes_click) return;
+                }
+                
                 else if (clicked_widget->type == widget_type_t::FLOAT_FIELD) {
                     // clear focus from all other float fields
                     for (uint32_t i = 0; i < SYN_MAX_WINDOW_COUNT; i++) {
@@ -214,6 +241,9 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
     
     } else if (action == SYN_MOUSE_BUTTON_RELEASED) {
 
+        m_dragging_widget = nullptr;
+        m_dragging_window = nullptr;
+        
         if (m_viewport_pick_pending) {
             float dist = glm::length(pos - m_viewport_click_pos);
             if (dist < 4.0f) {
@@ -381,6 +411,27 @@ void window_manager_t::on_mouse_move_event(const event_t &_e)
         return;
     }
 
+    // color picker widget
+    if (m_dragging_widget) {
+        glm::vec2 wp = m_dragging_widget->get_absolute_position(
+            glm::vec2(m_dragging_window->position.x, m_dragging_window->position.y + m_dragging_window->title_bar_height),
+            glm::vec2(m_dragging_window->size.x, m_dragging_window->size.y - m_dragging_window->title_bar_height));
+    
+        if (m_dragging_widget->type == widget_type_t::COLOR_PICKER_HUE) {
+            float t = glm::clamp(1.0f - (pos.y - wp.y) / m_dragging_widget->size.y, 0.0f, 1.0f);
+            if (m_dragging_widget->color_picker_hue_widget.hue)
+                *m_dragging_widget->color_picker_hue_widget.hue = t;
+            if (m_dragging_widget->color_picker_hue_widget.on_change)
+                m_dragging_widget->color_picker_hue_widget.on_change(t);
+        }
+        else if (m_dragging_widget->type == widget_type_t::COLOR_PICKER_SV) {
+            float s = glm::clamp((pos.x - wp.x) / m_dragging_widget->size.x, 0.0f, 1.0f);
+            float v = glm::clamp(1.0f - (pos.y - wp.y) / m_dragging_widget->size.y, 0.0f, 1.0f);
+            if (m_dragging_widget->color_picker_sv_widget.on_change)
+                m_dragging_widget->color_picker_sv_widget.on_change(s, v);
+        }
+        return;
+    }    
     // if an axis is already grabbed, update
     if (editor.get_grabbed_ui_transform_axis() != ui_transform_axis_t::NONE) {
         cam.disable();
@@ -586,6 +637,8 @@ void window_manager_t::on_input_char_event(const event_t &_e)
 void window_manager_t::on_ui_window_close_event(const event_t &_e)
 {
     window_handle_t handle = _e.as.ui_window_close.handle;
+    // window_t *win = get_window(handle);
+    // win->hide();
     release_window(handle);
     
 }
@@ -761,6 +814,14 @@ window_t *window_manager_t::get_window(const window_handle_t &_handle)
 }
 
 // 
+void window_manager_t::bring_window_to_front(const window_handle_t &_handle)
+{
+    window_t *win = get_window(_handle);
+    win->depth = m_next_depth;
+    m_next_depth += m_ddepth_per_layer;
+}
+
+// 
 void window_manager_t::set_viewport_window(const window_handle_t &_handle)
 {
     window_t *win = get_window(_handle);
@@ -865,7 +926,7 @@ void window_manager_t::set_focused_window(window_handle_t _handle)
         if (win) {
             win->set_focused(true);
             win->depth = m_next_depth;
-            m_next_depth += 0.05;
+            m_next_depth += m_ddepth_per_layer;
         
             if (m_next_depth > 99.5f) {
                 reorganize_depths();
@@ -1037,51 +1098,6 @@ void window_manager_t::draw_windows()
     m_projection = glm::ortho(0.0f, root_window.get_fwidth(), 
                               root_window.get_fheight(), 0.0f, 
                               m_zfar, m_znear);
-
-    // for now, we hard code syncing the fixed windows at this level
-
-    // sync transform
-    window_t *tw = get_window(m_transform_window_handle);
-    if (tw && selected_entity_handle.is_valid()) {
-        entity_t *e = entity_lib.get_entity(selected_entity_handle);
-        if (e) {
-            float vals[9] = {
-                e->t_position.x, e->t_position.y, e->t_position.z,
-                e->t_rotation.x, e->t_rotation.y, e->t_rotation.z,
-                e->t_scale.x,    e->t_scale.y,    e->t_scale.z,
-            };
-            // widgets: 0=close_btn, 1-9=float fields
-            for (int i = 0; i < 9; i++) {
-                widget_t *w = tw->get_widget(i + 1);
-                if (w && w->type == widget_type_t::FLOAT_FIELD && !w->float_field_widget.editing) {
-                    w->float_field_widget.value = vals[i];
-                } 
-            }
-        }
-    }
-
-    // sync material
-    window_t *mw = get_window(m_material_window_handle);
-    if (mw && selected_entity_handle.is_valid()) {
-        entity_t *e = entity_lib.get_entity(selected_entity_handle);
-        if (e) {
-            material_internal_t *mat = mat_lib.get_material(e->material_handle);
-            if (mat && mat->data_size >= sizeof(material_pbr_payload_t)) {
-                material_pbr_payload_t *pbr = (material_pbr_payload_t *)mat->data;
-                float vals[7] = {
-                    pbr->albedo_color.r, pbr->albedo_color.g, pbr->albedo_color.b,
-                    pbr->roughness, pbr->metallic, pbr->ao, pbr->tiling_factor
-                };
-                // widgets: 0=close_btn, 1-8=float fields
-                for (int i = 0; i < 7; i++) {
-                    widget_t *w = mw->get_widget(i + 1);
-                    if (w && w->type == widget_type_t::FLOAT_FIELD && !w->float_field_widget.editing) {
-                        w->float_field_widget.value = vals[i];
-                    }
-                }
-            }
-        }
-    }
     
     // 1. draw all colored geometry
     renderer_2d.batch.begin_batch();
@@ -1089,6 +1105,7 @@ void window_manager_t::draw_windows()
     for (uint32_t i = 0; i < SYN_MAX_WINDOW_COUNT; i++) {
         window_t *win = &m_pool[i];
         if (win->is_active() && win->is_visible()) {
+            if (win->on_update) win->on_update(win);
             win->draw();
         }
     }

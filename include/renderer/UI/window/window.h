@@ -14,6 +14,7 @@ class window_t
 {
 public:
     friend class window_manager_t;
+    friend class editor_t;
     
 public:
     window_t() = default;
@@ -27,6 +28,7 @@ public:
     void destroy_framebuffer();
 
     void on_resize();
+    std::function<void(window_t *)> on_update = nullptr;
     
     void draw();
     void draw_widgets();
@@ -56,6 +58,8 @@ public:
     const bool &has_frambuffer() { return m_has_framebuffer; }
     const framebuffer_handle_t &get_framebuffer_handle() { return m_framebuffer_handle; }
 
+    void hide() { m_is_visible = false; }
+    void show() { m_is_visible = true; }
     glm::vec2 get_content_size() { return glm::vec2(size.x, size.y - title_bar_height); }
     glm::vec2 get_content_position() { return glm::vec2(position.x, position.y + title_bar_height); }
 
@@ -64,6 +68,8 @@ public:
     widget_t *get_widget(uint32_t _index);
     widget_t *get_widget_at_pos(const glm::vec2 &_pos);
     widget_t *get_widget_of_type(widget_type_t _type);
+    widget_t *get_widgets() { return m_widgets; }
+    uint32_t get_widget_count() { return m_widget_count; }
 
     // tabs
     window_handle_t get_active_tab_child_handle();

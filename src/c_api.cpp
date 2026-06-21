@@ -209,7 +209,7 @@ void syn_load_ui_layout(const char *_filepath)
             win.size = abs_size;
             window_manager.add_window(win);
         }
-
+        
         memset(type, 0, sizeof(type));
         memset(name, 0, sizeof(name));
         position = { 0.0f, 0.0f };
@@ -235,6 +235,10 @@ void syn_load_ui_layout(const char *_filepath)
     // commit last block
     flush_window();
     fclose(fp);
+
+    // load other windows, not in the layout file
+    syn_create_color_picker_window("Color Picker", { 400.0f, 200.0f }, { 320.0f, 280.0f });
+    
     SYN_INFO("layout loaded from '%s'.\n", _filepath);
     
 }
@@ -410,6 +414,26 @@ void syn_create_transform_window(const char *_name, const glm::vec2 &_pos, const
         };
         tw->add_widget(f);
     }
+
+    tw->on_update = [](window_t *_w) {
+        if (!selected_entity_handle.is_valid()) return;
+        entity_t *e = entity_lib.get_entity(selected_entity_handle);
+        if (!e) return;
+
+        float vals[9] = {
+            e->t_position.x, e->t_position.y, e->t_position.z,
+            e->t_rotation.x, e->t_rotation.y, e->t_rotation.z,
+            e->t_scale.x,    e->t_scale.y,    e->t_scale.z,
+        };
+        // widgets: 0=close_btn, 1-9=float fields
+        for (int i = 0; i < 9; i++) {
+            widget_t *w = _w->get_widget(i + 1);
+            if (w && w->type == widget_type_t::FLOAT_FIELD && !w->float_field_widget.editing) {
+                w->float_field_widget.value = vals[i];
+            } 
+        }        
+    };
+    
     tw->on_resize();
     
 }
@@ -462,6 +486,21 @@ void syn_create_material_window(const char *_name, const glm::vec2 &_pos, const 
         mw->add_widget(f);
     }
 
+    // color swatch for albedo color
+    widget_t swatch;
+    swatch.type     = widget_type_t::COLOR_SWATCH;
+    swatch.anchor   = widget_anchor_t::TOP_LEFT;
+    swatch.position = { label_x + field_w + 10.0f, 0.0f };  // next to r field
+    swatch.size     = { 20.0f, 20.0f };
+    swatch.color    = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);  // updated dynamically
+    swatch.on_click = [](widget_t *w) {
+        window_t *mw = window_manager.get_window(window_manager.get_material_window_handle());
+        glm::vec2 pos = { mw->position.x + mw->size.x + 4.0f, mw->position.y };
+        editor.open_color_picker(input.mouse_position);
+    };
+    mw->add_widget(swatch);    
+
+    // albedo texture selection button
     widget_t btn;
     btn.type = widget_type_t::BUTTON;
     btn.anchor = widget_anchor_t::TOP_LEFT;
@@ -472,6 +511,37 @@ void syn_create_material_window(const char *_name, const glm::vec2 &_pos, const 
         editor.open_texture_select();        
     };
     mw->add_widget(btn);
+
+    mw->on_update = [](window_t *_w) {
+        if (!selected_entity_handle.is_valid()) return;
+        entity_t *e = entity_lib.get_entity(selected_entity_handle);
+        if (!e) return;
+
+        material_internal_t *mat = mat_lib.get_material(e->material_handle);
+        if (!mat || mat->data_size < sizeof(material_pbr_payload_t)) return;
+
+        material_pbr_payload_t *pbr = (material_pbr_payload_t *)mat->data;
+        float vals[7] = {
+            pbr->albedo_color.r, pbr->albedo_color.g, pbr->albedo_color.b,
+            pbr->roughness, pbr->metallic, pbr->ao, pbr->tiling_factor
+        };
+        // widgets: 0=close_btn, 1-8=float fields
+        for (int i = 0; i < 7; i++) {
+            widget_t *w = _w->get_widget(i + 1);
+            if (w && w->type == widget_type_t::FLOAT_FIELD && !w->float_field_widget.editing) {
+                w->float_field_widget.value = vals[i];
+            }
+        }
+
+        // 
+        widget_t *ws = _w->get_widgets();
+        for (uint32_t i = 0; i < _w->get_widget_count(); i++) {
+            if (ws[i].type == widget_type_t::COLOR_SWATCH) {
+                ws[i].color = pbr->albedo_color;
+            }
+        }
+        
+    };
     
     mw->on_resize();
     
@@ -610,6 +680,110 @@ void syn_create_help_window(const char *_name, const glm::vec2 &_pos, const glm:
     
 }
 
+// 
+void syn_create_color_picker_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size)
+{
+    window_t win;
+    win.name     = _name;
+    win.position = _pos;
+    win.size     = _size;
+    window_handle_t handle = window_manager.add_window(win);
+    editor.set_color_picker_window_handle(handle);
+
+    window_t *pw = window_manager.get_window(handle);
+    pw->set_visible(false);
+    pw->set_resizable(false);
+
+    float padding   = 4.0f;
+    float strip_w   = 20.0f;
+    float btn_h     = 22.0f;
+    float field_h   = 20.0f;
+    float field_row = field_h + padding;
+    float content_w = _size.x - padding * 2.0f;
+    float content_h = _size.y - pw->title_bar_height - padding * 2.0f;
+    float bottom_h  = btn_h + field_row + padding;
+    float sq_h      = content_h - bottom_h;
+    float sv_w      = content_w - strip_w - padding;
+
+    // SV square
+    widget_t sv;
+    sv.type     = widget_type_t::COLOR_PICKER_SV;
+    sv.anchor   = widget_anchor_t::TOP_LEFT;
+    sv.position = { padding, padding };
+    sv.size     = { sv_w, sq_h };
+    sv.color_picker_sv_widget.hue        = &editor.m_color_picker_hsv.x;
+    sv.color_picker_sv_widget.saturation = &editor.m_color_picker_hsv.y;
+    sv.color_picker_sv_widget.value      = &editor.m_color_picker_hsv.z;
+    sv.color_picker_sv_widget.on_change = [](float _s, float _v) {
+        editor.m_color_picker_hsv.y = _s;
+        editor.m_color_picker_hsv.z = _v;
+        editor.update_color_picker_from_hsv();
+    };
+    pw->add_widget(sv);
+
+    // H strip
+    widget_t hue;
+    hue.type     = widget_type_t::COLOR_PICKER_HUE;
+    hue.anchor   = widget_anchor_t::TOP_LEFT;
+    hue.position = { padding + sv_w + padding, padding };
+    hue.size     = { strip_w, sq_h };
+    hue.color_picker_hue_widget.hue = &editor.m_color_picker_hsv.x;
+    hue.color_picker_hue_widget.on_change = [](float _h) {
+        editor.m_color_picker_hsv.x = _h;
+        editor.update_color_picker_from_hsv();
+    };
+    pw->add_widget(hue);
+
+    // RGB float fields
+    float field_w = (content_w - padding * 2.0f) / 3.0f;
+    float field_y = padding + sq_h + padding;
+    for (int i = 0; i < 3; i++) {
+        widget_t f;
+        f.type     = widget_type_t::FLOAT_FIELD;
+        f.anchor   = widget_anchor_t::TOP_LEFT;
+        f.position = { padding + i * (field_w + padding), field_y };
+        f.size     = { field_w, field_h };
+        f.float_field_widget.min   = 0.0f;
+        f.float_field_widget.max   = 1.0f;
+        f.float_field_widget.value = 1.0f;
+        int idx = i;
+        f.float_field_widget.on_change = [idx](float _v) {
+            editor.m_color_picker_rgb[idx] = _v;
+            editor.update_color_picker_from_rgb();
+        };
+        pw->add_widget(f);
+    }
+
+    // Select / Cancel buttons
+    float btn_w = (content_w - padding) * 0.5f;
+    float btn_y = field_y + field_row + padding;
+
+    widget_t cancel_btn;
+    cancel_btn.type = widget_type_t::BUTTON;
+    cancel_btn.anchor = widget_anchor_t::TOP_LEFT;
+    cancel_btn.position = { padding, btn_y };
+    cancel_btn.size = { btn_w, btn_h };
+    cancel_btn.text = "Cancel";
+    cancel_btn.on_click = [](widget_t *) {
+        editor.close_color_picker(false);
+    };
+    pw->add_widget(cancel_btn);
+
+    widget_t select_btn;
+    select_btn.type = widget_type_t::BUTTON;
+    select_btn.anchor = widget_anchor_t::TOP_LEFT;
+    select_btn.position = { padding + btn_w + padding, btn_y };
+    select_btn.size = { btn_w, btn_h };
+    select_btn.text = "Select";
+    select_btn.on_click = [](widget_t *) {
+        editor.close_color_picker(true);
+    };
+    pw->add_widget(select_btn);
+
+    pw->on_resize();
+    
+}
+
 
 //---------------------------------------------------------------------------------------
 // rendering loop functions
@@ -631,22 +805,10 @@ void syn_render_begin_3d()
 {
     syn_prerender();
     
-    // 
-    window_t *viewport = window_manager.get_viewport_window();
-    if (viewport && viewport->has_frambuffer()) {
-        framebuffer_t *fbo = api.fbo_handler.get_framebuffer(viewport->get_framebuffer_handle());
-        if (fbo) {
-            fbo->bind();
-            
-            // set viewport to drawable area
-            glm::vec2 content_size = viewport->get_content_size();
-            glViewport(0, 0, (size_t)content_size.x, (size_t)content_size.y);
-
-            api.set_clear_color({ 0.2f, 0.2f, 0.2f, 1.0f });
-            api.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-        }
-    }
-
+    //
+    api.set_clear_color({ 0.2f, 0.2f, 0.2f, 1.0f });
+    renderer.bind_scene_fbuffer();
+    
     // perspective_camera.update(time_step.dt);
     cam.update(time_step.dt);
 

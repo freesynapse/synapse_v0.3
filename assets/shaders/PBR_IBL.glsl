@@ -79,15 +79,19 @@ layout(binding=4) uniform sampler2D u_ao_map;
 layout(binding=5) uniform sampler2D u_emissive_map;
 layout(binding=6) uniform samplerCube u_irradiance_map;
 layout(binding=7) uniform samplerCube u_prefilter_map;
+layout(binding=8) uniform sampler2DShadow u_shadow_map;
 
 uniform vec3 u_view_pos;
+uniform int u_shadows_enabled;
+uniform mat4 u_light_space_matrix;
 
 const float PI = 3.14159265359;
 const float MAX_REFLECTION_LOD = 4.0;
 
 // --- PBR Functions ---
 
-float DistributionGGX(vec3 N, vec3 H, float roughness) {
+float distribution_ggx(vec3 N, vec3 H, float roughness)
+{
     float a = roughness * roughness;
     float a2 = a * a;
     float NdotH = max(dot(N, H), 0.0);
@@ -98,7 +102,9 @@ float DistributionGGX(vec3 N, vec3 H, float roughness) {
     return nom / denom;
 }
 
-float GeometrySchlickGGX(float NdotV, float roughness) {
+// 
+float geometry_schlick_ggx(float NdotV, float roughness)
+{
     float r = (roughness + 1.0);
     float k = (r * r) / 8.0;
     float nom   = NdotV;
@@ -106,18 +112,46 @@ float GeometrySchlickGGX(float NdotV, float roughness) {
     return nom / denom;
 }
 
-float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
+// 
+float geometry_smith(vec3 N, vec3 V, vec3 L, float roughness)
+{
     float NdotV = max(dot(N, V), 0.0);
     float NdotL = max(dot(N, L), 0.0);
-    float ggx2 = GeometrySchlickGGX(NdotV, roughness);
-    float ggx1 = GeometrySchlickGGX(NdotL, roughness);
+    float ggx2 = geometry_schlick_ggx(NdotV, roughness);
+    float ggx1 = geometry_schlick_ggx(NdotL, roughness);
     return ggx1 * ggx2;
 }
 
-vec3 fresnelSchlick(float cosTheta, vec3 F0) {
-    return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+// 
+vec3 fresnel_schlick(float cosTheta, vec3 F0) { return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0); }
+
+// 
+float shadow_factor(vec3 world_pos, vec3 N, vec3 L)
+{
+    if (u_shadows_enabled == 0)
+        return 1.0;
+
+    vec4 light_space_pos = u_light_space_matrix * vec4(world_pos, 1.0);
+    vec3 proj = light_space_pos.xyz / light_space_pos.w;
+    proj = proj * 0.5 + 0.5;
+
+    if (proj.z > 1.0)
+        return 1.0;
+
+    float bias = max(0.005 * (1.0 - dot(N, L)), 0.0005);
+    proj.z -= bias;
+
+    float shadow = 0.0;
+    vec2 texel_size = vec2(1.0 / float(textureSize(u_shadow_map, 0).x));
+    for (int x = -1; x <= 1; x++) {
+        for (int y = -1; y <= 1; y++) {
+            shadow += texture(u_shadow_map, vec3(proj.xy + vec2(x, y) * texel_size, proj.z));
+        }
+    }
+    return shadow / 9.0;
 }
 
+// 
 void main()
 {
     vec2 uv = v_uv * u_tiling_factor;
@@ -197,23 +231,24 @@ void main()
         float NdotL = max(dot(N, L), 0.0);
         
         // Cook-Torrance BRDF
-        float NDF = DistributionGGX(N, H, roughness);
-        float G   = GeometrySmith(N, V, L, roughness);
-        vec3  F   = fresnelSchlick(max(dot(H, V), 0.0), F0);
+        float NDF = distribution_ggx(N, H, roughness);
+        float G   = geometry_smith(N, V, L, roughness);
+        vec3  F   = fresnel_schlick(max(dot(H, V), 0.0), F0);
     
         vec3 numerator    = NDF * G * F;
         float denominator = 4.0 * max(dot(N, V), 0.0) * NdotL + 0.0001;
         vec3 specular = numerator / denominator;
     
         // vec3 kS = F;
-        vec3 kS = fresnelSchlick(max(dot(N, V), 0.0), F0);
+        vec3 kS = fresnel_schlick(max(dot(N, V), 0.0), F0);
         vec3 kD = (vec3(1.0) - kS) * (1.0 - metallic);
-    
-        Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+
+        float shadow = (type > 0.5 && type < 1.5) ? shadow_factor(v_world_pos, N, L) : 1.0;
+        Lo += (kD * albedo / PI + specular) * radiance * NdotL * shadow;
 
     }
 
-    vec3 kS_env = fresnelSchlick(max(dot(N, V), 0.0), F0);
+    vec3 kS_env = fresnel_schlick(max(dot(N, V), 0.0), F0);
     vec3 kD_env = (vec3(1.0) - kS_env) * (1.0 - metallic);
     
     vec3 irradiance = texture(u_irradiance_map, N).rgb;

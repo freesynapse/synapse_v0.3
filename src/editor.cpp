@@ -189,9 +189,10 @@ void editor_t::load_scene(const std::string &_path)
             else if (tokens[0] == "material")
                 in_material = true;
             else if (in_material) {
-                if (tokens[0] == "albedo")
+                if (tokens[0] == "albedo") {
                     pbr.albedo_color = { std::stof(tokens[1]), std::stof(tokens[2]),
                                          std::stof(tokens[3]), std::stof(tokens[4]) };
+                }
                 else if (tokens[0] == "roughness")   pbr.roughness     = std::stof(tokens[1]);
                 else if (tokens[0] == "metallic")    pbr.metallic      = std::stof(tokens[1]);
                 else if (tokens[0] == "ao")          pbr.ao            = std::stof(tokens[1]);
@@ -294,6 +295,107 @@ void editor_t::load_scene(const std::string &_path)
 
     fclose(f);
     SYN_INFO("scene loaded from '%s'.\n", _path.c_str());
+}
+
+// 
+entity_handle_t editor_t::create_entity_from_asset(const std::string &_asset_name,
+                                                   const glm::vec3 &_position,
+                                                   const std::string &_material_name)
+{
+    mesh_handle_t mesh = assets.get_entity_mesh(_asset_name);
+    if (!mesh.id) {
+        SYN_ERROR("no mesh for '%s'.\n", _asset_name.c_str());
+        return { 0 };
+    }
+
+    std::string mat_name = _material_name.empty() ?
+        assets.get_material_name(assets.get_material(_asset_name)) :
+        _material_name;
+
+    material_handle_t mat = mat_lib.create_material_from(mat_name.empty() ? 
+        mat_lib.fallback_material_handle :
+        assets.get_material(mat_name)
+    );
+
+    glm::mat4 transform = entity_t::make_transform(_position, {}, glm::vec3(1.0f));
+    std::string uname = entity_lib.generate_unique_name(_asset_name);
+    entity_handle_t handle = entity_lib.create_entity(uname, mesh, mat, transform);
+
+    entity_t *e = entity_lib.get_entity(handle);
+    if (e) {
+        e->t_position             = _position;
+        e->t_rotation             = {};
+        e->t_scale                = glm::vec3(1.0f);
+        e->mesh_primitive_type    = primitive_type_t::NONE;
+        e->manifest_material_name = mat_name;
+        e->is_material_dirty      = false;
+    }
+    
+    return handle;
+    
+}
+
+// 
+entity_handle_t editor_t::create_entity_from_primitive(primitive_type_t _type,
+                                                       const std::string &_name,
+                                                       const glm::vec3 &_position,
+                                                       const std::string &_material_name)
+{
+    mesh_handle_t mesh = { 0 };
+    float params[4] = {};
+    uint32_t param_count = 0;
+
+    switch (_type) {
+        case primitive_type_t::CUBE:
+            mesh = mesh_generator.create_cube_mesh();
+            break;
+        case primitive_type_t::SPHERE_UV:
+            mesh = mesh_generator.create_uv_sphere_mesh(1.0f, 36, 18);
+            params[0] = 36; params[1] = 18; param_count = 2;
+            break;
+        case primitive_type_t::PLANE:
+            mesh = mesh_generator.create_plane_mesh(10.0f, 21);
+            params[0] = 10; params[1] = 21; param_count = 2;
+            break;
+        case primitive_type_t::CONE:
+            mesh = mesh_generator.create_cone_mesh(1.0f, 2.0f, 32);
+            params[0] = 1; params[1] = 2; params[2] = 32; param_count = 3;
+            break;
+        case primitive_type_t::CYLINDER:
+            mesh = mesh_generator.create_cylinder_mesh(1.0f, 2.0f, 32);
+            params[0] = 1; params[1] = 2; params[2] = 32; param_count = 3;
+            break;
+        case primitive_type_t::TORUS:
+            mesh = mesh_generator.create_torus_mesh(1.0f, 0.3f, 36, 18);
+            params[0] = 1; params[1] = 0.3f; params[2] = 36; params[3] = 18; param_count = 4;
+            break;
+        default:
+            SYN_ERROR("unknown primitive type.\n");
+            return { 0 };
+    }
+
+    material_handle_t mat = _material_name.empty() ?
+        mat_lib.create_material_from(mat_lib.fallback_material_handle) :
+        mat_lib.create_material_from(assets.get_material(_material_name));
+
+    glm::mat4 transform = entity_t::make_transform(_position, {}, glm::vec3(1.0f));
+    std::string uname = entity_lib.generate_unique_name(_name);
+    entity_handle_t handle = entity_lib.create_entity(uname, mesh, mat, transform);
+
+    entity_t *e = entity_lib.get_entity(handle);
+    if (e) {
+        e->t_position             = _position;
+        e->t_rotation             = {};
+        e->t_scale                = glm::vec3(1.0f);
+        e->mesh_primitive_type    = _type;
+        e->mesh_param_count       = param_count;
+        memcpy(e->mesh_params, params, sizeof(params));
+        e->manifest_material_name = _material_name;
+        e->is_material_dirty      = _material_name.empty();
+    }
+
+    return handle;
+    
 }
 
 // 
@@ -465,6 +567,7 @@ void editor_t::assign_texture_to_selected(const std::string &_name)
             }
         }
     }
+    e->is_material_dirty = true;
 
     // close after select
     window_t *pw = window_manager.get_window(m_texture_select_window_handle);
@@ -851,3 +954,112 @@ void editor_t::update_ui_transform_drag(glm::vec2 &_screen_pos)
     }
     
 }
+
+// 
+void editor_t::open_color_picker(const glm::vec2 &_anchor_pos)
+{
+    if (!selected_entity_handle.is_valid()) return;
+    entity_t *e = entity_lib.get_entity(selected_entity_handle);
+    if (!e) return;
+    material_internal_t *mat = mat_lib.get_material(e->material_handle);
+    if (!mat) return;
+    material_pbr_payload_t *pbr = (material_pbr_payload_t *)mat->data;
+
+    // save original color
+    m_color_picker_prev_color = pbr->albedo_color;
+
+    // init HSV from current color
+    m_color_picker_rgb = glm::vec3(pbr->albedo_color);
+    glm::vec3 hsv = rgb_to_hsv(m_color_picker_rgb);
+    m_color_picker_hsv = hsv;
+    update_color_picker_from_hsv();
+
+    // show window
+    window_t *pw = window_manager.get_window(m_color_picker_window_handle);
+    if (!pw) return;
+    glm::vec2 pos = glm::vec2(
+        glm::min(_anchor_pos.x, root_window.get_fwidth() - pw->size.x),
+        glm::min(_anchor_pos.y, root_window.get_fheight() - pw->size.x)
+    );
+    pw->position = pos;
+    pw->set_visible(true);
+    window_manager.set_focused_window(m_color_picker_window_handle);
+    
+}
+
+// 
+void editor_t::close_color_picker(bool _apply)
+{
+    if (!_apply) {
+        // revert to original
+        if (selected_entity_handle.is_valid()) {
+            entity_t *e = entity_lib.get_entity(selected_entity_handle);
+            if (e) {
+                material_internal_t *mat = mat_lib.get_material(e->material_handle);
+                if (mat) {
+                    material_pbr_payload_t *pbr = (material_pbr_payload_t *)mat->data;
+                    pbr->albedo_color = m_color_picker_prev_color;
+                }
+            }
+        }
+    }
+    window_t *pw = window_manager.get_window(m_color_picker_window_handle);
+    if (pw) pw->set_visible(false);
+    
+}
+
+// 
+void editor_t::update_color_picker_from_hsv()
+{
+    glm::vec3 rgb = hsv_to_rgb(m_color_picker_hsv);
+    m_color_picker_rgb = rgb;
+
+    // update material albedo in real-time
+    if (selected_entity_handle.is_valid()) {
+        entity_t *e = entity_lib.get_entity(selected_entity_handle);
+        if (e) {
+            material_internal_t *mat = mat_lib.get_material(e->material_handle);
+            if (mat) {
+                material_pbr_payload_t *pbr = (material_pbr_payload_t *)mat->data;
+                pbr->albedo_color = glm::vec4(rgb, 1.0f);
+            }
+            e->is_material_dirty = true;
+        }
+    }
+
+    // sync float fields
+    window_t *pw = window_manager.get_window(m_color_picker_window_handle);
+    if (!pw) return;
+    float rgb_vals[3] = { rgb.r, rgb.g, rgb.b };
+    int field_count = 0;
+    for (uint32_t i = 0; i < pw->m_widget_count && field_count < 3; i++) {
+        widget_t &w = pw->m_widgets[i];
+        if (w.type == widget_type_t::FLOAT_FIELD && !w.float_field_widget.editing) {
+            w.float_field_widget.value = rgb_vals[field_count++];
+        }
+    }
+}
+
+// 
+void editor_t::update_color_picker_from_rgb()
+{
+    glm::vec3 hsv = rgb_to_hsv(m_color_picker_rgb);
+    m_color_picker_hsv = hsv;
+
+    // update material albedo in real-time
+    if (selected_entity_handle.is_valid()) {
+        entity_t *e = entity_lib.get_entity(selected_entity_handle);
+        if (e) {
+            material_internal_t *mat = mat_lib.get_material(e->material_handle);
+            if (mat) {
+                material_pbr_payload_t *pbr = (material_pbr_payload_t *)mat->data;
+                pbr->albedo_color = glm::vec4(m_color_picker_rgb, 1.0f);
+                e->is_material_dirty = true;
+            }
+        }
+    }
+    
+}
+
+
+

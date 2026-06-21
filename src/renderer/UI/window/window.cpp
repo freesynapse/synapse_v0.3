@@ -395,7 +395,84 @@ void window_t::draw_widgets()
                     
                 break;
             }
+
+            case widget_type_t::COLOR_PICKER_SV: {
+                float hue = w->color_picker_sv_widget.hue ? *w->color_picker_sv_widget.hue : 0.0f;
+                shader_t *shader = shader_lib.get_shader(window_manager.m_ui_color_picker_shader_handle);
+                if (!shader) break;
+
+                shader->enable();
+                shader->set_matrix_4fv("u_projection", window_manager.m_projection);
+                shader->set_uniform_2fv("u_position", p);
+                shader->set_uniform_2fv("u_size", s);
+                shader->set_uniform_1f("u_depth", depth + window_manager.m_ddepth_layer_texture);
+                shader->set_uniform_1i("u_mode", 0);
+                shader->set_uniform_1f("u_hue", hue);
+
+                window_manager.m_tex_quad_vao.bind();
+                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+                window_manager.m_tex_quad_vao.unbind();
+
+                shader->disable();
+
+                // cross hair
+                if (!w->color_picker_sv_widget.saturation || !w->color_picker_sv_widget.value) break;
+                float cx = p.x + *w->color_picker_sv_widget.saturation * s.x;
+                float cy = p.y + (1.0f - *w->color_picker_sv_widget.value) * s.y;
+                float arm = 6.0f;
+                float thickness = 1.5f;
+                glm::vec4 color = { 1.0f, 1.0f, 1.0f, 0.75f };
+
+                renderer_2d.batch.add_quad({ cx - arm, cy - thickness * 0.5f }, 
+                                           { arm * 2.0f, thickness }, 
+                                           color, depth_offset + 0.01f);
+                renderer_2d.batch.add_quad({ cx - thickness * 0.5f, cy - arm }, 
+                                           { thickness, arm * 2.0f }, 
+                                           color, depth_offset + 0.01f);
+                break;
+            }
             
+            case widget_type_t::COLOR_PICKER_HUE: {
+                shader_t *shader = shader_lib.get_shader(window_manager.m_ui_color_picker_shader_handle);
+                if (!shader) break;
+                shader->enable();
+                shader->set_matrix_4fv("u_projection", window_manager.m_projection);
+                shader->set_uniform_2fv("u_position", p);
+                shader->set_uniform_2fv("u_size", s);
+                shader->set_uniform_1f("u_depth", depth + window_manager.m_ddepth_layer_texture);
+                shader->set_uniform_1i("u_mode", 1);
+                shader->set_uniform_1f("u_hue", 0.0f);
+
+                window_manager.m_tex_quad_vao.bind();
+                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+                window_manager.m_tex_quad_vao.unbind();
+
+                shader->disable();
+
+                // indicator bar
+                if (!w->color_picker_hue_widget.hue) break;
+                float hy = p.y + (1.0f - *w->color_picker_hue_widget.hue) * s.y;
+                renderer_2d.batch.add_quad({ p.x, hy - 1.5f },
+                                           { s.x, 3.0f },
+                                           { 1.0f, 1.0f, 1.0f, 0.75f }, 
+                                           depth_offset + 0.01f);
+                
+                break;
+            }
+
+            case widget_type_t::COLOR_SWATCH: {
+                renderer_2d.batch.add_quad(p, s, w->color, depth_offset);
+                ui_render_vertex_t outline[] = {
+                    ui_render_vertex_t({ p.x,       p.y       }, ol_c, depth_offset + 0.01f),
+                    ui_render_vertex_t({ p.x + s.x, p.y       }, ol_c, depth_offset + 0.01f),
+                    ui_render_vertex_t({ p.x + s.x, p.y + s.y }, ol_c, depth_offset + 0.01f),
+                    ui_render_vertex_t({ p.x,       p.y + s.y }, ol_c, depth_offset + 0.01f),
+                    ui_render_vertex_t({ p.x,       p.y       }, ol_c, depth_offset + 0.01f),
+                };
+                renderer_2d.batch.add_line_strip(outline, 5);
+                break;
+            }
+
             default:
                 break;
         }
