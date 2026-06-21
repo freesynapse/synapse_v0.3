@@ -576,6 +576,43 @@ resize_handle_t window_t::get_resize_handle_at_pos(const glm::vec2 &_pos)
 }
 
 // 
+void window_t::im_begin(float _padding)
+{
+    m_im_cursor_y = m_im_padding;
+    
+}
+
+// 
+widget_state_t *window_t::get_or_create_im_state(uint32_t _id)
+{
+    // 1. search
+    for (uint32_t i = 0; i < m_widget_state_count; i++) {
+        if (m_widget_states[i].id == id) return &m_widget_states[i];
+    }
+
+    // 2. else, create
+    if (m_widget_state_count >= SYN_MAX_WIDGET_STATES) {
+        SYN_WARNING("widget state pool full in window '%s'.\n", name.c_str());
+        return nullptr;
+    }
+
+    widget_state_t &s = m_widget_states[m_widget_state_count++];
+    s = widget_state_t{};
+    s.id = _id;
+    return &s;
+    
+}
+
+// 
+bool window_t::im_is_hovered(const glm::vec2 &_pos, const glm::vec2 &_size)
+{
+    glm::vec2 mpos = input.mouse_position;
+    return (mpos.x >= _pos.x && mpos.x <= _pos.x + _size.x &&
+            mpos.y >= _pos.y && mpos.y <= _pos.y + _size.y);
+}
+
+
+// 
 void window_t::add_widget(const widget_t &_widget)
 {
     if (m_widget_count >= SYN_WINDOW_MAX_WIDGET_COUNT) {

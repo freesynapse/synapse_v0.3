@@ -4,6 +4,7 @@
 #include "renderer/UI/window/window_types.h"
 #include "renderer/buffers/framebuffer_types.h"
 #include "renderer/UI/window/widget_types.h"
+#include "renderer/UI/window/widget_state.h"
 
 
 // 
@@ -63,7 +64,12 @@ public:
     glm::vec2 get_content_size() { return glm::vec2(size.x, size.y - title_bar_height); }
     glm::vec2 get_content_position() { return glm::vec2(position.x, position.y + title_bar_height); }
 
-    // widgets
+    // immediate mode
+    void im_begin(float _padding=4.0f);
+    widget_state_t *get_or_create_im_state(uint32_t _id);
+    bool im_is_hovered(const glm::vec2 &_pos, const glm::vec2 &_size);
+
+    // TODO : remove once im is implemented
     void add_widget(const widget_t &_widget);
     widget_t *get_widget(uint32_t _index);
     widget_t *get_widget_at_pos(const glm::vec2 &_pos);
@@ -105,10 +111,6 @@ private:
     // constants
     float m_original_title_bar_height           = title_bar_height;
     
-    // widgets
-    widget_t m_widgets[SYN_WINDOW_MAX_WIDGET_COUNT];
-    uint32_t m_widget_count                     = 0;
-
     // resizing
     float m_resize_border_width                 = 5.0f;
     glm::vec2 min_size                          = glm::vec2(100.0f, 100.0f);
@@ -137,6 +139,20 @@ private:
 
     bool m_is_tab_container                     = false;
     bool m_is_tab_child                         = false;
+
+    // TODO : remove once im is implemented
+    widget_t m_widgets[SYN_WINDOW_MAX_WIDGET_COUNT];
+    uint32_t m_widget_count = 0;
+    
+    // immediate mode widget state cache
+    widget_state_t m_widget_states[SYN_MAX_WIDGET_STATES];
+    uint32_t m_widget_state_count = 0;
+
+    // immediate mode cursor -- tracks Y position during syn_begin/end_window
+    float m_im_cursor_x = 0.0f;
+    float m_im_cursor_y = 0.0f;
+    float m_im_row_height = 24.0f;
+    float m_im_padding = 4.0f;
     
     // general flags
     bool m_is_active                            = false;

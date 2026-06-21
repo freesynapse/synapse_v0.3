@@ -3,7 +3,7 @@
 entity helmet
     mesh_type   ASSET
     mesh_name   helmet
-    position    0.0000 1.0000 -2.0000
+    position    0.0000 1.5138 -2.0000
     rotation    -270.0000 90.0000 0.0000
     scale       1.0000 1.0000 1.0000
     manifest_material  helmet_mat
@@ -13,12 +13,29 @@ entity test_sphere
     mesh_type   PRIMITIVE
     mesh_name   SPHERE_UV
     mesh_params 36 18
-    position    0.0000 1.0000 2.0000
+    position    2.8261 1.1813 2.0000
     rotation    0.0000 0.0000 0.0000
     scale       1.0000 1.0000 1.0000
     material
-        albedo      0.6161 0.6161 0.9643 1.0000
+        albedo      0.9500 0.9500 1.0000 1.0000
         roughness   0.0500
+        metallic    1.0000
+        ao          1.0000
+        tiling      1.0000
+        albedo_tex  none
+    end_material
+end_entity
+
+entity ground
+    mesh_type   PRIMITIVE
+    mesh_name   PLANE
+    mesh_params 10 21
+    position    0.0000 0.0300 0.0000
+    rotation    0.0000 0.0000 0.0000
+    scale       2.4161 2.4161 2.4161
+    material
+        albedo      0.9500 0.9500 1.0000 1.0000
+        roughness   1.0000
         metallic    1.0000
         ao          1.0000
         tiling      1.0000
