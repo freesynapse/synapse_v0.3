@@ -34,6 +34,13 @@ uniform samplerCube u_skybox_sampler;
 // 
 void main()
 {
-    frag_color = texture(u_skybox_sampler, v_uv);
+    // Reinhard tonemapping and gamma correction, matching PBR_IBL.glsl
+    vec3 color = texture(u_skybox_sampler, v_uv).rgb;
+    color = color / (color + vec3(1.0));
+    color = pow(color, vec3(1.0 / 2.2));
+
+    // 
+    frag_color = vec4(color, 1.0);
+    // frag_color = texture(u_skybox_sampler, v_uv);
     
 }

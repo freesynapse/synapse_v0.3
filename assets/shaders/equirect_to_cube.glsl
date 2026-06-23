@@ -42,6 +42,7 @@ void main()
 {
     vec2 uv = SampleEquirectangular(normalize(v_uv));
     vec3 color = texture(u_equirectangular_map, uv).rgb;
+    color = min(color, vec3(10.0));
     frag_color = vec4(color, 1.0);
     // frag_color = vec4(1.0);
 }

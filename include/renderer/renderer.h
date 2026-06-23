@@ -45,13 +45,16 @@ private:
 	void init_skybox();
 public:
 	void set_skybox(const cubemap_handle_t &_handle);
+	void set_skybox_render(bool _bool) { m_do_render_skybox = _bool; }
+	void toggle_skybox() { m_do_render_skybox = !m_do_render_skybox; }
 	void render_skybox();
 
 	// IBL
+	void bake_ibl();
 	void bake_irradiance_hdr();
 	void bake_specular_hdr();
-	cubemap_handle_t convert_equirect_to_cubemap(const texture_handle_t &_hdr_tex_handle);
-
+	cubemap_handle_t convert_equirect_to_cubemap(const texture_handle_t &_hdr_tex_handle, uint32_t _tex_size=2048);
+	
 	// shadow map
 	void init_shadow_map();
 	void release_shadow_map();
@@ -81,12 +84,15 @@ public:
 
 	// ui elements
 	void render_ui_transform(const glm::vec3 &_world_pos);
+	const glm::mat4 &get_ui_projection_matrix() { return m_ui_projection; }
+	void calculate_ui_projection_matrix();
 	
 	// element inits
 private:
     void init_debug_rendering();
     void init_orienatation_obj(uint32_t _size);
-    void init_ui_transform();
+    void init_ui_rendering();
+    void shutdown_ui_rendering();
     
 public:
 	void toggle_wireframe();
@@ -122,6 +128,8 @@ public:
 
 	// skybox
 	skybox_t m_skybox;
+	bool m_do_render_skybox = true;
+	
 
 	// IBL maps
 	cubemap_handle_t m_irradiance_map;
@@ -145,10 +153,14 @@ public:
 		float duration = 2.0f;
 	} m_notification;
 
-	// ui transform
+	// ui stuff
 	shader_handle_t m_ui_transform_shader_handle;
 	vertex_array_t m_ui_transform_vao;
-
+	shader_handle_t m_ui_color_picker_shader_handle;
+	glm::mat4 m_ui_projection;
+	shader_handle_t m_ui_tex_quad_shader_handle;
+    vertex_array_t m_ui_tex_quad_vao;
+	
 	// debug (vaos and shader handles in debug_state_t)
 	debug_state_t debug;
 	bool m_debug_initialized = false;

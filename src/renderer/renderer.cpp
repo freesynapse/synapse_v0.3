@@ -84,7 +84,7 @@ void renderer_t::init()
     init_orienatation_obj(100);
 
     // ui elements
-    init_ui_transform();    // viewport entity manipulation ui
+    init_ui_rendering();    // viewport entity manipulation ui
 
 }
 
@@ -99,6 +99,9 @@ void renderer_t::shutdown()
     if (debug.grid_vao_id != 0) {
         glDeleteVertexArrays(1, &debug.grid_vao_id);
     }
+
+    shutdown_ui_rendering();
+    
 }
 
 //
@@ -236,9 +239,8 @@ void renderer_t::set_skybox(const cubemap_handle_t &_handle)
 //
 void renderer_t::render_skybox()
 {
-    if (!m_skybox.is_active)
-        return;
-    
+    if (!m_skybox.is_active) return;
+
     glDepthFunc(GL_LEQUAL);
     
     shader_t *sky_shader = shader_lib.get_shader(m_skybox.shader_handle);
@@ -259,8 +261,16 @@ void renderer_t::render_skybox()
     mesh->vao.unbind();
     
     m_perf_stats.draw_calls_per_frame++;
-    
+
     glDepthFunc(GL_LESS);
+    
+}
+
+// 
+void renderer_t::bake_ibl()
+{
+    bake_irradiance_hdr();
+    bake_specular_hdr();
     
 }
 
@@ -405,20 +415,20 @@ void renderer_t::bake_specular_hdr()
 }
 
 // TODO : another pass at this at a later time perhaps, for now Im done.
-cubemap_handle_t renderer_t::convert_equirect_to_cubemap(const texture_handle_t &_hdr_tex_handle)
+cubemap_handle_t renderer_t::convert_equirect_to_cubemap(const texture_handle_t &_hdr_tex_handle, uint32_t _tex_size)
 {
     SYN_INFO("converting equirectangular HDR to cubemap...\n");
     
-    // create an empty 512 x 512 HDR cubemap
-    cubemap_handle_t handle = cubemap_lib.create_empty(512, 512, GL_RGB16F, true);
+    // create an empty HDR cubemap
+    uint32_t tex_size = _tex_size;
+    cubemap_handle_t handle = cubemap_lib.create_empty(tex_size, tex_size, GL_RGB16F, true);
     cubemap_internal_t *cubemap = cubemap_lib.get_cubemap(handle);
     
     // linear minification filter while baking
     glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap->opengl_id);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     
-    glm::mat4 capture_proj =
-        glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+    glm::mat4 capture_proj = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
     glm::mat4 capture_views[] = {
         glm::lookAt(glm::vec3(0.0f), glm::vec3( 1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)), // +X
         glm::lookAt(glm::vec3(0.0f), glm::vec3(-1.0f,  0.0f,  0.0f), glm::vec3(0.0f, -1.0f,  0.0f)), // -X
@@ -448,7 +458,7 @@ cubemap_handle_t renderer_t::convert_equirect_to_cubemap(const texture_handle_t 
     glDisable(GL_DEPTH_TEST);
     glDisable(GL_CULL_FACE);
     
-    glViewport(0, 0, 512, 512);
+    glViewport(0, 0, tex_size, tex_size);
     
     for (uint32_t i = 0; i < 6; i++) {
         convert_shader->set_matrix_4fv("u_view", capture_views[i]);
@@ -543,7 +553,10 @@ void renderer_t::render_shadow_pass()
 
     // build light-space matrix from lights[0] (directional ligth)
     glm::vec3 light_dir = glm::normalize(glm::vec3(m_lighting_state.lights[0].direction));
+
+    // TODO : fix this: at far distances the shadows disappear
     float cam_dist = m_shadow_map.ortho_size;
+
     //glm::vec3 light_pos = -light_dir * cam_dist;
     glm::vec3 scene_center = cam.get_position();
     scene_center.y = 0.0f;
@@ -551,8 +564,45 @@ void renderer_t::render_shadow_pass()
     
     // glm::mat4 light_view = glm::lookAt(light_pos, glm::vec3(0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     glm::mat4 light_view = glm::lookAt(light_pos, scene_center, glm::vec3(0.0f, 1.0f, 0.0f));
-    float s = m_shadow_map.ortho_size;
-    glm::mat4 light_proj = glm::ortho(-s, s, -s, s, m_shadow_map.z_near, m_shadow_map.z_far);
+
+    // setup scene-dependent projection (base viewing frustum based on entities)
+    glm::vec3 ls_min( FLT_MAX);
+    glm::vec3 ls_max(-FLT_MAX);
+    
+    for (uint32_t i = 0; i < m_command_count; i++) {
+        const render_command_t &cmd = m_command_queue[i];
+        mesh_internal_t *mesh = mesh_lib.get_mesh(cmd.mesh);
+        if (!mesh) continue;
+
+        // transform AABB corners to light space
+        glm::vec3 corners[8] = {
+            { mesh->aabb_min.x, mesh->aabb_min.y, mesh->aabb_min.z },
+            { mesh->aabb_max.x, mesh->aabb_min.y, mesh->aabb_min.z },
+            { mesh->aabb_min.x, mesh->aabb_max.y, mesh->aabb_min.z },
+            { mesh->aabb_max.x, mesh->aabb_max.y, mesh->aabb_min.z },
+            { mesh->aabb_min.x, mesh->aabb_min.y, mesh->aabb_max.z },
+            { mesh->aabb_max.x, mesh->aabb_min.y, mesh->aabb_max.z },
+            { mesh->aabb_min.x, mesh->aabb_max.y, mesh->aabb_max.z },
+            { mesh->aabb_max.x, mesh->aabb_max.y, mesh->aabb_max.z },
+        };
+
+        // 
+        for (auto &c : corners) {
+            glm::vec4 world = cmd.transform * glm::vec4(c, 1.0f);
+            glm::vec4 ls = light_view * world;
+            ls_min = glm::min(ls_min, glm::vec3(ls));
+            ls_max = glm::max(ls_max, glm::vec3(ls));
+        }
+    }
+    float margin = 2.0f;
+    float l = ls_min.x - margin;
+    float r = ls_max.x + margin;
+    float b = ls_min.y - margin;
+    float t = ls_max.y + margin;
+    float n = -ls_max.z - margin;
+    float f = -ls_min.z + margin;
+    
+    glm::mat4 light_proj = glm::ortho(l, r, b, t, n, f);
 
     m_shadow_map.light_space_matrix = light_proj * light_view;
 
@@ -704,6 +754,8 @@ void renderer_t::cmd_flush()
 
     render_shadow_pass();
     bind_scene_fbuffer();
+
+    if (m_do_render_skybox) render_skybox();
     
     //
     if (debug.show_wireframe) {
@@ -1062,6 +1114,14 @@ void renderer_t::render_ui_transform(const glm::vec3 &_world_pos)
     }
 }
 
+// 
+void renderer_t::calculate_ui_projection_matrix()
+{
+    m_ui_projection = glm::ortho(0.0f, root_window.get_fwidth(),
+                                root_window.get_fheight(), 0.0f,
+                                window_manager.get_zfar(), window_manager.get_znear());
+}
+
 //
 void renderer_t::init_debug_rendering() 
 {
@@ -1130,8 +1190,9 @@ void renderer_t::init_orienatation_obj(uint32_t _size)
   
 }
 
-void renderer_t::init_ui_transform()
+void renderer_t::init_ui_rendering()
 {
+    // setup UI transform
     m_ui_transform_shader_handle = shader_lib.load_from_file("ui_transform_shader", 
         "../assets/shaders/ui_transform.glsl");
 
@@ -1147,7 +1208,37 @@ void renderer_t::init_ui_transform()
     });
     m_ui_transform_vao.create_empty_vertices(vertices_size);
     m_ui_transform_vao.create_empty_indices(indices_size);
+
+    // ui projection and misc shaders and vaos
+    calculate_ui_projection_matrix();
+
+    m_ui_tex_quad_shader_handle = shader_lib.load_from_file("ui_tex_quad_shader", 
+        "../assets/shaders/ui_quad_tex.glsl");
+
+    // 
+    glm::vec2 vs[] = { 
+        { 0.0f, 0.0f },
+        { 0.0f, 1.0f }, 
+        { 1.0f, 1.0f },
+        { 1.0f, 0.0f },
+    };
+    uint32_t is[] = { 0, 1, 2, 2, 3, 0 };
+    m_ui_tex_quad_vao.set_buffer_layout({ { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT2 } });
+    m_ui_tex_quad_vao.create(vs, 4, is, 6);
+
+    // 
+    m_ui_color_picker_shader_handle = shader_lib.load_from_file("ui_color_picker_shader", 
+        "../assets/shaders/ui_color_picker.glsl");
     
+    
+}
+
+// 
+void renderer_t::shutdown_ui_rendering()
+{
+   	m_ui_transform_vao.destroy();
+    m_ui_tex_quad_vao.destroy();
+
 }
 
 //

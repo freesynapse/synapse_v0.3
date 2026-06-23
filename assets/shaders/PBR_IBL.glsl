@@ -256,12 +256,10 @@ void main()
     
     vec3 R = reflect(-V, N);
     vec3 prefiltered_color = textureLod(u_prefilter_map, R, roughness * MAX_REFLECTION_LOD).rgb;
-    // vec3 prefiltered_color = texture(u_prefilter_map, R).rgb;
     vec3 env_specular = prefiltered_color * kS_env;
         
     // 4. Final Color Assembly
     vec3 ambient = (kD_env * diffuse + env_specular) * ao;
-    // vec3 ambient = vec3(0.03) * albedo * ao;
     vec3 color = ambient + Lo + emissive;
 
     // HDR Tonemapping & Gamma Correction
