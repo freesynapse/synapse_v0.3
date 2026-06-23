@@ -25,22 +25,7 @@ void window_manager_t::init()
     m_active_count = 0;
     
     m_window_shader_handle = shader_lib.load_from_file("ui_window_base_shader", "../assets/shaders/ui_window_base.glsl");
-    m_tex_quad_shader_handle = shader_lib.load_from_file("ui_tex_quad_shader", "../assets/shaders/ui_quad_tex.glsl");
 
-    // 
-    glm::vec2 vs[] = { 
-        { 0.0f, 0.0f },
-        { 0.0f, 1.0f }, 
-        { 1.0f, 1.0f },
-        { 1.0f, 0.0f },
-    };
-    uint32_t is[] = { 0, 1, 2, 2, 3, 0 };
-    m_tex_quad_vao.set_buffer_layout({ { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT2 } });
-    m_tex_quad_vao.create(vs, 4, is, 6);
-
-    // 
-    m_ui_color_picker_shader_handle = shader_lib.load_from_file("ui_color_picker_shader", 
-        "../assets/shaders/ui_color_picker.glsl");
     //
     events.register_callback(event_type_t::INPUT_MOUSE_BUTTON, __window_manager_on_mouse_button_callback);
     events.register_callback(event_type_t::INPUT_MOUSE_MOVE, __window_manager_on_mouse_move_callback);
@@ -62,9 +47,6 @@ void window_manager_t::shutdown()
             m_pool[i].destroy();
         }
     }
-
-    m_tex_quad_vao.destroy();
-    
 }
     
 //
@@ -82,97 +64,20 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
         if (clicked.id > 0) {
             window_t *win = &m_pool[clicked.id - 1];
 
-            // first check for widget
-            widget_t *clicked_widget = win->get_widget_at_pos(pos);
-            if (clicked_widget) {
-                set_focused_window(clicked);
-                if (clicked_widget->type == widget_type_t::HIERARCHY) {
-                    hierarchy_widget_t &hw = clicked_widget->hierarchy_widget;
-                    float row_h = hw.row_height > 0.0f ? hw.row_height : font.get_font_glyph_height() + 6.0f;
-                    glm::vec2 wp = clicked_widget->get_absolute_position(
-                        glm::vec2(win->position.x, win->position.y + win->title_bar_height), 
-                        glm::vec2(win->size.x, win->size.y - win->title_bar_height));
-                    int row = (int)((pos.y - wp.y) / row_h) + (int)hw.scroll_offset;
-
-                    uint32_t found = 0;
-                    for (uint32_t i = 0; i < SYN_MAX_ENTITY_COUNT; i++) {
-                        entity_t *e = &entity_lib.m_pool[i];
-                        if (!e->is_active) continue;
-                        if ((int)found == row) {
-                            if (hw.selected) *hw.selected = { i + 1 };
-                            break;
-                        }
-                        found++;
-                    }
-                    if (clicked_widget->consumes_click) return;
-                }
-
-                else if (clicked_widget->type == widget_type_t::LIST) {
-                    list_widget_t &lw = clicked_widget->list_widget;
-                    float row_h = lw.row_height > 0.0f ? lw.row_height : font.get_font_glyph_height();
-                    glm::vec2 wp = clicked_widget->get_absolute_position(
-                        glm::vec2(win->position.x, win->position.y + win->title_bar_height), 
-                        glm::vec2(win->size.x, win->size.y - win->title_bar_height));
-
-                    int row = (int)((pos.y - wp.y) / row_h) + (int)lw.scroll_offset;
-                    if (row >= 0 && row < (int)lw.items.size()) {
-                        lw.selected_index = row;
-                        if (lw.on_select) lw.on_select(row, lw.items[row]);
-                    }
-                    
-                    if (clicked_widget->consumes_click) return;
-                }
-
-                else if (clicked_widget->type == widget_type_t::COLOR_PICKER_HUE) {
-                    glm::vec2 wp = clicked_widget->get_absolute_position(
-                        glm::vec2(win->position.x, win->position.y + win->title_bar_height), 
-                        glm::vec2(win->size.x, win->size.y - win->title_bar_height));
-                    float t = glm::clamp(1.0f - (pos.y - wp.y) / clicked_widget->size.y, 0.0f, 1.0f);
-                    if (clicked_widget->color_picker_hue_widget.hue) { *clicked_widget->color_picker_hue_widget.hue = t; }
-                    if (clicked_widget->color_picker_hue_widget.on_change) { clicked_widget->color_picker_hue_widget.on_change(t); }
-                    m_dragging_widget = clicked_widget;
-                    m_dragging_window = win;
-                    if (clicked_widget->consumes_click) return;
-                }
-                
-                else if (clicked_widget->type == widget_type_t::COLOR_PICKER_SV) {
-                    glm::vec2 wp = clicked_widget->get_absolute_position(
-                        glm::vec2(win->position.x, win->position.y + win->title_bar_height), 
-                        glm::vec2(win->size.x, win->size.y - win->title_bar_height));
-                    float s = glm::clamp((pos.x - wp.x) / clicked_widget->size.x, 0.0f, 1.0f);
-                    float v = glm::clamp(1.0f - (pos.y - wp.y) / clicked_widget->size.y, 0.0f, 1.0f);
-                    if (clicked_widget->color_picker_sv_widget.on_change) { clicked_widget->color_picker_sv_widget.on_change(s, v); }
-                    m_dragging_widget = clicked_widget;
-                    m_dragging_window = win;
-                    if (clicked_widget->consumes_click) return;
-                }
-                
-                else if (clicked_widget->type == widget_type_t::FLOAT_FIELD) {
-                    // clear focus from all other float fields
-                    for (uint32_t i = 0; i < SYN_MAX_WINDOW_COUNT; i++) {
-                        window_t &win = m_pool[i];
-                        if (!win.is_active()) continue;
-                        for (uint32_t j = 0; j < win.m_widget_count; j++) {
-                            if (win.m_widgets[j].type == widget_type_t::FLOAT_FIELD) {
-                                win.m_widgets[j].float_field_widget.editing = false;
-                            }
-                        }
-                    }
-                    // focus the clicked one
-                    float_field_t &ff = clicked_widget->float_field_widget;
-                    ff.editing = true;
-                    // initialize with current value
-                    snprintf(ff.buf, sizeof(ff.buf), "%.4f", ff.value);
-                    ff.cursor = (int)strlen(ff.buf);
-                    if (clicked_widget->consumes_click) return;
-                }
-                
-                else {
-                    if (clicked_widget->on_click) {
-                        clicked_widget->on_click(clicked_widget);
-                    }
-                    if (clicked_widget->consumes_click) return;
-                }
+            // immediate mode mouse button event handling
+            win->im_click_pending = true;
+            win->im_click_pos = pos;
+            
+            // check close button
+            glm::vec2 cp = win->m_close_btn_pos;
+            glm::vec2 cs = win->m_close_btn_size;
+            if (pos.x >= cp.x && pos.x <= cp.x + cs.x &&
+                pos.y >= cp.y && pos.y <= cp.y + cs.y) {
+                event_t e;
+                e.type = event_type_t::UI_WINDOW_CLOSE;
+                e.as.ui_window_close.handle = clicked;
+                events.dispatch_event(e);
+                return;
             }
 
             // ui transform
@@ -241,13 +146,31 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
     
     } else if (action == SYN_MOUSE_BUTTON_RELEASED) {
 
-        m_dragging_widget = nullptr;
         m_dragging_window = nullptr;
-        
+
+        // immediate mode -- clear pending clicks
+        for (uint32_t i = 0; i < SYN_MAX_WINDOW_COUNT; i++) {
+            if (m_pool[i].is_active()) {
+                m_pool[i].im_click_pending = false;
+            }
+        }
+
+        // clear window's drag state
+        for (uint32_t i = 0; i < SYN_MAX_WINDOW_COUNT; i++) {
+            m_pool[i].im_dragging_state_id = 0;
+            m_pool[i].im_drag_type = im_drag_type_t::NONE;
+        }
+
+        // 
         if (m_viewport_pick_pending) {
             float dist = glm::length(pos - m_viewport_click_pos);
             if (dist < 4.0f) {
                 selected_entity_handle = m_viewport_pick_result;
+                // clear selection for im 
+                window_t *tw = window_manager.get_window(editor.get_transform_window_handle());
+                if (tw) tw->im_clear_states();
+                window_t *mw = window_manager.get_window(editor.get_material_window_handle());
+                if (mw) mw->im_clear_states();
             }
             m_viewport_pick_pending = false;
             m_viewport_pick_result = { 0 };
@@ -411,27 +334,36 @@ void window_manager_t::on_mouse_move_event(const event_t &_e)
         return;
     }
 
-    // color picker widget
-    if (m_dragging_widget) {
-        glm::vec2 wp = m_dragging_widget->get_absolute_position(
-            glm::vec2(m_dragging_window->position.x, m_dragging_window->position.y + m_dragging_window->title_bar_height),
-            glm::vec2(m_dragging_window->size.x, m_dragging_window->size.y - m_dragging_window->title_bar_height));
+    // immediate mode drag dispatch
+    for (uint32_t i = 0; i < SYN_MAX_WINDOW_COUNT; i++) {
+        window_t *win = &m_pool[i];
+        if (!win->is_active() || win->im_dragging_state_id == 0) continue;
+
+        glm::vec2 mp = _e.as.mouse_move.pos;
+        glm::vec2 wp = win->im_drag_widget_pos;
+        glm::vec2 ws = win->im_drag_widget_size;
+
+        switch (win->im_drag_type) {
+            case im_drag_type_t::COLOR_PICKER_SV: {
+                float s = glm::clamp((mp.x - wp.x) / ws.x, 0.0f, 1.0f);
+                float v = glm::clamp(1.0f - (mp.y - wp.y) / ws.y, 0.0f, 1.0f);
+                editor.m_color_picker_hsv.y = s;
+                editor.m_color_picker_hsv.z = v;
+                editor.update_color_picker_from_hsv();
+                break;
+            }
+
+            case im_drag_type_t::COLOR_PICKER_HUE: {
+                float h = glm::clamp(1.0f - (mp.y - wp.y) / ws.y, 0.0f, 1.0f);
+                editor.m_color_picker_hsv.x = h;
+                editor.update_color_picker_from_hsv();
+                break;
+            }
+            default: break;
+        }
+    }
     
-        if (m_dragging_widget->type == widget_type_t::COLOR_PICKER_HUE) {
-            float t = glm::clamp(1.0f - (pos.y - wp.y) / m_dragging_widget->size.y, 0.0f, 1.0f);
-            if (m_dragging_widget->color_picker_hue_widget.hue)
-                *m_dragging_widget->color_picker_hue_widget.hue = t;
-            if (m_dragging_widget->color_picker_hue_widget.on_change)
-                m_dragging_widget->color_picker_hue_widget.on_change(t);
-        }
-        else if (m_dragging_widget->type == widget_type_t::COLOR_PICKER_SV) {
-            float s = glm::clamp((pos.x - wp.x) / m_dragging_widget->size.x, 0.0f, 1.0f);
-            float v = glm::clamp(1.0f - (pos.y - wp.y) / m_dragging_widget->size.y, 0.0f, 1.0f);
-            if (m_dragging_widget->color_picker_sv_widget.on_change)
-                m_dragging_widget->color_picker_sv_widget.on_change(s, v);
-        }
-        return;
-    }    
+
     // if an axis is already grabbed, update
     if (editor.get_grabbed_ui_transform_axis() != ui_transform_axis_t::NONE) {
         cam.disable();
@@ -441,37 +373,7 @@ void window_manager_t::on_mouse_move_event(const event_t &_e)
     
     // detect hovering the ui transform object
     editor.set_hovered_ui_transform_axis(editor.pick_ui_transform_axis(pos));
-    
-    // widgets
-    for (uint32_t i = 0; i < SYN_MAX_WINDOW_COUNT; i++) {
-        window_t *win = &m_pool[i];
-        if (!win->m_is_active || !win->m_is_visible) continue;
-
-        // reset all hover flags
-        for (uint32_t j = 0; j < win->m_widget_count; j++) {
-            win->m_widgets[j].is_hovered = false;
-        }
-
-        widget_t *hovered = win->get_widget_at_pos(pos);
         
-        if (hovered) {
-            hovered->is_hovered = true;
-
-            if (hovered->type == widget_type_t::LIST) {
-                list_widget_t &lw = hovered->list_widget;
-                float row_h = lw.row_height > 0.0f ? lw.row_height : font.get_font_glyph_height();
-                glm::vec2 wp = hovered->get_absolute_position(
-                    glm::vec2(win->position.x, win->position.y + win->title_bar_height), 
-                    glm::vec2(win->size.x, win->size.y - win->title_bar_height));
-                int row = (int)((pos.y - wp.y) / row_h) + (int)lw.scroll_offset;
-                if (row >= 0 && row < (int)lw.items.size() && lw.on_hover) {
-                    lw.on_hover(row, lw.items[row]);
-                }
-
-            }
-        }
-    }
-    
 }
 
 // 
@@ -485,35 +387,9 @@ void window_manager_t::on_mouse_scroll_event(const event_t &_e)
     window_t *win = get_window(hovered);
     if (!win) return;
 
-    widget_t *w = win->get_widget_at_pos(m_mouse_pos);
-    if (!w) return;
+    win->im_scroll_delta = delta;        
+    return;
 
-    if (w->type == widget_type_t::FLOAT_FIELD) {
-        float_field_t &ff = w->float_field_widget;
-        if (ff.editing) return;
-
-        float speed = 1.0f;
-        if (input.is_key_down(SYN_KEY_LEFT_SHIFT))  speed = 10.0f;
-        if (input.is_key_down(SYN_KEY_LEFT_ALT))    speed = 0.1f;
-        if (input.is_key_down(SYN_KEY_LEFT_CTRL))   speed = 0.01f;
-
-        float new_val = glm::clamp(ff.value - delta * speed, ff.min, ff.max);
-        ff.value = new_val;
-        if (ff.binding) *ff.binding = new_val;
-        if (ff.on_change) ff.on_change(new_val);
-        return;
-    }
-
-    else if (w->type == widget_type_t::LIST) {
-        list_widget_t &lw = w->list_widget;
-        float max_scroll = glm::max(0.0f, (float)lw.items.size() - (w->size.y / (lw.row_height > 0.0f ? lw.row_height : 20.0f)));
-        lw.scroll_offset = glm::clamp(lw.scroll_offset - delta, 0.0f, max_scroll);
-    }
-    
-    else if (w->on_scroll) {
-        w->on_scroll(w, delta);
-        return;
-    }
 }
 
 // 
@@ -543,67 +419,57 @@ void window_manager_t::on_keydown_event(const event_t &_e)
         }
     }
 
-    // float field keyboard handling
-    for (uint32_t i = 0; i < win->m_widget_count; i++) {
-        widget_t *w = &win->m_widgets[i];
-        if (w->type != widget_type_t::FLOAT_FIELD || !w->float_field_widget.editing) continue;
-
-        float_field_t &ff = w->float_field_widget;
-        int len = (int)strlen(ff.buf);
-
-        switch (key)
-        {
-            case SYN_KEY_ENTER: {
-                char *end;
-                float v = strtof(ff.buf, &end);
-                if (end != ff.buf) {
-                    v = glm::clamp(v, ff.min, ff.max);
-                    ff.value = v;
-                    if (ff.binding) *ff.binding = v;
-                    if (ff.on_change) ff.on_change(v);
+    // immediate mode
+    if (win->im_active_state_id != 0) {
+        widget_state_t *state = win->im_get_or_create_state(win->im_active_state_id);
+        if (state && state->editing) {
+            int len = (int)strlen(state->buf);
+            switch (key) {
+                case SYN_KEY_ENTER: {
+                    char *end;
+                    float v = strtof(state->buf, &end);
+                    if (end != state->buf) {
+                        v = std::max(state->min, std::min(state->max, v));
+                        state->value = v;
+                        if (state->binding) *state->binding = v;
+                    }
+                    state->editing = false;
+                    state->is_dirty = true;
+                    win->im_active_state_id = 0;
+                    break;
                 }
-                ff.editing = false;
-                break;
-            }
-            
-            case SYN_KEY_ESCAPE: {
-                ff.editing = false;
-                break;
-            }
 
-            case SYN_KEY_BACKSPACE: {
-                if (ff.cursor > 0) {
-                    memmove(&ff.buf[ff.cursor - 1], &ff.buf[ff.cursor], len - ff.cursor + 1);
-                    ff.cursor--;
+                case SYN_KEY_ESCAPE: {
+                    state->editing = false;
+                    win->im_active_state_id = 0;
+                    break;
                 }
-                break;
-            }
 
-            case SYN_KEY_DELETE: {
-                if (ff.cursor < len) {
-                    memmove(&ff.buf[ff.cursor], &ff.buf[ff.cursor + 1], len - ff.cursor);
+                case SYN_KEY_BACKSPACE: {
+                    if (state->cursor > 0) {
+                        memmove(&state->buf[state->cursor - 1], &state->buf[state->cursor], len - state->cursor + 1);
+                        state->cursor--;
+                    }
+                    break;
                 }
-                break;
+
+                case SYN_KEY_DELETE: {
+                    if (state->cursor < len) {
+                        memmove(&state->buf[state->cursor], &state->buf[state->cursor + 1], len - state->cursor);
+                    }
+                    break;
+                }
+
+                case SYN_KEY_LEFT:  if (state->cursor > 0)   state->cursor--; break;
+                case SYN_KEY_RIGHT: if (state->cursor < len) state->cursor++; break;
+
+                default: break;
             }
 
-            case SYN_KEY_LEFT: {
-                if (ff.cursor > 0) ff.cursor--;
-                break;
-            }
-
-            case SYN_KEY_RIGHT: {
-                if (ff.cursor < len) ff.cursor++;
-                break;
-            }
-
-            default: break;
-            
+            return;
         }
-
-        // only one float field can be in edit mode, yes?
-        return;
-    }
-    
+    }           
+        
 }
 
 // 
@@ -616,30 +482,27 @@ void window_manager_t::on_input_char_event(const event_t &_e)
     unsigned int cp = _e.as.input_char.codepoint;
     if (!((cp >= '0' && cp <= '9') || cp == '.' || cp == '-')) return;
 
-    for (uint32_t i = 0; i < win->m_widget_count; i++) {
-        widget_t *w = &win->m_widgets[i];
-        if (w->type != widget_type_t::FLOAT_FIELD || !w->float_field_widget.editing) continue;
-
-        float_field_t &ff = w->float_field_widget;
-        int len = (int)strlen(ff.buf);
-        if (len >= 31) return;
-
-        memmove(&ff.buf[ff.cursor + 1], &ff.buf[ff.cursor], len - ff.cursor + 1);
-        ff.buf[ff.cursor] = (char)cp;
-        ff.cursor++;
-
-        return;
+    // immediate mode
+    if (win->im_active_state_id != 0) {
+        widget_state_t *state = win->im_get_or_create_state(win->im_active_state_id);
+        if (state && state->editing) {
+            int len = (int)strlen(state->buf);
+            if (len >= SYN_IM_BUFFER_LEN - 1) return;
+            memmove(&state->buf[state->cursor + 1], &state->buf[state->cursor], len - state->cursor + 1);
+            state->buf[state->cursor] = (char)cp;
+            state->cursor++;
+            return;
+        }
     }
-    
+        
 }
 
 // 
 void window_manager_t::on_ui_window_close_event(const event_t &_e)
 {
     window_handle_t handle = _e.as.ui_window_close.handle;
-    // window_t *win = get_window(handle);
-    // win->hide();
-    release_window(handle);
+    window_t *win = get_window(handle);
+    win->hide();
     
 }
 
@@ -676,10 +539,10 @@ window_handle_t window_manager_t::add_window(window_t &_window)
     win->this_handle = handle;
     
     if (win->depth == 0.0f) {
-        win->depth = m_next_depth;
-        m_next_depth += m_ddepth_per_layer;
-    } else if (win->depth >= m_next_depth) {
-        m_next_depth = win->depth + m_ddepth_per_layer;
+        win->depth = next_depth;
+        next_depth += ddepth_per_layer;
+    } else if (win->depth >= next_depth) {
+        next_depth = win->depth + ddepth_per_layer;
     }
     
     win->init();
@@ -701,8 +564,9 @@ window_handle_t window_manager_t::add_window(window_t &_window)
 window_handle_t window_manager_t::add_window(const window_desc_t &_desc)
 {
     window_t window;
+    window.name     = _desc.name;
     window.position = _desc.position;
-    window.size = _desc.size;
+    window.size     = _desc.size;
     
     return add_window(window);
 }
@@ -805,11 +669,7 @@ void window_manager_t::release_window(window_handle_t _handle)
 window_t *window_manager_t::get_window(const window_handle_t &_handle)
 {
     uint32_t idx = _handle.id - 1;
-    if (_handle.id == 0 || idx >= SYN_MAX_WINDOW_COUNT) {
-        SYN_WARNING("invalid window_handle_t: id = %d.\n", _handle.id);
-        return nullptr;
-    }
-    
+    if (_handle.id == 0 || idx >= SYN_MAX_WINDOW_COUNT) return nullptr;
     return &m_pool[idx];
 }
 
@@ -817,8 +677,8 @@ window_t *window_manager_t::get_window(const window_handle_t &_handle)
 void window_manager_t::bring_window_to_front(const window_handle_t &_handle)
 {
     window_t *win = get_window(_handle);
-    win->depth = m_next_depth;
-    m_next_depth += m_ddepth_per_layer;
+    win->depth = next_depth;
+    next_depth += ddepth_per_layer;
 }
 
 // 
@@ -925,10 +785,10 @@ void window_manager_t::set_focused_window(window_handle_t _handle)
         window_t *win = &m_pool[_handle.id - 1];
         if (win) {
             win->set_focused(true);
-            win->depth = m_next_depth;
-            m_next_depth += m_ddepth_per_layer;
+            win->depth = next_depth;
+            next_depth += ddepth_per_layer;
         
-            if (m_next_depth > 99.5f) {
+            if (next_depth > 99.5f) {
                 reorganize_depths();
             }
         }
@@ -1095,17 +955,12 @@ void window_manager_t::draw_windows()
     api.set_depth_func(GL_LEQUAL);
     api.set_depth_mask(GL_TRUE);
 
-    m_projection = glm::ortho(0.0f, root_window.get_fwidth(), 
-                              root_window.get_fheight(), 0.0f, 
-                              m_zfar, m_znear);
-    
     // 1. draw all colored geometry
     renderer_2d.batch.begin_batch();
 
     for (uint32_t i = 0; i < SYN_MAX_WINDOW_COUNT; i++) {
         window_t *win = &m_pool[i];
         if (win->is_active() && win->is_visible()) {
-            if (win->on_update) win->on_update(win);
             win->draw();
         }
     }
@@ -1120,7 +975,7 @@ void window_manager_t::draw_windows()
             if (!win) return;
             glm::vec2 cp = win->get_content_position();
             glm::vec2 cs = win->get_content_size();
-            renderer_2d.batch.add_quad(cp, cs, glm::vec4(0.1f, 0.1f, 0.1f, 0.6f), win->depth + m_ddepth_layer_texture);
+            renderer_2d.batch.add_quad(cp, cs, glm::vec4(0.1f, 0.1f, 0.1f, 0.6f), win->depth + ddepth_layer_widget);
         };
         gray_out(m_transform_window_handle);
         gray_out(m_material_window_handle);
@@ -1156,20 +1011,20 @@ void window_manager_t::draw_framebuffer(window_t *_win)
     framebuffer_t *fbo = api.fbo_handler.get_framebuffer(_win->get_framebuffer_handle());
     if (!fbo) return;
  
-    shader_t *shader = shader_lib.get_shader(m_tex_quad_shader_handle);
+    shader_t *shader = shader_lib.get_shader(renderer.m_ui_tex_quad_shader_handle);
     if (!shader) return;
     
     shader->enable();
-    shader->set_matrix_4fv("u_projection", m_projection);
+    shader->set_matrix_4fv("u_projection", renderer.get_ui_projection_matrix());
     shader->set_uniform_2fv("u_position", _win->get_content_position());
     shader->set_uniform_2fv("u_size", _win->get_content_size());
-    shader->set_uniform_1f("u_depth", _win->depth + m_ddepth_layer_texture);
+    shader->set_uniform_1f("u_depth", _win->depth + ddepth_layer_widget);
 
     fbo->bind_texture(0, 0);
 
-    m_tex_quad_vao.bind();
+    renderer.m_ui_tex_quad_vao.bind();
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    m_tex_quad_vao.unbind();
+    renderer.m_ui_tex_quad_vao.unbind();
         
     shader->disable();
     
@@ -1181,20 +1036,20 @@ void window_manager_t::draw_framebuffer_for(window_t *_active, window_t *_tab_co
     framebuffer_t *fbo = api.fbo_handler.get_framebuffer(_active->get_framebuffer_handle());
     if (!fbo) return;
  
-    shader_t *shader = shader_lib.get_shader(m_tex_quad_shader_handle);
+    shader_t *shader = shader_lib.get_shader(renderer.m_ui_tex_quad_shader_handle);
     if (!shader) return;
     
     shader->enable();
-    shader->set_matrix_4fv("u_projection", m_projection);
+    shader->set_matrix_4fv("u_projection", renderer.m_ui_projection);
     shader->set_uniform_2fv("u_position", _tab_container->get_content_position());
     shader->set_uniform_2fv("u_size", _tab_container->get_content_size());
-    shader->set_uniform_1f("u_depth", _tab_container->depth + m_ddepth_layer_texture);
+    shader->set_uniform_1f("u_depth", _tab_container->depth + ddepth_layer_widget);
 
     fbo->bind_texture(0, 0);
 
-    m_tex_quad_vao.bind();
+    renderer.m_ui_tex_quad_vao.bind();
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-    m_tex_quad_vao.unbind();
+    renderer.m_ui_tex_quad_vao.unbind();
         
     shader->disable();
     
@@ -1255,7 +1110,7 @@ void window_manager_t::reorganize_depths()
                 return a.depth < b.depth;
                 });
     
-    float new_depth = m_zfar + 1.0f + m_ddepth_per_layer * m_active_count;
+    float new_depth = m_zfar + 1.0f + ddepth_per_layer * m_active_count;
     float closest_depth = new_depth;
     for (auto &pair : active_windows) {
         window_t *win = &m_pool[pair.index];
@@ -1264,9 +1119,9 @@ void window_manager_t::reorganize_depths()
         if (std::abs(win->depth - new_depth) > 0.01f) {
             win->depth = new_depth;
         }
-        new_depth += m_ddepth_per_layer;
+        new_depth += ddepth_per_layer;
     }
     
-    m_next_depth = closest_depth + m_ddepth_per_layer;
+    next_depth = closest_depth + ddepth_per_layer;
 }
 

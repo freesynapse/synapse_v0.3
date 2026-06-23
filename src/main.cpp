@@ -16,10 +16,21 @@ int main()
     syn_init("synapse v0.3", 0, 0, SYN_MODE_3D);
     // syn_init("synapse v0.3", 2000, 1400, SYN_MODE_3D);
     root_window.set_exit_key(SYN_KEY_W, SYN_MOD_CTRL);
-    // syn_set_window_pos_quadrant(UPPER_RIGHT);
 
     syn_load_assets("../assets/manifest.syn");
     syn_load_ui_layout("../assets/layout.syn");
+    // load hdr skybox
+    const char *filepath = "../assets/textures/skybox/HDR/kloppenheim_07_puresky_4k.hdr";
+    texture_handle_t hdr_tex = tex_lib.load_texture_hdr(filepath);
+    if (!hdr_tex.is_valid()) {
+        SYN_WARNING("failed to load HDR skybox '%s'.\n", filepath);
+    }
+    cubemap_handle_t cm = renderer.convert_equirect_to_cubemap(hdr_tex, 4096);
+    if (!cm.is_valid()) {
+        SYN_WARNING("failed to convert HDR to skybox.\n");
+    }
+    renderer.set_skybox(cm);
+    renderer.bake_ibl();
     
     //
     time_step.fps_limit = 60.0f;
@@ -45,10 +56,27 @@ int main()
 
         handle_input();
 
-        // RENDERING 3D tests
+        //
         syn_render_begin_3d();
         render(time_step.dt);
         syn_render_end_3d();
+
+        // immediate mode ui
+        syn_im_begin();
+    
+        editor.draw_color_picker_window();
+        editor.draw_material_window();
+        editor.draw_transform_window();
+        editor.draw_hierarchy_window();
+        editor.draw_texture_select_window();
+        editor.draw_create_primitive_window();
+        
+        syn_log_window();
+        syn_help_window();
+    
+        syn_im_end();
+
+        syn_frame_end();
     }
 
     syn_shutdown();
@@ -60,8 +88,6 @@ int main()
 //
 void render(float _dt)
 {
-    // renderer.render_skybox();
-
     entity_t *ent_pool = entity_lib.get_pool();
     for (uint32_t i = 0; i < SYN_MAX_ENTITY_COUNT; i++) {
         if (ent_pool[i].is_active) {
@@ -98,6 +124,7 @@ void setup_lights()
     light_t sun;
     sun.position = glm::vec4(0, 0, 0, 1.0f);            // .w = 1 --> directional light
     sun.direction = glm::vec4(-1.0f, -1.0f, -1.0f, 0.0f); // Top-down angle
+    // sun.direction = glm::vec4(0.0f, -1.0f, 0.0f, 0.0f);
     sun.color = glm::vec4(1.0f, 1.0f, 0.9f, 1.0f); // Sun doesn't need 100+ intensity
     // renderer.set_light(3, sun);
     renderer.set_light(0, sun);

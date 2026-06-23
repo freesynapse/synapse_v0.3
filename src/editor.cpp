@@ -448,6 +448,11 @@ void editor_t::on_keydown_event(const event_t &_e)
 
                 entity_handle_t new_handle = entity_lib.create_entity(unique_name, src->mesh_handle, new_mat, src->transform);
                 selected_entity_handle = new_handle;
+                // clear selection for im 
+                window_t *tw = window_manager.get_window(m_transform_window_handle);
+                if (tw) tw->im_clear_states();
+                window_t *mw = window_manager.get_window(m_material_window_handle);
+                if (mw) mw->im_clear_states();
             }
         }
     }
@@ -488,6 +493,252 @@ void editor_t::on_keydown_event(const event_t &_e)
 }
 
 // 
+void editor_t::draw_transform_window()
+{
+    if (!m_transform_window_handle.id) return;
+    if (!selected_entity_handle.is_valid()) return;
+    entity_t *e = entity_lib.get_entity(selected_entity_handle);
+
+    syn_begin_window(m_transform_window_handle);
+
+    if (e) {
+        syn_label(m_transform_window_handle, "Position");
+        syn_begin_row(m_transform_window_handle, { 1.0f, 1.0f, 1.0f });
+            syn_float_field(m_transform_window_handle, "px", &e->t_position.x, -10000.0f, 10000.0f);
+            syn_float_field(m_transform_window_handle, "py", &e->t_position.y, -10000.0f, 10000.0f);
+            syn_float_field(m_transform_window_handle, "pz", &e->t_position.z, -10000.0f, 10000.0f);
+        syn_end_row(m_transform_window_handle);
+    
+        syn_label(m_transform_window_handle, "Rotation");
+        syn_begin_row(m_transform_window_handle, { 1.0f, 1.0f, 1.0f });
+            syn_float_field(m_transform_window_handle, "rx", &e->t_rotation.x, -10000.0f, 10000.0f);
+            syn_float_field(m_transform_window_handle, "ry", &e->t_rotation.y, -10000.0f, 10000.0f);
+            syn_float_field(m_transform_window_handle, "rz", &e->t_rotation.z, -10000.0f, 10000.0f);
+        syn_end_row(m_transform_window_handle);
+    
+        syn_label(m_transform_window_handle, "Scale");
+        syn_begin_row(m_transform_window_handle, { 1.0f, 1.0f, 1.0f });
+            syn_float_field(m_transform_window_handle, "sx", &e->t_scale.x, 0.001f, 10000.0f);
+            syn_float_field(m_transform_window_handle, "sy", &e->t_scale.y, 0.001f, 10000.0f);
+            syn_float_field(m_transform_window_handle, "sz", &e->t_scale.z, 0.001f, 10000.0f);
+        syn_end_row(m_transform_window_handle);
+
+        if (im_needs_update(window_manager.get_window(m_transform_window_handle))) {
+            e->transform = entity_t::make_transform(e->t_position, e->t_rotation, e->t_scale);
+        }
+    }
+    
+    syn_end_window(m_transform_window_handle);
+
+}
+
+// 
+void editor_t::draw_material_window()
+{
+    if (!m_material_window_handle.id) return;
+    if (!selected_entity_handle.is_valid()) return;
+    entity_t *e = entity_lib.get_entity(selected_entity_handle);
+
+    syn_begin_window(m_material_window_handle);
+
+    if (e) {
+        material_internal_t *mat = mat_lib.get_material(e->material_handle);
+        material_pbr_payload_t *pbr = mat ? (material_pbr_payload_t *)mat->data : nullptr;
+        if (pbr) {
+            syn_begin_row(m_material_window_handle, { 1.0f, 3.0f, 3.0f, 3.0f });
+            syn_color_swatch(m_material_window_handle, &pbr->albedo_color.r, &pbr->albedo_color.g, &pbr->albedo_color.b);
+            syn_float_field(m_material_window_handle, "r", &pbr->albedo_color.r, 0.0f, 1.0f);
+            syn_float_field(m_material_window_handle, "g", &pbr->albedo_color.g, 0.0f, 1.0f);
+            syn_float_field(m_material_window_handle, "b", &pbr->albedo_color.b, 0.0f, 1.0f);
+            syn_end_row(m_material_window_handle);
+
+            syn_float_field(m_material_window_handle, "rough",  &pbr->roughness,     0.0f, 1.0f);
+            syn_float_field(m_material_window_handle, "metal",  &pbr->metallic,      0.0f, 1.0f);
+            syn_float_field(m_material_window_handle, "ao",     &pbr->ao,            0.0f, 1.0f);
+            syn_float_field(m_material_window_handle, "tiling", &pbr->tiling_factor, 0.0f, 100.0f);
+
+            if (syn_button(m_material_window_handle, "albedo texture")) {
+                editor.open_texture_select();
+            }
+        }
+    }
+
+    syn_end_window(m_material_window_handle);
+}
+
+// 
+void editor_t::draw_color_picker_window()
+{
+    if (!m_color_picker_window_handle.id) return;
+    if (!selected_entity_handle.is_valid()) return;
+
+    window_t *pw = window_manager.get_window(m_color_picker_window_handle);
+    if (!pw || !pw->is_visible()) return;
+
+    float padding  = 4.0f;
+    float strip_w  = 20.0f;
+    float sv_w     = pw->get_content_size().x - strip_w - padding * 3.0f;
+
+    syn_begin_window(m_color_picker_window_handle);
+
+    // SV square and hue strip side by side
+    syn_begin_row(m_color_picker_window_handle, { sv_w, strip_w });
+        syn_color_picker_sv(m_color_picker_window_handle,
+                            &m_color_picker_hsv.x,
+                            &m_color_picker_hsv.y,
+                            &m_color_picker_hsv.z);
+        syn_color_picker_hue(m_color_picker_window_handle,
+                             &m_color_picker_hsv.x);
+    syn_end_row(m_color_picker_window_handle);
+
+    // RGB float fields
+    syn_begin_row(m_color_picker_window_handle, { 1.0f, 1.0f, 1.0f });
+        syn_float_field(m_color_picker_window_handle, "r", &m_color_picker_rgb.x, 0.0f, 1.0f);
+        syn_float_field(m_color_picker_window_handle, "g", &m_color_picker_rgb.y, 0.0f, 1.0f);
+        syn_float_field(m_color_picker_window_handle, "b", &m_color_picker_rgb.z, 0.0f, 1.0f);
+    syn_end_row(m_color_picker_window_handle);
+
+    // Cancel / Select buttons
+    syn_begin_row(m_color_picker_window_handle, { 1.0f, 1.0f });
+        if (syn_button(m_color_picker_window_handle, "Select")) close_color_picker(true);
+        if (syn_button(m_color_picker_window_handle, "Cancel")) close_color_picker(false);
+    syn_end_row(m_color_picker_window_handle);
+
+    if (im_needs_update(window_manager.get_window(m_color_picker_window_handle)))
+        update_color_picker_from_rgb();
+    
+    syn_end_window(m_color_picker_window_handle);
+}
+
+// 
+void editor_t::draw_hierarchy_window()
+{
+    const char *names[SYN_MAX_ENTITY_COUNT];
+    entity_handle_t handles[SYN_MAX_ENTITY_COUNT];
+    uint32_t count = 0;
+    int selected_index = -1;
+
+    entity_t *selected_e = nullptr;
+    if (selected_entity_handle.id != 0) {
+        selected_e = entity_lib.get_entity(selected_entity_handle);
+    }
+
+    // 
+    for (uint32_t i = 0; i < SYN_MAX_ENTITY_COUNT; i++) {
+        entity_t *e = &entity_lib.m_pool[i];
+        if (!e->is_active) continue;
+        if (e == selected_e) selected_index = count;
+        names[count] = e->name.c_str();
+        handles[count] = { i + 1 };
+        count++;
+    }
+
+    syn_begin_window(m_hierarchy_window_handle);
+    if (syn_list(m_hierarchy_window_handle, names, count, &selected_index)) {
+        selected_entity_handle = handles[selected_index];
+        window_t *tw = window_manager.get_window(m_transform_window_handle);
+        if (tw) tw->im_clear_states();
+        window_t *mw = window_manager.get_window(m_material_window_handle);
+        if (mw) mw->im_clear_states();
+    }
+    syn_end_window(m_hierarchy_window_handle);
+    
+}
+
+// 
+void editor_t::draw_texture_select_window()
+{
+    if (!m_texture_select_window_handle.id) return;
+    window_t *w = window_manager.get_window(m_texture_select_window_handle);
+    if (!w || !w->is_visible()) return;
+
+    // build texture name list
+    const char *names[SYN_MAX_TEXTURE_COUNT + 1];
+    texture_handle_t handles[SYN_MAX_TEXTURE_COUNT + 1];
+    uint32_t count = 1;
+
+    names[0] = "(no texture)";
+    handles[0] = { 0 };
+
+    // 
+    for (uint32_t i = 0; i < SYN_MAX_TEXTURE_COUNT; i++) {
+        texture_internal_t &tex = tex_lib.m_pool[i];
+        if (!tex.is_active || tex.name.empty()) continue;
+        if (tex.name == "__fallback_texture__") continue;
+        names[count] = tex.name.c_str();
+        handles[count] = { i };
+        count++;
+    }
+
+    static int selected_index = -1;
+    static texture_handle_t preview_handle = { 0 };
+
+    syn_begin_window(m_texture_select_window_handle);
+
+    float preview_size = 256.0f;
+    float list_h = w->get_content_size().y - preview_size - w->im_padding * 3.0f;
+    int hovered_index = -1;
+    if (syn_list(m_texture_select_window_handle, names, count, &selected_index, &hovered_index, list_h)) {
+        if (selected_index == 0) {
+            assign_texture_to_selected("(no texture)");
+        } else {
+            assign_texture_to_selected(names[selected_index]);
+        }
+    }
+
+    if (hovered_index > 0 && hovered_index < (int)count) {
+        preview_handle = handles[hovered_index];
+    } else if (hovered_index == 0) {
+        preview_handle = { 0 };
+    }
+
+    if (preview_handle.id != 0) {
+        glm::vec2 content_pos  = w->get_content_position();
+        glm::vec2 content_size = w->get_content_size();
+        glm::vec2 preview_pos  = {
+            content_pos.x + content_size.x - preview_size - w->im_padding,
+            content_pos.y + content_size.y - preview_size - w->im_padding
+        };
+        syn_tex_quad(m_texture_select_window_handle, preview_handle, 
+                     { preview_size, preview_size }, preview_pos);
+    }
+    
+    syn_end_window(m_texture_select_window_handle);
+
+}
+
+// 
+void editor_t::draw_create_primitive_window()
+{
+    if (!m_create_window_handle.id) return;
+    window_t *w = window_manager.get_window(m_create_window_handle);
+    if (!w || !w->is_visible()) return;
+
+    struct {
+        const char *label;
+        primitive_type_t type;
+    } primitives[] = {
+        { "Cube",        primitive_type_t::CUBE      },
+        { "Sphere (UV)", primitive_type_t::SPHERE_UV },
+        { "Plane",       primitive_type_t::PLANE     },
+        { "Cone",        primitive_type_t::CONE      },
+        { "Cylinder",    primitive_type_t::CYLINDER  },
+        { "Torus",       primitive_type_t::TORUS     },
+    };
+
+    syn_begin_window(m_create_window_handle);
+
+    for (int i = 0; i < (int)(sizeof(primitives) / sizeof(primitives[0])); i++) {
+        if (syn_button(m_create_window_handle, primitives[i].label)) {
+            create_primitive(primitives[i].type);
+            w->set_visible(false);
+        }
+    }
+
+    syn_end_window(m_create_window_handle);    
+}
+
+// 
 void editor_t::toggle_create_menu(const glm::vec2 &_pos)
 {
     window_t *pw = window_manager.get_window(m_create_window_handle);
@@ -518,23 +769,23 @@ void editor_t::open_texture_select()
     window_t *pw = window_manager.get_window(m_texture_select_window_handle);
     if (!pw) return;
 
-    widget_t *lw = pw->get_widget_of_type(widget_type_t::LIST);
-    if (!lw) return;
-
-    lw->list_widget.items.clear();
-    lw->list_widget.selected_index = -1;
-    lw->list_widget.items.push_back("(no texture)");
-
-    for (uint32_t i = 0; i < SYN_MAX_TEXTURE_COUNT; i++) {
-        texture_internal_t &tex = tex_lib.m_pool[i];
-        if (tex.is_active && !tex.name.empty()) {
-            lw->list_widget.items.push_back(tex.name);
-        }
+    // anchor to material window
+    window_t *mw = window_manager.get_window(m_material_window_handle);
+    if (mw) {
+        glm::vec2 pos = {
+            mw->position.x + mw->size.x + 4.0f,
+            mw->position.y
+        };
+        pos -= glm::vec2(pw->size.x + 300, pw->size.y);
+            
+        // clamp to screen
+        pos.x = glm::min(pos.x, root_window.get_fwidth()  - pw->size.x);
+        pos.y = glm::min(pos.y, root_window.get_fheight() - pw->size.y);
+        pw->position = pos;
     }
 
     pw->set_visible(true);
     window_manager.set_focused_window(m_texture_select_window_handle);
-    
 }
 
 // 
@@ -572,30 +823,6 @@ void editor_t::assign_texture_to_selected(const std::string &_name)
     // close after select
     window_t *pw = window_manager.get_window(m_texture_select_window_handle);
     pw->set_visible(false);
-    
-}
-
-// 
-void editor_t::set_texture_select_preview(const std::string &_name)
-{
-    window_t *pw = window_manager.get_window(m_texture_select_window_handle);
-    if (!pw) return;
-    widget_t *preview = pw->get_widget_of_type(widget_type_t::TEX_QUAD);
-    if (!preview) return;
-
-    if (_name == "(no texture)") {
-        preview->tex_quad_widget.texture_handle = { 0 };
-        return;
-    }
-    
-    for (uint32_t i = 0; i < SYN_MAX_TEXTURE_COUNT; i++) {
-        texture_internal_t &tex = tex_lib.m_pool[i];
-        if (tex.is_active && tex.name == _name) {
-            preview->tex_quad_widget.texture_handle = { i };
-            return;
-        }
-    }
-    preview->tex_quad_widget.texture_handle = { 0 };
     
 }
 
@@ -653,6 +880,11 @@ entity_handle_t editor_t::create_primitive(primitive_type_t _type)
     glm::mat4 transform = glm::mat4(1.0f);
     entity_handle_t handle = entity_lib.create_entity(unique_name, mesh, mat_lib.fallback_material_handle, transform);
     selected_entity_handle = handle;
+    // clear selection for im 
+    window_t *tw = window_manager.get_window(m_transform_window_handle);
+    if (tw) tw->im_clear_states();
+    window_t *mw = window_manager.get_window(m_material_window_handle);
+    if (mw) mw->im_clear_states();
 
     // store mesh parameters
     entity_t *e = entity_lib.get_entity(handle);
@@ -733,7 +965,7 @@ entity_handle_t editor_t::pick_entity(const glm::vec2 &_screen_pos)
 
         mesh_internal_t *mesh = mesh_lib.get_mesh(e->mesh_handle);
         if (!mesh) continue;
-
+        
         glm::mat4 inv = glm::inverse(e->transform);
         ray_t local_ray;
         local_ray.origin    = glm::vec3(inv * glm::vec4(ray.origin, 1.0f));
@@ -741,8 +973,14 @@ entity_handle_t editor_t::pick_entity(const glm::vec2 &_screen_pos)
 
         float t;
         if (ray_aabb_intersect(local_ray, mesh->aabb_min, mesh->aabb_max, t)) {
-            if (t < closest_t) {
-                closest_t = t;
+            // convert local t back to world space
+            glm::vec3 local_hit = local_ray.origin + local_ray.direction * t;
+            glm::vec3 world_hit = glm::vec3(e->transform * glm::vec4(local_hit, 1.0f));
+            float world_t = glm::length(world_hit - ray.origin);
+
+            // 
+            if (world_t < closest_t) {
+                closest_t = world_t;
                 closest_entity = { i + 1 };
             }
         }
@@ -1024,18 +1262,6 @@ void editor_t::update_color_picker_from_hsv()
                 pbr->albedo_color = glm::vec4(rgb, 1.0f);
             }
             e->is_material_dirty = true;
-        }
-    }
-
-    // sync float fields
-    window_t *pw = window_manager.get_window(m_color_picker_window_handle);
-    if (!pw) return;
-    float rgb_vals[3] = { rgb.r, rgb.g, rgb.b };
-    int field_count = 0;
-    for (uint32_t i = 0; i < pw->m_widget_count && field_count < 3; i++) {
-        widget_t &w = pw->m_widgets[i];
-        if (w.type == widget_type_t::FLOAT_FIELD && !w.float_field_widget.editing) {
-            w.float_field_widget.value = rgb_vals[field_count++];
         }
     }
 }

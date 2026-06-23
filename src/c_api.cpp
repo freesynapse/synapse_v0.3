@@ -52,7 +52,7 @@ entity_handle_t             selected_entity_handle = { 0 };
 
 
 //---------------------------------------------------------------------------------------
-// high-level control functions
+// high-level control
 //
 void syn_init(const char *_name, int _width, int _height, int _mode)
 {
@@ -131,25 +131,7 @@ void syn_shutdown()
 
 
 //---------------------------------------------------------------------------------------
-// accessors and helpers
-//
-void syn_set_window_pos_quadrant(int _quadrant)
-{
-    int xoffset, yoffset;
-    glfwGetWindowPos(root_window.m_window_ptr, &xoffset, &yoffset);
-    glm::ivec2 screen_dim = root_window.m_screen_dim;
-    glm::ivec2 win_dim = root_window.get_window_dims();
-    switch (_quadrant) {
-        case UPPER_LEFT:    xoffset =                        0;  yoffset =                        0;    break;
-        case UPPER_RIGHT:   xoffset = screen_dim.x - win_dim.x;  yoffset =                        0;    break;
-        case LOWER_LEFT:    xoffset =                        0;  yoffset = screen_dim.y - win_dim.y;    break;
-        case LOWER_RIGHT:   xoffset = screen_dim.x - win_dim.x;  yoffset = screen_dim.y - win_dim.y;    break;
-        default: SYN_WARNING("unknown screen quadrant (%d).\n", _quadrant);
-    }
-    root_window.set_window_position(xoffset, yoffset);
-
-}
-
+// ui creation and ui asset loader
 //
 void syn_load_assets(const char *_asset_file)
 {
@@ -302,78 +284,25 @@ void syn_create_viewport_window(const char *_name, const glm::vec2 &_pos, const 
 void syn_create_log_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size)
 {
     window_t win;
-    win.name = _name;
+    win.name     = _name;
     win.position = _pos;
-    win.size = _size;
-    win.set_resizable(false);
+    win.size     = _size;
 
-    widget_t text_area;
-    text_area.type = widget_type_t::TEXT_AREA;
-    text_area.anchor = widget_anchor_t::TOP_LEFT;
-    text_area.position = glm::vec2(0.0f, 0.0f);
-    text_area.size = glm::vec2(win.size.x - 10.0f, win.size.y - win.title_bar_height - 5.0f);
-    text_area.consumes_click = false;
-
-    text_area.get_lines = [](text_area_line_t * _lines, uint32_t _max_lines) -> uint32_t {
-        uint32_t count = std::min(syn_log_buffer.count, _max_lines);
-        for (uint32_t i = 0; i < count; i++) {
-            const log_entry_t &e = syn_log_buffer.get(syn_log_buffer.count - count + i);
-            strncpy(_lines[i].text, e.msg, SYN_LOG_LINE_LEN - 1);
-            switch (e.level) {
-                case log_level_t::WARNING:  _lines[i].color = { 1.0f, 0.8f, 0.0f, 1.0f }; break;
-                case log_level_t::ERROR:    _lines[i].color = { 1.0f, 0.3f, 0.3f, 1.0f }; break;
-                case log_level_t::DEBUG:    _lines[i].color = { 0.4f, 1.0f, 0.4f, 1.0f }; break;
-                default:                    _lines[i].color = { 0.9f, 0.9f, 0.9f, 1.0f }; break;
-            }
-        }
-        return count;
-    };
-
-    text_area.on_resize = [](widget_t *_self, const glm::vec2 &_content_size) {
-        _self->size = glm::vec2(_content_size.x - 8.0f, _content_size.y - 5.0f);
-    };
-
-    text_area.on_scroll = [](widget_t *_self, float _delta) {
-        _self->scroll_offset = glm::clamp(_self->scroll_offset + _delta, 0.0f, (float)_self->scroll_max_lines);
-    };
-    
     window_handle_t handle = window_manager.add_window(win);
-    window_t *lw = window_manager.get_window(handle);
-    lw->add_widget(text_area);
-    lw->on_resize();
-
     window_manager.set_log_window_handle(handle);
-    
+
 }
 
 // 
 void syn_create_hierarchy_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size)
 {
     window_t win;
-    win.name = _name;
+    win.name     = _name;
     win.position = _pos;
-    win.size = _size;
+    win.size     = _size;
 
     window_handle_t handle = window_manager.add_window(win);
-    window_manager.set_hierarchy_window_handle(handle);
-    window_t *hw = window_manager.get_window(handle);
-
-    // entity hierarchy
-    widget_t hier;
-    hier.type               = widget_type_t::HIERARCHY;
-    hier.anchor             = widget_anchor_t::TOP_LEFT;
-    hier.position           = glm::vec2(0.0f, 0.0f);
-    hier.size               = glm::vec2(_size.x, _size.y - hw->title_bar_height);
-    hier.hierarchy_widget.selected = &selected_entity_handle;
-    hier.on_resize = [](widget_t *_w, const glm::vec2 &_content_size) {
-        _w->size = _content_size;
-    };
-    hier.on_scroll = [](widget_t *_w, float _delta) {
-        _w->hierarchy_widget.scroll_offset = glm::max(0.0f, _w->hierarchy_widget.scroll_offset - _delta);
-    };
-    
-    hw->add_widget(hier);
-    hw->on_resize();
+    editor.set_hierarchy_window_handle(handle);
     
 }
 
@@ -381,219 +310,42 @@ void syn_create_hierarchy_window(const char *_name, const glm::vec2 &_pos, const
 void syn_create_transform_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size)
 {
     window_t win;
-    win.name = _name;
+    win.name     = _name;
     win.position = _pos;
-    win.size = _size;
+    win.size     = _size;
     window_handle_t handle = window_manager.add_window(win);
-    window_manager.set_transform_window_handle(handle);
-    window_t *tw = window_manager.get_window(handle);
+    editor.set_transform_window_handle(handle);
 
-    float w         = _size.x;
-    float field_h   = 20.0f;
-    float field_w   = w * 0.2f;
-    float label_x   = w * 0.15f;
-
-    const char *labels[] = { "px ", "py ", "pz ", "rx ", "ry ", "rz ", "sx ", "sy ", "sz " };
-    for (int i = 0; i < 9; i++) {
-        widget_t f;
-        f.type                   = widget_type_t::FLOAT_FIELD;
-        f.anchor                 = widget_anchor_t::TOP_LEFT;
-        f.position               = glm::vec2(label_x, i * (field_h + 2.0f));
-        f.size                   = glm::vec2(field_w, field_h);
-        f.text                   = labels[i];
-        f.float_field_widget.min = (i >= 6) ? 0.001f : -10000.0f;
-        f.float_field_widget.max = 10000.0f;
-        f.float_field_widget.on_change = [i](float _v) {
-            if (!selected_entity_handle.is_valid()) return;
-            entity_t *e = entity_lib.get_entity(selected_entity_handle);
-            if (!e) return;
-            if      (i < 3) e->t_position[i % 3] = _v;
-            else if (i < 6) e->t_rotation[i % 3] = _v;
-            else            e->t_scale[i % 3]     = _v;
-            e->transform = entity_t::make_transform(e->t_position, e->t_rotation, e->t_scale);
-        };
-        tw->add_widget(f);
-    }
-
-    tw->on_update = [](window_t *_w) {
-        if (!selected_entity_handle.is_valid()) return;
-        entity_t *e = entity_lib.get_entity(selected_entity_handle);
-        if (!e) return;
-
-        float vals[9] = {
-            e->t_position.x, e->t_position.y, e->t_position.z,
-            e->t_rotation.x, e->t_rotation.y, e->t_rotation.z,
-            e->t_scale.x,    e->t_scale.y,    e->t_scale.z,
-        };
-        // widgets: 0=close_btn, 1-9=float fields
-        for (int i = 0; i < 9; i++) {
-            widget_t *w = _w->get_widget(i + 1);
-            if (w && w->type == widget_type_t::FLOAT_FIELD && !w->float_field_widget.editing) {
-                w->float_field_widget.value = vals[i];
-            } 
-        }        
-    };
-    
-    tw->on_resize();
-    
 }
 
 // 
 void syn_create_material_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size)
 {
     window_t win;
-    win.name = _name;
+    win.name     = _name;
     win.position = _pos;
-    win.size = _size;
+    win.size     = _size;
     window_handle_t handle = window_manager.add_window(win);
-    window_manager.set_material_window_handle(handle);
-    window_t *mw = window_manager.get_window(handle);
-
-    float w       = _size.x;
-    float field_h = 20.0f;
-    float field_w = w * 0.25f;
-    float label_x = w * 0.20f;
-
-    const char *labels[] = { "r", "g", "b", "rough", "metal", "ao", "tiling" };
-    float maxvals[]      = { 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 100.0f };
-
-    for (int i = 0; i < 7; i++) {
-        widget_t f;
-        f.type                   = widget_type_t::FLOAT_FIELD;
-        f.anchor                 = widget_anchor_t::TOP_LEFT;
-        f.position               = glm::vec2(label_x, i * (field_h + 2.0f));
-        f.size                   = glm::vec2(field_w, field_h);
-        f.text                   = labels[i];
-        f.float_field_widget.min = 0.0f;
-        f.float_field_widget.max = maxvals[i];
-        f.float_field_widget.on_change = [i](float _v) {
-            if (!selected_entity_handle.is_valid()) return;
-            entity_t *e = entity_lib.get_entity(selected_entity_handle);
-            if (!e) return;
-            material_internal_t *mat = mat_lib.get_material(e->material_handle);
-            if (!mat || mat->data_size < sizeof(material_pbr_payload_t)) return;
-            material_pbr_payload_t *pbr = (material_pbr_payload_t *)mat->data;
-            switch (i) {
-                case 0: pbr->albedo_color.r = _v; break;
-                case 1: pbr->albedo_color.g = _v; break;
-                case 2: pbr->albedo_color.b = _v; break;
-                case 3: pbr->roughness      = _v; break;
-                case 4: pbr->metallic       = _v; break;
-                case 5: pbr->ao             = _v; break;
-                case 6: pbr->tiling_factor  = _v; break;
-            }
-        };
-        mw->add_widget(f);
-    }
-
-    // color swatch for albedo color
-    widget_t swatch;
-    swatch.type     = widget_type_t::COLOR_SWATCH;
-    swatch.anchor   = widget_anchor_t::TOP_LEFT;
-    swatch.position = { label_x + field_w + 10.0f, 0.0f };  // next to r field
-    swatch.size     = { 20.0f, 20.0f };
-    swatch.color    = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);  // updated dynamically
-    swatch.on_click = [](widget_t *w) {
-        window_t *mw = window_manager.get_window(window_manager.get_material_window_handle());
-        glm::vec2 pos = { mw->position.x + mw->size.x + 4.0f, mw->position.y };
-        editor.open_color_picker(input.mouse_position);
-    };
-    mw->add_widget(swatch);    
-
-    // albedo texture selection button
-    widget_t btn;
-    btn.type = widget_type_t::BUTTON;
-    btn.anchor = widget_anchor_t::TOP_LEFT;
-    btn.position = glm::vec2(label_x, 20.0f + 7 * (field_h + 2.0f));
-    btn.size = glm::vec2(font.get_string_width("albedo texture"), font.get_font_glyph_height() + 6.0f);
-    btn.text = "albedo texture";
-    btn.on_click = [](widget_t *) {
-        editor.open_texture_select();        
-    };
-    mw->add_widget(btn);
-
-    mw->on_update = [](window_t *_w) {
-        if (!selected_entity_handle.is_valid()) return;
-        entity_t *e = entity_lib.get_entity(selected_entity_handle);
-        if (!e) return;
-
-        material_internal_t *mat = mat_lib.get_material(e->material_handle);
-        if (!mat || mat->data_size < sizeof(material_pbr_payload_t)) return;
-
-        material_pbr_payload_t *pbr = (material_pbr_payload_t *)mat->data;
-        float vals[7] = {
-            pbr->albedo_color.r, pbr->albedo_color.g, pbr->albedo_color.b,
-            pbr->roughness, pbr->metallic, pbr->ao, pbr->tiling_factor
-        };
-        // widgets: 0=close_btn, 1-8=float fields
-        for (int i = 0; i < 7; i++) {
-            widget_t *w = _w->get_widget(i + 1);
-            if (w && w->type == widget_type_t::FLOAT_FIELD && !w->float_field_widget.editing) {
-                w->float_field_widget.value = vals[i];
-            }
-        }
-
-        // 
-        widget_t *ws = _w->get_widgets();
-        for (uint32_t i = 0; i < _w->get_widget_count(); i++) {
-            if (ws[i].type == widget_type_t::COLOR_SWATCH) {
-                ws[i].color = pbr->albedo_color;
-            }
-        }
-        
-    };
-    
-    mw->on_resize();
+    editor.set_material_window_handle(handle);
     
 }
 
 // 
 void syn_create_primitive_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size)
 {
-    float btn_h = 22.0f;
-    float btn_w = _size.x - 8.0f;
+    float btn_h = 24.0f;  // match im_default_row_height
+    float min_h = 4.0f + (int)primitive_type_t::COUNT * (btn_h + 4.0f);
 
     window_t win;
     win.name     = _name;
     win.position = _pos;
-    win.size     = { _size.x, glm::max(_size.y, 4.0f + (int)primitive_type_t::COUNT * (btn_h + 4.0f)) };
+    win.size     = { _size.x, glm::max(_size.y, min_h) };
+    win.set_resizable(false);
     window_handle_t handle = window_manager.add_window(win);
     editor.set_create_window_handle(handle);
-    
     window_t *pw = window_manager.get_window(handle);
     pw->set_visible(false);
-    pw->set_resizable(false);
 
-    struct {
-        const char *label;
-        primitive_type_t type;
-    } primitives[] = {
-        { "Cube", primitive_type_t::CUBE },
-        { "Sphere (UV)", primitive_type_t::SPHERE_UV },
-        { "Plane", primitive_type_t::PLANE },
-        { "Cone", primitive_type_t::CONE },
-        { "Cylinder", primitive_type_t::CYLINDER },
-        { "Torus", primitive_type_t::TORUS },
-    };
-
-    int i;
-    for (i = 0; i < (int)(sizeof(primitives)/sizeof(primitives[0])); i++) {
-        widget_t btn;
-        btn.type = widget_type_t::BUTTON;
-        btn.anchor = widget_anchor_t::TOP_LEFT;
-        btn.position = glm::vec2(4.0f, 4.0f + i * (btn_h + 4.0f));
-        btn.size = glm::vec2(btn_w, btn_h);
-        btn.text = primitives[i].label;
-        primitive_type_t t = primitives[i].type;
-        btn.on_click = [t](widget_t *_w) {
-            SYN_INFO("button clicked, type=%d\n", (int)t);
-            editor.create_primitive(t);
-        };
-        pw->add_widget(btn);
-    }
-
-    pw->on_resize();
-    
 }
 
 // 
@@ -611,73 +363,21 @@ void syn_create_texture_select_window(const char *_name, const glm::vec2 &_pos, 
     pw->set_visible(false);
     pw->set_resizable(true);
 
-    widget_t list;
-    list.type     = widget_type_t::LIST;
-    list.anchor   = widget_anchor_t::TOP_LEFT;
-    list.position = glm::vec2(0.0f, 0.0f);
-    list.size     = glm::vec2(_size.x, _size.y - pw->title_bar_height);
-    list.list_widget.on_select = [](int _idx, const std::string &_name) {
-        editor.assign_texture_to_selected(_name);
-    };
-    list.list_widget.on_hover = [](int, const std::string &_name) {
-        editor.set_texture_select_preview(_name);
-    };
-    pw->add_widget(list);
-
-    widget_t preview;
-    preview.type     = widget_type_t::TEX_QUAD;
-    preview.anchor   = widget_anchor_t::BOTTOM_RIGHT;
-    preview.position = glm::vec2(20.0f, 20.0f);
-    preview.size     = glm::vec2(256.0f, 256.0f);
-    pw->add_widget(preview);
-
-    pw->on_resize();
 }
 
 // 
 void syn_create_help_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size)
 {
     window_t win;
-    win.name = _name;
+    win.name     = _name;
     win.position = _pos;
-    win.size = _size;
-
-    widget_t text_area;
-    text_area.type = widget_type_t::TEXT_AREA;
-    text_area.anchor = widget_anchor_t::TOP_LEFT;
-    text_area.position = glm::vec2(0.0f, 0.0f);
-    text_area.size = glm::vec2(win.size.x - 10.0f, win.size.y - win.title_bar_height - 5.0f);
-    text_area.consumes_click = false;
-
-    dev_tools.load_help_file("../assets/docs/help.txt");
-    text_area.get_lines = [](text_area_line_t * _lines, uint32_t _max_lines) -> uint32_t {
-        auto &file_lines = dev_tools.get_help_content();
-        size_t count = std::min((uint32_t)file_lines.size(), _max_lines);
-        // 
-        for (uint32_t i = 0; i < count; i++) {
-            strncpy(_lines[i].text, file_lines[i].c_str(), SYN_TEXT_AREA_LINE_LEN - 1);
-            _lines[i].color = { 1.0f, 1.0f, 1.0f, 1.0f };
-        }
-        
-        return count;
-    };
-
-    text_area.on_resize = [](widget_t *_self, const glm::vec2 &_content_size) {
-        _self->size = glm::vec2(_content_size.x - 8.0f, _content_size.y - 5.0f);
-    };
-
-    text_area.on_scroll = [](widget_t *_self, float _delta) {
-        _self->scroll_offset = glm::clamp(_self->scroll_offset + _delta, 0.0f, (float)_self->scroll_max_lines);
-    };
-    
+    win.size     = _size;
     window_handle_t handle = window_manager.add_window(win);
-    window_t *hw = window_manager.get_window(handle);
-    hw->add_widget(text_area);
-    hw->set_visible(false);
-    hw->on_resize();
-
     window_manager.set_help_window_handle(handle);
-    
+    window_t *hw = window_manager.get_window(handle);
+    hw->set_visible(false);
+    dev_tools.load_help_file("../assets/docs/help.txt");
+
 }
 
 // 
@@ -694,94 +394,6 @@ void syn_create_color_picker_window(const char *_name, const glm::vec2 &_pos, co
     pw->set_visible(false);
     pw->set_resizable(false);
 
-    float padding   = 4.0f;
-    float strip_w   = 20.0f;
-    float btn_h     = 22.0f;
-    float field_h   = 20.0f;
-    float field_row = field_h + padding;
-    float content_w = _size.x - padding * 2.0f;
-    float content_h = _size.y - pw->title_bar_height - padding * 2.0f;
-    float bottom_h  = btn_h + field_row + padding;
-    float sq_h      = content_h - bottom_h;
-    float sv_w      = content_w - strip_w - padding;
-
-    // SV square
-    widget_t sv;
-    sv.type     = widget_type_t::COLOR_PICKER_SV;
-    sv.anchor   = widget_anchor_t::TOP_LEFT;
-    sv.position = { padding, padding };
-    sv.size     = { sv_w, sq_h };
-    sv.color_picker_sv_widget.hue        = &editor.m_color_picker_hsv.x;
-    sv.color_picker_sv_widget.saturation = &editor.m_color_picker_hsv.y;
-    sv.color_picker_sv_widget.value      = &editor.m_color_picker_hsv.z;
-    sv.color_picker_sv_widget.on_change = [](float _s, float _v) {
-        editor.m_color_picker_hsv.y = _s;
-        editor.m_color_picker_hsv.z = _v;
-        editor.update_color_picker_from_hsv();
-    };
-    pw->add_widget(sv);
-
-    // H strip
-    widget_t hue;
-    hue.type     = widget_type_t::COLOR_PICKER_HUE;
-    hue.anchor   = widget_anchor_t::TOP_LEFT;
-    hue.position = { padding + sv_w + padding, padding };
-    hue.size     = { strip_w, sq_h };
-    hue.color_picker_hue_widget.hue = &editor.m_color_picker_hsv.x;
-    hue.color_picker_hue_widget.on_change = [](float _h) {
-        editor.m_color_picker_hsv.x = _h;
-        editor.update_color_picker_from_hsv();
-    };
-    pw->add_widget(hue);
-
-    // RGB float fields
-    float field_w = (content_w - padding * 2.0f) / 3.0f;
-    float field_y = padding + sq_h + padding;
-    for (int i = 0; i < 3; i++) {
-        widget_t f;
-        f.type     = widget_type_t::FLOAT_FIELD;
-        f.anchor   = widget_anchor_t::TOP_LEFT;
-        f.position = { padding + i * (field_w + padding), field_y };
-        f.size     = { field_w, field_h };
-        f.float_field_widget.min   = 0.0f;
-        f.float_field_widget.max   = 1.0f;
-        f.float_field_widget.value = 1.0f;
-        int idx = i;
-        f.float_field_widget.on_change = [idx](float _v) {
-            editor.m_color_picker_rgb[idx] = _v;
-            editor.update_color_picker_from_rgb();
-        };
-        pw->add_widget(f);
-    }
-
-    // Select / Cancel buttons
-    float btn_w = (content_w - padding) * 0.5f;
-    float btn_y = field_y + field_row + padding;
-
-    widget_t cancel_btn;
-    cancel_btn.type = widget_type_t::BUTTON;
-    cancel_btn.anchor = widget_anchor_t::TOP_LEFT;
-    cancel_btn.position = { padding, btn_y };
-    cancel_btn.size = { btn_w, btn_h };
-    cancel_btn.text = "Cancel";
-    cancel_btn.on_click = [](widget_t *) {
-        editor.close_color_picker(false);
-    };
-    pw->add_widget(cancel_btn);
-
-    widget_t select_btn;
-    select_btn.type = widget_type_t::BUTTON;
-    select_btn.anchor = widget_anchor_t::TOP_LEFT;
-    select_btn.position = { padding + btn_w + padding, btn_y };
-    select_btn.size = { btn_w, btn_h };
-    select_btn.text = "Select";
-    select_btn.on_click = [](widget_t *) {
-        editor.close_color_picker(true);
-    };
-    pw->add_widget(select_btn);
-
-    pw->on_resize();
-    
 }
 
 
@@ -795,6 +407,8 @@ void syn_prerender()
 
     root_window.pre_render();
     renderer.reset_perf_counters();
+
+    events.process_events();
     
     __was_prerender_called = true;
     
@@ -853,7 +467,7 @@ void syn_render_end_3d()
         api.fbo_handler.unbind();
     }
 
-    //
+    // 
     syn_render_end();
 
 }
@@ -862,7 +476,7 @@ void syn_render_end_3d()
 void syn_render_end()
 {
     // everything is drawn, render the screen NDC quad
-    api.set_clear_color(0.2f, 0.2f, 0.2f, 1.0f);
+    api.set_clear_color(0.0f, 0.0f, 0.0f, 1.0f);
     api.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     
@@ -877,13 +491,621 @@ void syn_render_end()
 
     // 
     dev_tools.handle_input();
-    
-    //
+}
+
+// 
+void syn_frame_end()
+{
     root_window.post_render();
-    events.process_events();
     time_step.update();
     time_step.calculate_fps();
 
     __was_prerender_called = false;
+}
+
+
+//---------------------------------------------------------------------------------------
+// immediate mode ui
+// 
+void syn_im_begin()
+{
+    renderer_2d.batch.begin_batch();
+    
+}
+
+// 
+void syn_im_end()
+{
+    renderer_2d.batch.end_batch();
+    font.end_render_block(true);
+}
+
+void syn_begin_window(window_handle_t _handle)
+{
+    window_t *w = window_manager.get_window(_handle);
+    if (!w || !w->is_visible()) return;
+    w->im_begin();
+}
+
+// 
+void syn_end_window(window_handle_t _handle)
+{
+    
+}
+
+// 
+void syn_begin_row(window_handle_t _handle, const std::vector<float> &_ratios)
+{
+    window_t *w = window_manager.get_window(_handle);
+    if (w) w->im_begin_row(_ratios);
+}
+
+// 
+void syn_end_row(window_handle_t _handle)
+{
+    window_t *w = window_manager.get_window(_handle);
+    if (w) w->im_end_row();
+    
+}
+
+// immediate mode widgets
+// 
+void syn_label(window_handle_t _handle, const char *_text)
+{
+    window_t *w = window_manager.get_window(_handle);
+    if (!w) return;
+
+    widget_params_t wp;
+    im_set_widget_params(w, &wp);
+    
+    float font_depth = w->depth + window_manager.ddepth_layer_text;
+
+    font.set_depth(font_depth);
+    font.set_color(glm::vec4(1.0f));
+    font.render_text_clipped(wp.p.x + 4.0f, wp.p.y + (wp.s.y + font.get_font_glyph_height()) * 0.5f, wp.s.x, _text);
+
+    im_update_cursor_y(w, &wp);
+}
+
+// 
+bool syn_button(window_handle_t _handle, const char *_text)
+{
+    window_t *w = window_manager.get_window(_handle);
+    if (!w) return false;
+
+    uint32_t id = im_widget_hash(_text, w);
+    widget_state_t *state = w->im_get_or_create_state(id);
+    if (!state) return false;
+
+    widget_params_t wp;
+    im_set_widget_params(w, &wp);
+
+    state->is_hovered = w->im_is_hovered(wp.p, wp.s);
+    glm::vec4 col = state->is_hovered ? glm::vec4(0.5f, 0.5f, 0.5f, 1.0f) : glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
+    renderer_2d.batch.add_quad(wp.p, wp.s, col, w->depth + window_manager.ddepth_layer_widget);
+
+    ui_render_vertex_t outline[] = {
+        ui_render_vertex_t({ wp.p.x,          wp.p.y          }, glm::vec4(0.4f, 0.4f, 0.4f, 1.0f), w->depth + 0.02f),
+        ui_render_vertex_t({ wp.p.x + wp.s.x, wp.p.y          }, glm::vec4(0.4f, 0.4f, 0.4f, 1.0f), w->depth + 0.02f),
+        ui_render_vertex_t({ wp.p.x + wp.s.x, wp.p.y + wp.s.y }, glm::vec4(0.4f, 0.4f, 0.4f, 1.0f), w->depth + 0.02f),
+        ui_render_vertex_t({ wp.p.x,          wp.p.y + wp.s.y }, glm::vec4(0.4f, 0.4f, 0.4f, 1.0f), w->depth + 0.02f),
+        ui_render_vertex_t({ wp.p.x,          wp.p.y          }, glm::vec4(0.4f, 0.4f, 0.4f, 1.0f), w->depth + 0.02f),
+    };
+    renderer_2d.batch.add_line_strip(outline, 5);
+
+    if (_text) {
+        float tx = wp.p.x + (wp.s.x - font.get_string_width(_text)) * 0.5f;
+        float ty = wp.p.y + (wp.s.y + font.get_font_glyph_height()) * 0.5f;
+        font.set_depth(w->depth + window_manager.ddepth_layer_text);
+        font.set_color(glm::vec4(1.0f));
+        font.render_text(tx, ty, _text);
+    }
+
+    // return true if clicked
+    im_update_cursor_y(w, &wp);
+    return state->is_hovered && input.is_button_pressed(SYN_MOUSE_BUTTON_1);
+    
+}
+
+// 
+void syn_float_field(window_handle_t _handle,
+                     const char *_label,
+                     float *_value,
+                     float _min,
+                     float _max)
+{
+    window_t *w = window_manager.get_window(_handle);
+    if (!w || !_value) return;
+
+    uint32_t id = im_widget_hash(_label, w);
+    widget_state_t *state = w->im_get_or_create_state(id);
+    if (!state) return;
+
+    if (!state->binding) state->binding = _value;
+    state->min = _min;
+    state->max = _max;
+    
+    widget_params_t wp;
+    im_set_widget_params(w, &wp);
+
+    state->is_hovered = w->im_is_hovered(wp.p, wp.s);
+
+    // sync value from binding when not editing
+    if (!state->editing) state->value = *_value;
+    glm::vec4 col = state->is_hovered ? glm::vec4(0.4f, 0.4f, 0.4f, 1.0f) : glm::vec4(0.25f, 0.25f, 0.25f, 1.0f);
+    renderer_2d.batch.add_quad(wp.p, wp.s, col, w->depth + window_manager.ddepth_layer_widget);
+
+    glm::vec4 ol_c = state->editing ? glm::vec4(0.6f, 0.6f, 0.6f, 1.0f) : glm::vec4(0.4f, 0.4f, 0.4f, 1.0f);
+    ui_render_vertex_t outline[] = {
+        ui_render_vertex_t({ wp.p.x,          wp.p.y          }, ol_c, w->depth + 0.02f),
+        ui_render_vertex_t({ wp.p.x + wp.s.x, wp.p.y          }, ol_c, w->depth + 0.02f),
+        ui_render_vertex_t({ wp.p.x + wp.s.x, wp.p.y + wp.s.y }, ol_c, w->depth + 0.02f),
+        ui_render_vertex_t({ wp.p.x,          wp.p.y + wp.s.y }, ol_c, w->depth + 0.02f),
+        ui_render_vertex_t({ wp.p.x,          wp.p.y          }, ol_c, w->depth + 0.02f),
+    };
+    renderer_2d.batch.add_line_strip(outline, 5);
+
+    float font_depth = w->depth + window_manager.ddepth_layer_text;
+
+    font.set_depth(font_depth);
+    float text_y = wp.p.y + (wp.s.y + font.get_font_glyph_height()) * 0.5f;
+    font.set_color(glm::vec4(1.0f));
+
+    // position label left of field
+    if (_label) {
+        float label_x = wp.p.x + 6.0f;
+        font.render_text(label_x, text_y, _label);
+    }
+
+    // value display
+    char display[SYN_IM_BUFFER_LEN] = {};
+    if (state->editing) snprintf(display, sizeof(display), "%s", state->buf);
+    else                snprintf(display, sizeof(display), "%.3f", state->value);
+
+    float val_w = font.get_string_width("%s", display);
+    float val_x = wp.p.x + wp.s.x - val_w - 6.0f;
+    font.render_text(val_x, text_y, display);
+
+    // cursor
+    if (state->editing) {
+        char before[SYN_IM_BUFFER_LEN] = {};
+        strncpy(before, state->buf, state->cursor);
+        float cur_x = val_x + font.get_string_width(before);
+        ui_render_vertex_t cur[] = {
+            ui_render_vertex_t({ cur_x, wp.p.y + 3.0f          }, glm::vec4(1.0f), w->depth + 0.02f),
+            ui_render_vertex_t({ cur_x, wp.p.y + wp.s.y - 3.0f }, glm::vec4(1.0f), w->depth + 0.02f),
+        };
+        renderer_2d.batch.add_line_strip(cur, 2);
+    }
+
+    // click to start editing
+    if (state->is_hovered && w->im_click_pending) {
+        // cancel editing of all other widgets in window
+        for (uint32_t i = 0; i < w->im_widget_state_count; i++) {
+            w->im_widget_states[i].editing = false;
+        }
+
+        // enable this field for editing
+        state->editing = true;
+        w->im_active_state_id = state->id;
+        snprintf(state->buf, SYN_IM_BUFFER_LEN, "%.3f", state->value);
+        state->cursor = (int)strlen(state->buf);
+        w->im_click_pending = false;
+    }
+
+    // consume scroll
+    if (state->is_hovered && !state->editing && w->im_scroll_delta != 0.0f) {
+        float speed = 1.0f;
+        if (input.is_key_down(SYN_KEY_LEFT_SHIFT))  speed = 10.0f;
+        if (input.is_key_down(SYN_KEY_LEFT_ALT))    speed = 0.1f;
+        if (input.is_key_down(SYN_KEY_LEFT_CTRL))   speed = 0.01f;
+        float new_val = glm::clamp(state->value - w->im_scroll_delta * speed, state->min, state->max);
+        state->value = new_val;
+        if (state->binding) *state->binding = new_val;
+        state->is_dirty = true;
+        w->im_scroll_delta = 0.0f;
+        
+    }
+    
+    im_update_cursor_y(w, &wp);
+    
+}
+
+// 
+void syn_color_picker_sv(window_handle_t _handle, float *_hue, float *_saturation, float *_value)
+{
+    window_t *w = window_manager.get_window(_handle);
+    if (!w || !_hue || !_saturation || !_value) return;
+
+    uint32_t id = im_widget_hash("__color_picker_sv", w);
+    widget_state_t *state = w->im_get_or_create_state(id);
+    if (!state) return;
+
+    widget_params_t wp;
+    im_set_widget_params(w, &wp);
+
+    // override height: remaining space minus rgb row + button row + padding
+    float rows_below = 24.0f * 2.0f + wp.pad * 3.0f;
+    wp.s.y = w->get_content_size().y - w->im_cursor_y - rows_below;
+    wp.p.y = wp.content_pos.y + w->im_cursor_y;
+
+    state->is_hovered = w->im_is_hovered(wp.p, wp.s);
+
+    // draw SV quad (shader)
+    shader_t *shader = shader_lib.get_shader(renderer.m_ui_color_picker_shader_handle);
+    if (shader) {
+        shader->enable();
+        shader->set_matrix_4fv("u_projection", renderer.m_ui_projection);
+        shader->set_uniform_2fv("u_position", wp.p);
+        shader->set_uniform_2fv("u_size", wp.s);
+        shader->set_uniform_1f("u_depth", w->depth + window_manager.ddepth_layer_widget);
+        shader->set_uniform_1i("u_mode", 0);
+        shader->set_uniform_1f("u_hue", *_hue);
+        renderer.m_ui_tex_quad_vao.bind();
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+        renderer.m_ui_tex_quad_vao.unbind();
+        shader->disable();
+    }
+
+    // crosshair
+    float cx = wp.p.x + *_saturation * wp.s.x;
+    float cy = wp.p.y + (1.0f - *_value) * wp.s.y;
+    float arm = 6.0f, thickness = 1.5f;
+    glm::vec4 cross_col = { 1.0f, 1.0f, 1.0f, 0.75f };
+    renderer_2d.batch.add_quad({ cx - arm, cy - thickness * 0.5f }, { arm * 2.0f, thickness }, cross_col, w->depth + 0.01f);
+    renderer_2d.batch.add_quad({ cx - thickness * 0.5f, cy - arm }, { thickness, arm * 2.0f }, cross_col, w->depth + 0.01f);
+    
+    // click/drag
+    if (state->is_hovered && w->im_click_pending) {
+        w->im_dragging_state_id = state->id;
+        w->im_drag_type         = im_drag_type_t::COLOR_PICKER_SV;
+        w->im_drag_widget_pos   = wp.p;
+        w->im_drag_widget_size  = wp.s;
+        float s = glm::clamp((w->im_click_pos.x - wp.p.x) / wp.s.x, 0.0f, 1.0f);
+        float v = glm::clamp(1.0f - (w->im_click_pos.y - wp.p.y) / wp.s.y, 0.0f, 1.0f);
+        *_saturation = s;
+        *_value = v;
+        editor.update_color_picker_from_hsv();
+        w->im_click_pending = false;
+    }
+
+    im_update_cursor_y(w, &wp);
+    
+}
+
+// 
+void syn_color_picker_hue(window_handle_t _handle, float *_hue)
+{
+    window_t *w = window_manager.get_window(_handle);
+    if (!w || !_hue) return;
+
+    uint32_t id = im_widget_hash("__color_picker_hue", w);
+    widget_state_t *state = w->im_get_or_create_state(id);
+    if (!state) return;
+
+    widget_params_t wp;
+    im_set_widget_params(w, &wp);
+
+    // override height: remaining space minus rgb row + button row + padding
+    float rows_below = 24.0f * 2.0f + wp.pad * 3.0f;
+    wp.s.y = w->get_content_size().y - w->im_cursor_y - rows_below;
+    wp.p.y = wp.content_pos.y + w->im_cursor_y;
+
+    state->is_hovered = w->im_is_hovered(wp.p, wp.s);
+
+    // draw hue bar (shader)
+    shader_t *shader = shader_lib.get_shader(renderer.m_ui_color_picker_shader_handle);
+    if (shader) {
+        shader->enable();
+        shader->set_matrix_4fv("u_projection", renderer.m_ui_projection);
+        shader->set_uniform_2fv("u_position", wp.p);
+        shader->set_uniform_2fv("u_size", wp.s);
+        shader->set_uniform_1f("u_depth", w->depth + window_manager.ddepth_layer_widget);
+        shader->set_uniform_1i("u_mode", 1);
+        shader->set_uniform_1f("u_hue", 0.0f);
+        renderer.m_ui_tex_quad_vao.bind();
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
+        renderer.m_ui_tex_quad_vao.unbind();
+        shader->disable();
+    }
+
+    // indicator bar
+    float hy = wp.p.y + (1.0f - *_hue) * wp.s.y;
+    renderer_2d.batch.add_quad({ wp.p.x, hy - 1.5f }, { wp.s.x, 3.0f }, { 1.0f, 1.0f, 1.0f, 0.75f }, w->depth + 0.01f);
+
+    // click/drag
+    if (state->is_hovered && w->im_click_pending) {
+        w->im_dragging_state_id = state->id;
+        w->im_drag_type         = im_drag_type_t::COLOR_PICKER_HUE;
+        w->im_drag_widget_pos   = wp.p;
+        w->im_drag_widget_size  = wp.s;
+        float h = glm::clamp(1.0f - (w->im_click_pos.y - wp.p.y) / wp.s.y, 0.0f, 1.0f);
+        *_hue = h;
+        editor.update_color_picker_from_hsv();
+        w->im_click_pending = false;
+    }
+
+    im_update_cursor_y(w, &wp);
+    
+}
+
+// 
+void syn_color_swatch(window_handle_t _handle, float *_r, float *_g, float *_b)
+{
+    window_t *w = window_manager.get_window(_handle);
+    if (!w || !_r || !_g || !_b) return;
+
+    uint32_t id = im_widget_hash("__color_swatch", w);
+    widget_state_t *state = w->im_get_or_create_state(id);
+    if (!state) return;
+
+    widget_params_t wp;
+    im_set_widget_params(w, &wp);
+
+    state->is_hovered = w->im_is_hovered(wp.p, wp.s);
+
+    glm::vec4 col = { *_r, *_g, *_b, 1.0f };
+    renderer_2d.batch.add_quad(wp.p, wp.s, col, w->depth + 0.01f);
+
+    glm::vec4 ol_c = state->is_hovered ? glm::vec4(0.8f, 0.8f, 0.8f, 1.0f) : glm::vec4(0.4f, 0.4f, 0.4f, 1.0f);
+    
+    ui_render_vertex_t outline[] = {
+        ui_render_vertex_t({ wp.p.x,           wp.p.y           }, ol_c, w->depth + 0.02f),
+        ui_render_vertex_t({ wp.p.x + wp.s.x,  wp.p.y           }, ol_c, w->depth + 0.02f),
+        ui_render_vertex_t({ wp.p.x + wp.s.x,  wp.p.y + wp.s.y  }, ol_c, w->depth + 0.02f),
+        ui_render_vertex_t({ wp.p.x,           wp.p.y + wp.s.y  }, ol_c, w->depth + 0.02f),
+        ui_render_vertex_t({ wp.p.x,           wp.p.y           }, ol_c, w->depth + 0.02f),
+    };
+    renderer_2d.batch.add_line_strip(outline, 5);
+
+    // open color picker on click
+    if (state->is_hovered && w->im_click_pending) {
+        editor.open_color_picker(w->im_click_pos);
+        w->im_click_pending = false;
+    }
+
+    im_update_cursor_y(w, &wp);
+    
+}
+
+bool syn_list(window_handle_t _handle,
+              const char **_items,
+              uint32_t _count,
+              int *_selected_index,
+              int *_hovered_index,
+              float _max_height)
+{
+    window_t *w = window_manager.get_window(_handle);
+    if (!w || !_items || !_selected_index) return false;
+
+    uint32_t id = im_widget_hash("__list", w);
+    widget_state_t *state = w->im_get_or_create_state(id);
+    if (!state) return false;
+
+    widget_params_t wp;
+    im_set_widget_params(w, &wp);
+
+    // fill remaining content
+    wp.s.y = (_max_height > 0.0f) ? _max_height : w->get_content_size().y - w->im_cursor_y;
+    wp.p.y = wp.content_pos.y + w->im_cursor_y;
+
+    float row_h = font.get_font_glyph_height() + 6.0f;
+    uint32_t max_rows = (uint32_t)(wp.s.y / row_h);
+    uint32_t start = (uint32_t)state->scroll_offset;
+
+    font.set_depth(w->depth + window_manager.ddepth_layer_text);
+    font.set_color(glm::vec4(1.0f));
+
+    bool selection_changed = false;
+    uint32_t drawn = 0;
+    
+    if (_hovered_index) *_hovered_index = -1;
+
+    for (uint32_t i = start; i < _count && drawn < max_rows; i++) {
+        float row_y = wp.p.y + drawn * row_h;
+        glm::vec2 row_p = { wp.p.x, row_y };
+        glm::vec2 row_s = { wp.s.x, row_h };
+
+        bool is_selected = ((int)i == *_selected_index);
+        if (is_selected) {
+            renderer_2d.batch.add_quad(row_p, row_s,
+                glm::vec4(0.5f, 0.3f, 0.1f, 1.0f),
+                w->depth + window_manager.ddepth_layer_widget);
+        } else if (w->im_is_hovered(row_p, row_s)) {
+            renderer_2d.batch.add_quad(row_p, row_s,
+                glm::vec4(0.4f, 0.4f, 0.4f, 1.0f),
+                w->depth + window_manager.ddepth_layer_widget);
+        }
+
+        font.render_text_clipped(wp.p.x + 6.0f, row_y + row_h - font.get_font_glyph_height() * 0.5f, wp.s.x - 8.0f, "%s", _items[i]);
+
+        if (w->im_click_pending && w->im_is_hovered(row_p, row_s)) {
+            *_selected_index = (int)i;
+            selection_changed = true;
+            w->im_click_pending = false;
+        }
+
+        // 
+        if (w->im_is_hovered(row_p, row_s)) {
+            renderer_2d.batch.add_quad(
+                row_p, row_s, 
+                glm::vec4(0.4f, 0.4f, 0.4f, 1.0f), 
+                w->depth + window_manager.ddepth_layer_widget
+            );
+            if (_hovered_index) *_hovered_index = (int)i;
+        }
+        
+        drawn++;
+    }
+
+    // scroll
+    if (w->im_is_hovered(wp.p, wp.s) && w->im_scroll_delta != 0.0f) {
+        float max_scroll = (float)(_count > max_rows ? _count - max_rows : 0);
+        state->scroll_offset = glm::clamp(state->scroll_offset - w->im_scroll_delta, 0.0f, max_scroll);
+        w->im_scroll_delta = 0.0f;
+    }
+
+    im_update_cursor_y(w, &wp);
+
+    return selection_changed;
+    
+}
+
+// 
+void syn_tex_quad(window_handle_t _handle, texture_handle_t _tex_handle, const glm::vec2 &_size, const glm::vec2 &_pos)
+{
+    window_t *w = window_manager.get_window(_handle);
+    if (!w) return;
+
+    texture_internal_t *tex = tex_lib.get_texture(_tex_handle);
+    if (!tex) return;
+    
+    uint32_t id = im_widget_hash("__tex_quad", w);
+    widget_state_t *state = w->im_get_or_create_state(id);
+    if (!state) return;
+
+    widget_params_t wp;
+    im_set_widget_params(w, &wp);
+    if (_pos.x >= 0.0f) {
+        wp.p = _pos;
+        wp.s = _size;
+    } else {
+        wp.s = _size;
+    }
+
+    shader_t *shader = shader_lib.get_shader(renderer.m_ui_tex_quad_shader_handle);
+    if (!shader) return;
+
+    shader->enable();
+    shader->set_matrix_4fv("u_projection", renderer.m_ui_projection);
+    shader->set_uniform_2fv("u_position", wp.p);
+    shader->set_uniform_2fv("u_size", wp.s);
+    shader->set_uniform_1f("u_depth", w->depth + window_manager.ddepth_layer_widget);
+    glBindTextureUnit(0, tex->opengl_id);
+    renderer.m_ui_tex_quad_vao.bind();
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    renderer.m_ui_tex_quad_vao.unbind();
+    shader->disable();
+
+    im_update_cursor_y(w, &wp);    
+    
+}
+
+// 
+void syn_log_window()
+{
+    window_handle_t handle = window_manager.get_log_window_handle();
+    
+    syn_begin_window(handle);
+    
+    window_t *w = window_manager.get_window(handle);
+    if (!w) return;
+
+    uint32_t id = im_widget_hash("__log", w);
+    widget_state_t *state = w->im_get_or_create_state(id);
+    if (!state) return;
+
+    widget_params_t wp;
+    im_set_widget_params(w, &wp);
+
+    // fill remaining content
+    wp.s.y = w->get_content_size().y - w->im_cursor_y;
+    wp.p.y = wp.content_pos.y + w->im_cursor_y;
+
+    float line_h = font.get_font_height() + 2.0f;
+    uint32_t max_lines = (uint32_t)(wp.s.y / line_h);
+    uint32_t count = syn_log_buffer.count;
+
+    // auto-scroll: offset 0 = bottom, > 0 = scroll up
+    uint32_t start = 0;
+    if (count > max_lines) {
+        float max_scroll = (float)(count - max_lines);
+        float offset = glm::clamp(state->scroll_offset, 0.0f, max_scroll);
+        start = (uint32_t)(max_scroll - offset);
+    }
+
+    uint32_t display_count = (count > start) ? std::min(count - start, max_lines) : 0;
+    font.set_depth(w->depth + window_manager.ddepth_layer_text);
+    
+    for (uint32_t i = 0; i < display_count; i++) {
+        const log_entry_t &e = syn_log_buffer.get(start + i);
+        glm::vec4 color;
+        switch (e.level) {
+            case log_level_t::WARNING: color = { 1.0f, 0.8f, 0.0f, 1.0f }; break;
+            case log_level_t::ERROR:   color = { 1.0f, 0.3f, 0.3f, 1.0f }; break;
+            case log_level_t::DEBUG:   color = { 0.4f, 1.0f, 0.4f, 1.0f }; break;
+            default:                   color = { 1.0f, 1.0f, 1.0f, 1.0f }; break;
+        }
+        font.set_color(color);
+        font.render_text_clipped(wp.p.x + 4.0f, 
+                                 wp.p.y + i * line_h + line_h, 
+                                 wp.s.x - 8.0f, 
+                                 "%s", e.msg);
+    }
+
+    // scroll
+    if (w->im_is_hovered(wp.p, wp.s) && w->im_scroll_delta != 0.0f) {
+        float max_scroll = (float)(count > max_lines ? count - max_lines : 0);
+        state->scroll_offset = glm::clamp(state->scroll_offset + w->im_scroll_delta, 0.0f, max_scroll);
+        w->im_scroll_delta = 0.0f;
+    }
+
+    im_update_cursor_y(w, &wp);
+
+    syn_end_window(handle);
+    
+}
+
+// 
+void syn_help_window() {
+    window_handle_t handle = window_manager.get_help_window_handle();
+    if (!handle.id) return;
+    
+    window_t *w = window_manager.get_window(handle);
+    if (!w || !w->is_visible()) return;
+
+    syn_begin_window(handle);
+
+    widget_params_t wp;
+    im_set_widget_params(w, &wp);
+    wp.s.y = w->get_content_size().y - w->im_cursor_y;
+    wp.p.y = wp.content_pos.y + w->im_cursor_y;
+
+    std::vector<std::string> lines = dev_tools.get_help_content();
+    float line_h = font.get_font_height();
+    uint32_t max_lines = (uint32_t)(wp.s.y / line_h);
+    uint32_t count = (uint32_t)lines.size();
+
+    uint32_t id = im_widget_hash("__help", w);
+    widget_state_t *state = w->im_get_or_create_state(id);
+    if (!state) { syn_end_window(handle); return; }
+
+    uint32_t start = 0;
+    if (count > max_lines) {
+        float max_scroll = (float)(count - max_lines);
+        float offset = glm::clamp(state->scroll_offset, 0.0f, max_scroll);
+        start = (uint32_t)offset;
+    }
+
+    uint32_t display_count = (count > start) ? std::min(count - start, max_lines) : 0;
+
+    font.set_depth(w->depth + window_manager.ddepth_layer_text);
+    font.set_color(glm::vec4(1.0f));
+
+    for (uint32_t i = 0; i < display_count; i++) {
+        font.render_text_clipped(wp.p.x + 4.0f,
+                                  wp.p.y + i * line_h + line_h,
+                                  wp.s.x - 8.0f,
+                                  "%s", lines[start + i].c_str());
+    }
+
+    // scroll
+    if (w->im_is_hovered(wp.p, wp.s) && w->im_scroll_delta != 0.0f) {
+        float max_scroll = (float)(count > max_lines ? count - max_lines : 0);
+        state->scroll_offset = glm::clamp(state->scroll_offset + w->im_scroll_delta, 0.0f, max_scroll);
+        w->im_scroll_delta = 0.0f;
+    }
+
+    syn_end_window(handle);    
     
 }

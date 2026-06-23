@@ -23,4 +23,6 @@ EDITOR
   F7            Toggle rendering AABBs of all entities
   F8            Reload all shaders
   F10           Toggle grid
- 
+  F11           Toggle skybox
+  F12           Toggle fullscreen
+  

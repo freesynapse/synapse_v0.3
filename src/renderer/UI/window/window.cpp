@@ -11,27 +11,7 @@
 // 
 void window_t::init()
 {
-    
-    widget_t close_btn;
-    close_btn.type          = widget_type_t::BUTTON;
-    close_btn.anchor        = widget_anchor_t::TOP_RIGHT;
-    close_btn.position      = glm::vec2(8.0f, 8.0f);
-    close_btn.size          = glm::vec2(10.0f, 10.0f);
-    close_btn.color         = glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
-    close_btn.hover_color   = glm::vec4(0.5f, 0.5f, 0.5f, 1.0f);
-    close_btn.outline_color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-    close_btn.in_title_bar  = true;
-    close_btn.on_click = [this](widget_t *) {
-        event_t e;
-        e.type = event_type_t::UI_WINDOW_CLOSE;
-        e.as.ui_window_close.handle = this->this_handle;
-        events.dispatch_event(e);
-    };
-
-    m_widget_count = 0;
-    add_widget(close_btn);
-    
-    // default flags
+        // default flags
     m_is_visible = true;
     m_is_active = true;
 
@@ -127,12 +107,12 @@ void window_t::destroy_framebuffer()
 void window_t::on_resize()
 {
     // notify widgets
-    glm::vec2 content_size = get_content_size();
-    for (uint32_t i = 0; i < m_widget_count; i++) {
-        if (m_widgets[i].on_resize) {
-            m_widgets[i].on_resize(&m_widgets[i], content_size);
-        }
-    }
+    // glm::vec2 content_size = get_content_size();
+    // for (uint32_t i = 0; i < m_widget_count; i++) {
+    //     if (m_widgets[i].on_resize) {
+    //         m_widgets[i].on_resize(&m_widgets[i], content_size);
+    //     }
+    // }
 
     // reize framebuffer if present
     if (m_has_framebuffer || m_is_tab_container) {
@@ -174,309 +154,33 @@ void window_t::draw()
     
     float tx = position.x + 10.0f;
     float ty = position.y + title_bar_height - font.get_font_height() * 0.5f;
-    float font_depth = depth + window_manager.m_ddepth_layer_text;//depth + window_manager.m_ddepth_layer_text;//(depth + window_manager.m_ddepth_layer_text) / window_manager.m_zfar;
+    float font_depth = depth + window_manager.ddepth_layer_text;//depth + window_manager.ddepth_layer_text;//(depth + window_manager.ddepth_layer_text) / window_manager.m_zfar;
     font.set_color(fg_color);
     font.set_depth(font_depth);
     font.render_text(tx, ty, "%s", name.c_str());
 
-    draw_widgets();
+    // render title bar close button
+    float btn_size = 10.0f;
+    float margin = 8.0f;
+    glm::vec2 btn_p = { position.x + size.x - margin - btn_size, position.y + (title_bar_height - btn_size) * 0.5f };
+    glm::vec2 btn_s = { btn_size, btn_size };
+    glm::vec2 mpos = input.mouse_position;
+    bool hovered = (mpos.x >= btn_p.x && mpos.x <= btn_p.x + btn_s.x &&
+                    mpos.y >= btn_p.y && mpos.y <= btn_p.y + btn_s.y);
+    glm::vec4 btn_color = hovered ? glm::vec4(0.8f, 0.2f, 0.2f, 1.0f) : glm::vec4(0.3f, 0.3f, 0.3f, 1.0f);
+    renderer_2d.batch.add_quad(btn_p, btn_s, btn_color, depth + 0.01f);
+    glm::vec4 ol_c = glm::vec4(0.7f, 0.7f, 0.7f, 1.0f);
+    ui_render_vertex_t outline[] = {
+        ui_render_vertex_t({ btn_p.x,            btn_p.y            }, ol_c, depth + 0.02f),
+        ui_render_vertex_t({ btn_p.x + btn_s.x,  btn_p.y            }, ol_c, depth + 0.02f),
+        ui_render_vertex_t({ btn_p.x + btn_s.x,  btn_p.y + btn_s.y  }, ol_c, depth + 0.02f),
+        ui_render_vertex_t({ btn_p.x,            btn_p.y + btn_s.y  }, ol_c, depth + 0.02f),
+        ui_render_vertex_t({ btn_p.x,            btn_p.y            }, ol_c, depth + 0.02f),
+    };
+    renderer_2d.batch.add_line_strip(outline, 5);
 
-}
-
-// 
-void window_t::draw_widgets()
-{
-    glm::vec2 content_pos  = glm::vec2(position.x, position.y + title_bar_height);
-    glm::vec2 content_size = glm::vec2(size.x, size.y - title_bar_height);
-    
-    for (uint32_t i = 0; i < m_widget_count; i++) {
-        // 
-        widget_t *w = &m_widgets[i];
-        if (!w->is_visible) continue;
-
-        glm::vec2 p = w->in_title_bar ? w->get_absolute_position(position, size) : w->get_absolute_position(content_pos, content_size);
-        glm::vec2 s = w->size;
-        glm::vec4 fg_c = w->is_hovered ? w->hover_color : w->color;
-        glm::vec4 ol_c = w->outline_color;
-        float depth_offset = (depth + 0.01f);
-
-        switch (w->type) {
-            case widget_type_t::BUTTON: {
-                renderer_2d.batch.add_quad(p, w->size, fg_c, depth_offset);
-                
-                ui_render_vertex_t line_vertices[] = {
-                    ui_render_vertex_t({ p.x,       p.y       }, ol_c, depth_offset + 0.01f),
-                    ui_render_vertex_t({ p.x + s.x, p.y       }, ol_c, depth_offset + 0.01f),
-                    ui_render_vertex_t({ p.x + s.x, p.y + s.y }, ol_c, depth_offset + 0.01f),
-                    ui_render_vertex_t({ p.x,       p.y + s.y }, ol_c, depth_offset + 0.01f),
-                    ui_render_vertex_t({ p.x,       p.y       }, ol_c, depth_offset + 0.01f),
-                };
-                renderer_2d.batch.add_line_strip(line_vertices, sizeof(line_vertices) / sizeof(line_vertices[0]));
-
-                if (!w->text.empty()) {
-                    float x = p.x + 0.5f * w->size.x - 0.5f * font.get_string_width(w->text.c_str());
-                    float y = p.y + w->size.y - 0.5f * font.get_font_glyph_height();
-                    font.render_text(x, y, "%s", w->text.c_str());
-                }
-                
-                break;
-            }
-
-            case widget_type_t::LABEL: {
-                if (!w->text.empty()) {
-                    float font_depth = depth + window_manager.m_ddepth_layer_text;
-                    font.set_depth(font_depth);
-                    font.set_color(glm::vec4(1.0f));
-                    font.render_text_clipped(p.x + 4.0f, p.y + s.y * 0.5f + font.get_font_glyph_height() * 0.5f, s.x - 8.0f, w->text.c_str());
-                }
-                break;
-            }
-
-            case widget_type_t::TEXT_AREA: {
-                if (!w->get_lines) break;
-
-                float prev_depth = font.get_current_depth();
-                float font_depth = depth + window_manager.m_ddepth_layer_text;//(depth + window_manager.m_ddepth_layer_text) / window_manager.m_zfar;
-                font.set_depth(font_depth);
-                glm::vec4 prev_color = font.get_color();
-
-                // 
-                float line_h = font.get_font_height();
-                uint32_t max_lines = (uint32_t)(w->size.y / line_h);
-
-                // get the text
-                text_area_line_t lines[256];
-                uint32_t count = w->get_lines(lines, 256u);
-
-                // scrolling
-                w->scroll_max_lines = (count > max_lines) ? count - max_lines : 0;
-                uint32_t start = w->scroll_max_lines - (uint32_t)w->scroll_offset;
-                uint32_t display_count = (count > start) ? std::min(count - start, max_lines) : 0;
-
-                // render text
-                for (uint32_t j = 0; j < display_count; j++) {
-                    font.set_color(lines[start + j].color);
-                    font.render_text_clipped(p.x + 4.0f, p.y + j * line_h + line_h, w->size.x - 8.0f, lines[start + j].text);
-                }
-                font.set_depth(prev_depth);
-                font.set_color(prev_color);
-                
-                break;
-            }
-
-            case widget_type_t::FLOAT_FIELD: {
-                float_field_t &ff = w->float_field_widget;
-
-                renderer_2d.batch.add_quad(p, w->size, fg_c, depth_offset);
-
-                // outline
-                glm::vec4 ol_c_ = ff.editing ? glm::vec4(0.6f, 0.6f, 0.6f, 1.0f) : ol_c;
-                ui_render_vertex_t line_vertices[] = {
-                    ui_render_vertex_t({ p.x,       p.y       }, ol_c_, depth_offset + 0.01f),
-                    ui_render_vertex_t({ p.x + s.x, p.y       }, ol_c_, depth_offset + 0.01f),
-                    ui_render_vertex_t({ p.x + s.x, p.y + s.y }, ol_c_, depth_offset + 0.01f),
-                    ui_render_vertex_t({ p.x,       p.y + s.y }, ol_c_, depth_offset + 0.01f),
-                    ui_render_vertex_t({ p.x,       p.y       }, ol_c_, depth_offset + 0.01f),
-                };
-
-                renderer_2d.batch.add_line_strip(line_vertices, 5);
-
-                // label to the left
-                float font_depth = depth + window_manager.m_ddepth_layer_text;
-                font.set_depth(font_depth);
-
-                float text_y = p.y + s.y * 0.5f + font.get_font_glyph_height() * 0.5f;
-                if (!w->text.empty()) {
-                    float label_x = p.x - font.get_string_width("%s", w->text.c_str()) - 6.0f;
-                    font.render_text(label_x, text_y, "%s", w->text.c_str());
-                }
-
-                char display[32] = {};
-                if (ff.editing) {
-                    snprintf(display, sizeof(display), "%s", ff.buf);
-                } else {
-                    snprintf(display, sizeof(display), "%.3f", ff.value);
-                }
-
-                float val_w = font.get_string_width("%s", display);
-                float val_x = p.x + s.x - val_w - 6.0f;
-                font.render_text(val_x, text_y, "%s", display);
-
-                // cursor (line)
-                if (ff.editing) {
-                    char before[32] = {};
-                    strncpy(before, ff.buf, ff.cursor);
-                    float cur_x = val_x + font.get_string_width("%s", before);
-                    ui_render_vertex_t cur[] = {
-                        ui_render_vertex_t({ cur_x, p.y + 3.0f       }, glm::vec4(1.0f), depth_offset + 0.02f),
-                        ui_render_vertex_t({ cur_x, p.y + s.y - 3.0f }, glm::vec4(1.0f), depth_offset + 0.02f),
-                    };
-                    renderer_2d.batch.add_line_strip(cur, 2);
-                }
-                break;
-            }
-            
-            case widget_type_t::HIERARCHY: {
-                hierarchy_widget_t &hw = w->hierarchy_widget;
-                hw.row_height = font.get_font_glyph_height() + 6.0f;
-                float font_depth = depth + window_manager.m_ddepth_layer_text;
-                font.set_depth(font_depth);
-                font.set_color(fg_color);
-
-                uint32_t max_rows = (uint32_t)(s.y / hw.row_height);
-                uint32_t start = (uint32_t)hw.scroll_offset;
-
-                uint32_t drawn = 0;
-                for (uint32_t i = 0; i < SYN_MAX_ENTITY_COUNT && drawn < max_rows; i++) {
-                    entity_t *e = &entity_lib.m_pool[i];
-                    if (!e->is_active) continue;
-                    if (i < start) continue;
-
-                    float row_y = p.y + drawn * hw.row_height;
-                    entity_handle_t handle = { i + 1 };
-
-                    // highlight selected
-                    bool is_selected = hw.selected && hw.selected->id == handle.id;
-                    if (is_selected) {
-                        renderer_2d.batch.add_quad({ p.x, row_y }, { s.x, hw.row_height }, w->hover_color, depth_offset);
-                    }
-
-                    font.render_text_clipped(p.x + 6.0f, row_y + hw.row_height - font.get_font_glyph_height() * 0.5f, s.x - 8.0f, "%s", e->name.c_str());
-                    drawn++;
-                }
-                break;
-            }
-
-            case widget_type_t::LIST: {
-                list_widget_t &lw = w->list_widget;
-                lw.row_height = font.get_font_glyph_height() + 6.0f;
-                font.set_depth(depth + window_manager.m_ddepth_layer_text);
-                font.set_color(fg_color);
-
-                uint32_t max_rows = (uint32_t)s.y / lw.row_height;
-                uint32_t start = (uint32_t)lw.scroll_offset;
-
-                uint32_t drawn = 0;
-
-                for (uint32_t i = start; i < lw.items.size() && drawn < max_rows; i++) {
-                    float row_y = p.y + drawn * lw.row_height;
-                    if (lw.selected_index == (int)i) {
-                        renderer_2d.batch.add_quad({ p.x, row_y }, { s.x, lw.row_height }, w->hover_color, depth_offset);
-                    }
-                    font.render_text_clipped(p.x + 6.0f, row_y + lw.row_height - font.get_font_glyph_height() * 0.5f, s.x - 8.0f, "%s", lw.items[i].c_str());
-                    drawn++;
-                }
-                break;
-            }
-
-            case widget_type_t::TEX_QUAD: {
-                tex_quad_widget_t &tq = w->tex_quad_widget;
-                if (tq.texture_handle.id == 0) break;
-                texture_internal_t *tex = tex_lib.get_texture(tq.texture_handle);
-                if (!tex || tex->opengl_id == 0) break;
-
-                // reuses the shader used for drawing the viewport framebuffer quad
-                shader_t *shader = shader_lib.get_shader(window_manager.m_tex_quad_shader_handle);
-                if (!shader) break;
-
-                shader->enable();
-                shader->set_matrix_4fv("u_projection", window_manager.m_projection);
-                shader->set_uniform_2fv("u_position", p);
-                shader->set_uniform_2fv("u_size", s);
-                shader->set_uniform_1f("u_depth", depth + window_manager.m_ddepth_layer_texture);
-
-                glBindTextureUnit(0, tex->opengl_id);
-
-                window_manager.m_tex_quad_vao.bind();
-                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-                window_manager.m_tex_quad_vao.unbind();
-
-                shader->disable();
-                    
-                break;
-            }
-
-            case widget_type_t::COLOR_PICKER_SV: {
-                float hue = w->color_picker_sv_widget.hue ? *w->color_picker_sv_widget.hue : 0.0f;
-                shader_t *shader = shader_lib.get_shader(window_manager.m_ui_color_picker_shader_handle);
-                if (!shader) break;
-
-                shader->enable();
-                shader->set_matrix_4fv("u_projection", window_manager.m_projection);
-                shader->set_uniform_2fv("u_position", p);
-                shader->set_uniform_2fv("u_size", s);
-                shader->set_uniform_1f("u_depth", depth + window_manager.m_ddepth_layer_texture);
-                shader->set_uniform_1i("u_mode", 0);
-                shader->set_uniform_1f("u_hue", hue);
-
-                window_manager.m_tex_quad_vao.bind();
-                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-                window_manager.m_tex_quad_vao.unbind();
-
-                shader->disable();
-
-                // cross hair
-                if (!w->color_picker_sv_widget.saturation || !w->color_picker_sv_widget.value) break;
-                float cx = p.x + *w->color_picker_sv_widget.saturation * s.x;
-                float cy = p.y + (1.0f - *w->color_picker_sv_widget.value) * s.y;
-                float arm = 6.0f;
-                float thickness = 1.5f;
-                glm::vec4 color = { 1.0f, 1.0f, 1.0f, 0.75f };
-
-                renderer_2d.batch.add_quad({ cx - arm, cy - thickness * 0.5f }, 
-                                           { arm * 2.0f, thickness }, 
-                                           color, depth_offset + 0.01f);
-                renderer_2d.batch.add_quad({ cx - thickness * 0.5f, cy - arm }, 
-                                           { thickness, arm * 2.0f }, 
-                                           color, depth_offset + 0.01f);
-                break;
-            }
-            
-            case widget_type_t::COLOR_PICKER_HUE: {
-                shader_t *shader = shader_lib.get_shader(window_manager.m_ui_color_picker_shader_handle);
-                if (!shader) break;
-                shader->enable();
-                shader->set_matrix_4fv("u_projection", window_manager.m_projection);
-                shader->set_uniform_2fv("u_position", p);
-                shader->set_uniform_2fv("u_size", s);
-                shader->set_uniform_1f("u_depth", depth + window_manager.m_ddepth_layer_texture);
-                shader->set_uniform_1i("u_mode", 1);
-                shader->set_uniform_1f("u_hue", 0.0f);
-
-                window_manager.m_tex_quad_vao.bind();
-                glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, nullptr);
-                window_manager.m_tex_quad_vao.unbind();
-
-                shader->disable();
-
-                // indicator bar
-                if (!w->color_picker_hue_widget.hue) break;
-                float hy = p.y + (1.0f - *w->color_picker_hue_widget.hue) * s.y;
-                renderer_2d.batch.add_quad({ p.x, hy - 1.5f },
-                                           { s.x, 3.0f },
-                                           { 1.0f, 1.0f, 1.0f, 0.75f }, 
-                                           depth_offset + 0.01f);
-                
-                break;
-            }
-
-            case widget_type_t::COLOR_SWATCH: {
-                renderer_2d.batch.add_quad(p, s, w->color, depth_offset);
-                ui_render_vertex_t outline[] = {
-                    ui_render_vertex_t({ p.x,       p.y       }, ol_c, depth_offset + 0.01f),
-                    ui_render_vertex_t({ p.x + s.x, p.y       }, ol_c, depth_offset + 0.01f),
-                    ui_render_vertex_t({ p.x + s.x, p.y + s.y }, ol_c, depth_offset + 0.01f),
-                    ui_render_vertex_t({ p.x,       p.y + s.y }, ol_c, depth_offset + 0.01f),
-                    ui_render_vertex_t({ p.x,       p.y       }, ol_c, depth_offset + 0.01f),
-                };
-                renderer_2d.batch.add_line_strip(outline, 5);
-                break;
-            }
-
-            default:
-                break;
-        }
-    }
+    m_close_btn_pos  = btn_p;
+    m_close_btn_size = btn_s;
 }
 
 // 
@@ -499,7 +203,7 @@ void window_t::draw_tab_bar()
         // tab label, centered
         float text_x = tab_x + tab_w * 0.5f - font.get_string_width("%s", tab->name.c_str()) * 0.5f;
         float text_y = tab_y + tab_h - font.get_font_height() * 0.5f;
-        float font_depth = (depth + window_manager.m_ddepth_layer_text) / window_manager.m_zfar;
+        float font_depth = (depth + window_manager.ddepth_layer_text) / window_manager.m_zfar;
         font.set_color(fg_color);
         font.set_depth(font_depth);
         font.render_text(text_x, text_y, "%s", tab->name.c_str());
@@ -533,8 +237,6 @@ void window_t::draw_tab_bar()
     // content area background
     renderer_2d.batch.add_quad({ p.x, p.y + tb_h }, { s.x, s.y - tb_h }, bg_color, depth);
 
-    draw_widgets();
-    
 }
 
 // 
@@ -578,25 +280,25 @@ resize_handle_t window_t::get_resize_handle_at_pos(const glm::vec2 &_pos)
 // 
 void window_t::im_begin(float _padding)
 {
-    m_im_cursor_y = m_im_padding;
+    im_cursor_y = im_padding;
     
 }
 
 // 
-widget_state_t *window_t::get_or_create_im_state(uint32_t _id)
+widget_state_t *window_t::im_get_or_create_state(uint32_t _id)
 {
     // 1. search
-    for (uint32_t i = 0; i < m_widget_state_count; i++) {
-        if (m_widget_states[i].id == id) return &m_widget_states[i];
+    for (uint32_t i = 0; i < im_widget_state_count; i++) {
+        if (im_widget_states[i].id == _id) return &im_widget_states[i];
     }
 
     // 2. else, create
-    if (m_widget_state_count >= SYN_MAX_WIDGET_STATES) {
+    if (im_widget_state_count >= SYN_IM_MAX_WIDGET_STATES) {
         SYN_WARNING("widget state pool full in window '%s'.\n", name.c_str());
         return nullptr;
     }
 
-    widget_state_t &s = m_widget_states[m_widget_state_count++];
+    widget_state_t &s = im_widget_states[im_widget_state_count++];
     s = widget_state_t{};
     s.id = _id;
     return &s;
@@ -607,52 +309,56 @@ widget_state_t *window_t::get_or_create_im_state(uint32_t _id)
 bool window_t::im_is_hovered(const glm::vec2 &_pos, const glm::vec2 &_size)
 {
     glm::vec2 mpos = input.mouse_position;
+    window_handle_t top = window_manager.get_window_at_pos(mpos);
+    if (top.id != this_handle.id) return false;
+    
     return (mpos.x >= _pos.x && mpos.x <= _pos.x + _size.x &&
             mpos.y >= _pos.y && mpos.y <= _pos.y + _size.y);
 }
 
-
 // 
-void window_t::add_widget(const widget_t &_widget)
+void window_t::im_begin_row(const std::vector<float> &_ratios)
 {
-    if (m_widget_count >= SYN_WINDOW_MAX_WIDGET_COUNT) {
-        SYN_ERROR("window '%s' widget pool full.\n", name.c_str());
-        return;
-    }
+    im_in_row      = true;
+    im_col_index   = 0;
+    im_row_saved_y = im_cursor_y;
+    im_row_max_h   = 0.0f;
 
-    m_widgets[m_widget_count++] = _widget;
+    glm::vec2 content_pos  = get_content_position();
+    glm::vec2 content_size = get_content_size();
+    float available_w = content_size.x - im_padding * 2.0f;
+
+    float total = 0.0f;
+    for (float r : _ratios) total += r;
+
+    im_col_x.clear();
+    im_col_w.clear();
+    float cursor_x = content_pos.x + im_padding;
+    for (float r : _ratios) {
+        float w = (r / total) * available_w;
+        im_col_x.push_back(cursor_x);
+        im_col_w.push_back(w - im_padding);
+        cursor_x += w;
+    }
 }
 
 // 
-widget_t *window_t::get_widget(uint32_t _index)
+void window_t::im_end_row()
 {
-    if (_index >= m_widget_count) return nullptr;
-    return &m_widgets[_index];
+    im_in_row    = false;
+    im_col_index = 0;
+    im_cursor_y  = im_row_saved_y + im_row_max_h + im_padding;
+    im_col_x.clear();
+    im_col_w.clear();    
 }
 
 // 
-widget_t *window_t::get_widget_at_pos(const glm::vec2 &_pos)
+void window_t::im_clear_states()
 {
-    for (int i = m_widget_count - 1; i >= 0; i--) {
-        widget_t *w = &m_widgets[i];
-        if (w->is_visible && w->is_enabled && w->contains_point(position, size, _pos, title_bar_height)) {
-            return w;
-        }
-    }
+    memset(im_widget_states, 0, sizeof(widget_state_t) * SYN_IM_MAX_WIDGET_STATES);
+    im_widget_state_count = 0;
+    im_active_state_id = 0;
     
-    return nullptr;
-}
-
-// 
-widget_t *window_t::get_widget_of_type(widget_type_t _type)
-{
-    for (uint32_t i = 0; i < m_widget_count; i++) {
-        if (m_widgets[i].type == _type) {
-            return &m_widgets[i];
-        }
-    }
-    
-    return nullptr;
 }
 
 // 
@@ -672,5 +378,70 @@ int window_t::get_tab_index_at_pos(const glm::vec2 &_pos)
     float tab_w = size.x / (float)m_tab_count;
     int idx = (int)((_pos.x - position.x) / tab_w);
     return glm::clamp(idx, 0, (int)m_tab_count - 1);
+    
+}
+
+
+//---------------------------------------------------------------------------------------
+// immediate mode helper functions 
+// 
+void im_set_widget_params(window_t *_window, widget_params_t *_params)
+{
+    _params->content_pos  = _window->get_content_position();
+    _params->content_size = _window->get_content_size();
+    _params->pad          = _window->im_padding;
+    _params->row_h        = _window->im_default_row_height;
+
+    if (_window->im_in_row && _window->im_col_index < (int)_window->im_col_w.size()) {
+        _params->col_x = _window->im_col_x[_window->im_col_index];
+        _params->col_w = _window->im_col_w[_window->im_col_index];
+        _params->in_row = true;
+    } else {
+        _params->col_x = _params->content_pos.x + _params->pad;
+        _params->col_w = _params->content_size.x - _params->pad * 2.0f;
+        _params->in_row = false;
+    }
+
+    _params->p = { _params->col_x, _params->content_pos.y + _window->im_cursor_y };
+    _params->s = { _params->col_w, _params->row_h };
+}
+
+// 
+void im_update_cursor_y(window_t *_window, widget_params_t *_params)
+{
+    if (_window->im_in_row) {
+        _window->im_row_max_h = std::max(_window->im_row_max_h, _params->s.y);
+        _window->im_col_index++;
+    } else {
+        _window->im_cursor_y += _params->s.y + _params->pad;
+    }
+}
+
+// 
+bool im_needs_update(window_t *_window)
+{
+    bool needs_update = false;
+    for (uint32_t i = 0; i < _window->im_widget_state_count; i++) {
+        if (_window->im_widget_states[i].is_dirty) {
+            needs_update = true;
+            _window->im_widget_states[i].is_dirty = false;
+        }
+    }
+
+    return needs_update;    
+}
+
+// 
+uint32_t im_widget_hash(const char *_str, window_t *_window)
+{
+    uint32_t hash = 2166136261u;
+    while (*_str) {
+        hash ^= (uint8_t)*_str++;
+        hash *= 16777619u;
+    }
+    uint32_t cursor_bits = (uint32_t)(_window->im_cursor_y * 100.0f);
+    hash ^= cursor_bits;
+    hash *= 16777619u;
+    return hash ? hash : 1u;
     
 }

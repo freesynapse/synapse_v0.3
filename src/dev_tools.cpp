@@ -56,7 +56,10 @@ void dev_tools_t::handle_input()
     if (input.was_key_pressed(SYN_KEY_F10)) {
         renderer.toggle_grid();
     }
-    
+
+    if (input.was_key_pressed(SYN_KEY_F11)) {
+        renderer.toggle_skybox();
+    }
 }
 
 // 

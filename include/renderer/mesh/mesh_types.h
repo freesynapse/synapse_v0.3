@@ -8,7 +8,7 @@
 
 
 // 
-enum class primitive_type_t {
+enum class primitive_type_t : uint8_t {
     NONE = 0,
     CUBE,
     SPHERE_UV,

@@ -1,6 +1,7 @@
 #ifndef __WINDOW_TYPES_H
 #define __WINDOW_TYPES_H
 
+#include <string>
 #include <glm/glm.hpp>
 
 // 
@@ -14,6 +15,7 @@ struct window_handle_t {
 
 // 
 struct window_desc_t {
+    std::string name;
     glm::vec2 position;
     glm::vec2 size;
     

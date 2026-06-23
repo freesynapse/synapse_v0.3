@@ -85,13 +85,14 @@ extern entity_handle_t              selected_entity_handle;
 
 
 //---------------------------------------------------------------------------------------
-// high-level control functions
-//
-
 /*  _name, _width and _height of root_window. _mode dictates which cameras are initiated
     by default, where SYN_MODE_2D creates a orthographic camera and SYN_MODE_3D
     creates a perspective camera and an orbit camera.
  */
+
+//---------------------------------------------------------------------------------------
+// high-level control
+//
 void syn_init(const char *_name, int _width, int _height, int _mode);
 void syn_mode_2d();
 void syn_mode_3d();
@@ -101,7 +102,6 @@ void syn_shutdown();
 //---------------------------------------------------------------------------------------
 // ui creation and ui asset loader
 //
-void syn_set_window_pos_quadrant(int _quadrant);
 void syn_load_assets(const char *_asset_file="assets.syn");
 void syn_load_ui_layout(const char *_filepath);
 void syn_save_ui_layout(const char *_filepath);
@@ -112,8 +112,8 @@ void syn_create_transform_window(const char *_name, const glm::vec2 &_pos, const
 void syn_create_material_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 void syn_create_primitive_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 void syn_create_texture_select_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
-void syn_create_color_picker_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 void syn_create_help_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
+void syn_create_color_picker_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 
 
 //---------------------------------------------------------------------------------------
@@ -123,9 +123,31 @@ void syn_prerender();
 void syn_render_begin_3d();
 void syn_render_end_3d();
 void syn_render_end();
+void syn_frame_end();
 
 extern bool __was_prerender_called; 
 
+
+//---------------------------------------------------------------------------------------
+// immediate mode ui
+// 
+void syn_im_begin();
+void syn_im_end();
+void syn_begin_window(window_handle_t _handle);
+void syn_end_window(window_handle_t _handle);
+void syn_begin_row(window_handle_t _handle, const std::vector<float> &_ratios);
+void syn_end_row(window_handle_t _handle);
+
+void syn_label(window_handle_t _handle, const char *_text);
+bool syn_button(window_handle_t _handle, const char *_text);
+void syn_float_field(window_handle_t _handle, const char *_label, float *_value, float _min=-FLT_MAX, float _max=FLT_MAX);
+void syn_color_picker_sv(window_handle_t _handle, float *_hue, float *_saturation, float *_value);
+void syn_color_picker_hue(window_handle_t _handle, float *_hue);
+void syn_color_swatch(window_handle_t _handle, float *_r, float *_g, float *_b);
+bool syn_list(window_handle_t _handle, const char **_items, uint32_t _count, int *_selected_index, int *_hovered_index=nullptr, float _max_height=0.0f);
+void syn_tex_quad(window_handle_t _handle, texture_handle_t _tex_handle, const glm::vec2 &_size, const glm::vec2 &_pos=glm::vec2(-1.0f));
+void syn_log_window();
+void syn_help_window();
 
 //---------------------------------------------------------------------------------------
 // rendering functions

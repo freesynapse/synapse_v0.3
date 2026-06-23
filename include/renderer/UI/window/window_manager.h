@@ -4,6 +4,7 @@
 #include "renderer/UI/window/window.h"
 #include "renderer/shader/shader_types.h"
 #include "renderer/buffers/vertex_array.h"
+#include "renderer/entity/entity_types.h"
 #include "event/event.h"
 
 // 
@@ -99,27 +100,22 @@ private:
     
     shader_handle_t m_window_shader_handle;
 
-    shader_handle_t m_tex_quad_shader_handle;
-    vertex_array_t m_tex_quad_vao;
-
-    shader_handle_t m_ui_color_picker_shader_handle;
-    
-    
-    glm::mat4 m_projection;
-    
     // window focus and depth
     window_handle_t m_hovered_window_handle = { 0 };
     window_handle_t m_focused_window_handle = { 0 };
     float m_zfar = -100.0f;
     float m_znear = 100.0f;
-    
-    float m_ddepth_per_layer = 0.05f;       // assign 0.05f per layer, leaving room for text and frambuffer rendering
-    float m_ddepth_layer_text = 0.02f;
-    float m_ddepth_layer_texture = 0.01f;
-    float m_next_depth = m_zfar;
 
+public:    
+    float ddepth_per_layer = 0.05f;       // assign 0.05f per layer, leaving room for text and frambuffer rendering
+    float ddepth_layer_text = 0.02f;
+    float ddepth_layer_widget = 0.01f;
+    float next_depth = m_zfar;
+
+private:
     // moving windows
     bool m_is_dragging = false;
+    window_t *m_dragging_window = nullptr;
     window_handle_t m_drag_window_handle = { 0 };
     glm::vec2 m_mouse_pos;
     glm::vec2 m_drag_offset;
@@ -141,18 +137,11 @@ private:
     dock_zone_t m_hovered_dock_zone = dock_zone_t::NONE;
     window_handle_t m_dock_target_window = { 0 };
 
-    // hierarchy widget
-    widget_t *m_hierarchy_widget = nullptr;
-
     // entity picking
     bool m_viewport_pick_pending = false;
     glm::vec2 m_viewport_click_pos = glm::vec2(0.0f, 0.0f);
     entity_handle_t m_viewport_pick_result = { 0 };
 
-    // window widget interacion
-    widget_t *m_dragging_widget = nullptr;
-    window_t *m_dragging_window = nullptr;
-    
 };
 
 
