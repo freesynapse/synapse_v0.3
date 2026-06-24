@@ -6,6 +6,7 @@
 #include "renderer/UI/window/window_types.h"
 #include "renderer/UI/ui_types.h"
 #include "event/event.h"
+#include "editor_command.h"
 
 // 
 class editor_t
@@ -55,6 +56,20 @@ public:
     void close_color_picker(bool _apply);
     void update_color_picker_from_hsv();  // HSV changed, update RGB float fields and material
     void update_color_picker_from_rgb();  // float fields changed, update HSV and material
+
+    // undo stack
+    void push_transform_command(entity_handle_t _entity_handle, 
+                                const glm::vec3 &_prev_pos,
+                                const glm::vec3 &_prev_rot,
+                                const glm::vec3 &_prev_scale,
+                                const glm::vec3 &_next_pos,
+                                const glm::vec3 &_next_rot,
+                                const glm::vec3 &_next_scale);
+    void push_material_command(entity_handle_t _entity_handle, 
+                               const material_pbr_payload_t &_prev, 
+                               const material_pbr_payload_t &_next);
+    void push_texture_command(entity_handle_t _entity_handle, texture_handle_t _prev, texture_handle_t _next);
+    void undo();
     
     // window handle accessors
     void set_transform_window_handle(window_handle_t _handle) { m_transform_window_handle = _handle; }
@@ -64,16 +79,17 @@ public:
     void set_texture_select_window_handle(window_handle_t _handle) { m_texture_select_window_handle = _handle; }
     void set_create_window_handle(window_handle_t _handle) { m_create_window_handle = _handle; }
 
-    void set_hovered_ui_transform_axis(ui_transform_axis_t _axis) { m_hovered_ui_transform_axis = _axis; }
-    void set_grabbed_ui_transform_axis(ui_transform_axis_t _axis) { m_grabbed_ui_transform_axis = _axis; }
-    void set_ui_transform_mode(ui_transform_mode_t _mode) { m_ui_transform_mode = _mode; }
-
     window_handle_t get_transform_window_handle() { return m_transform_window_handle; }
     window_handle_t get_material_window_handle() { return m_material_window_handle; }
     window_handle_t  get_color_picker_window_handle() { return m_color_picker_window_handle; }
     window_handle_t get_hierarchy_window_handle() { return m_hierarchy_window_handle; }
     window_handle_t get_texture_select_window_handle() { return m_texture_select_window_handle; }
     window_handle_t get_create_window_handle() { return m_create_window_handle; }
+
+    // transform ui accessors
+    void set_hovered_ui_transform_axis(ui_transform_axis_t _axis) { m_hovered_ui_transform_axis = _axis; }
+    void set_grabbed_ui_transform_axis(ui_transform_axis_t _axis) { m_grabbed_ui_transform_axis = _axis; }
+    void set_ui_transform_mode(ui_transform_mode_t _mode) { m_ui_transform_mode = _mode; }
 
     ui_transform_axis_t get_hovered_ui_transform_axis() { return m_hovered_ui_transform_axis; }
     ui_transform_axis_t get_grabbed_ui_transform_axis() { return m_grabbed_ui_transform_axis; }
@@ -110,6 +126,9 @@ public:
     glm::vec3 m_color_picker_rgb = { 1.0f, 0.0f, 0.0f };
 private:
     glm::vec4 m_color_picker_prev_color = {};   // for 'Cancel'
+
+    // undo
+    undo_stack_t m_undo_stack;
     
 };
 

@@ -481,6 +481,12 @@ void editor_t::on_keydown_event(const event_t &_e)
         }
     }
 
+    // undo last command
+    if (key == SYN_KEY_Z && (mods & SYN_MOD_CTRL)) {
+        undo();
+        return;
+    }
+    
     // save/load scene
     if (key == SYN_KEY_S && (mods & SYN_MOD_CTRL) && action == SYN_KEY_PRESSED) {
         save_scene("../assets/scene.syn");
@@ -1287,5 +1293,96 @@ void editor_t::update_color_picker_from_rgb()
     
 }
 
+// 
+void editor_t::push_transform_command(entity_handle_t _entity_handle, 
+                                      const glm::vec3 &_prev_pos,
+                                      const glm::vec3 &_prev_rot,
+                                      const glm::vec3 &_prev_scale,
+                                      const glm::vec3 &_next_pos,
+                                      const glm::vec3 &_next_rot,
+                                      const glm::vec3 &_next_scale)
+{
+    editor_command_t cmd;
+    cmd.type = editor_command_type_t::TRANSFORM_CHANGE;
+    cmd.entity_handle = _entity_handle;
+    cmd.prev_position = _prev_pos;
+    cmd.prev_rotation = _prev_rot;
+    cmd.prev_scale    = _prev_scale;
+    cmd.next_position = _next_pos;
+    cmd.next_rotation = _next_rot;
+    cmd.next_scale    = _next_scale;
+    m_undo_stack.push(cmd);
+    
+}
+
+void editor_t::push_material_command(entity_handle_t _entity_handle, 
+                                     const material_pbr_payload_t &_prev, 
+                                     const material_pbr_payload_t &_next)
+{
+    editor_command_t cmd;
+    cmd.type     = editor_command_type_t::MATERIAL_CHANGE;
+    cmd.prev_pbr = _prev;
+    cmd.next_pbr = _next;
+    m_undo_stack.push(cmd);
+    
+}
+
+// 
+void editor_t::push_texture_command(entity_handle_t _entity_handle,
+                                    texture_handle_t _prev,
+                                    texture_handle_t _next)
+{
+    editor_command_t cmd;
+    cmd.type         = editor_command_type_t::TEXTURE_CHANGE;
+    cmd.prev_texture = _prev;
+    cmd.next_texture = _next;
+    m_undo_stack.push(cmd);
+    
+}
+
+// 
+void editor_t::undo()
+{
+    editor_command_t *cmd = m_undo_stack.pop();
+    if (!cmd) return;
+
+    entity_t *e = entity_lib.get_entity(cmd->entity_handle);
+    if (!e) return;
+
+    switch (cmd.type) {
+        case editor_command_type_t::TRANSFORM_CHANGE: {
+            e->t_position = cmd->prev_position;
+            e->t_rotation = cmd->prev_rotation;
+            e->t_scale    = cmd->prev_scale;
+            e->transform  = entity_t::make_transform(e->t_position, e->t_rotation, e->t_scale);
+            // clear widget states so that float fields update
+            window_t *tw = window_manager.get_window(m_transform_window_handle);
+            if (tw) tw->im_clear_states();
+            break;
+        }
+
+        case editor_command_type_t::MATERIAL_CHANGE: {
+            material_internal_t *mat = mat_lib.get_material(e->material_handle);
+            if (mat && mat->data_size >= sizeof(material_pbr_payload_t)) {
+                *(material_pbr_payload_t *)mat->data = cmd->prev_pbr;
+            }
+            window_t *mw = window_manager.get_window(m_material_window_handle);
+            if (mw) mw->im_clear_states();
+            break;
+        }
+
+        case editor_command_type_t::TEXTURE_CHANGE: {
+            material_internal_t *mat = mat_lib.get_material(e->material_handle);
+            if (mat) {
+                mat->textures[(uint32_t)texture_map_type_t::ALBEDO] = cmd->prev_texture;
+                material_pbr_payload_t *pbr = (material_pbr_payload_t *)mat->data;
+                pbr->use_albedo_map = (cmd->prev_texture.id != 0) ? 1.0f : 0.0f;
+            }
+            break;
+        }
+
+        default: break;
+    }
+}
 
 

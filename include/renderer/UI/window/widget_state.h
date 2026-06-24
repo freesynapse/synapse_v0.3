@@ -31,22 +31,24 @@ struct widget_params_t {
 
 // per-widget state that must survive across frames
 struct widget_state_t {
-    uint32_t id         = 0;        // hash of widget label
-    bool is_hovered     = false;
-    bool is_active      = false;    // e.g. a float field being edited
-    bool is_dirty       = false;
+    uint32_t id                 = 0;        // hash of widget label
+    bool is_hovered             = false;
+    bool is_active              = false;    // e.g. a float field being edited
+    bool is_dirty               = false;
+    bool is_scrolling           = false;
     
     // float field
-    float value         = 0.0f;
-    float *binding      = nullptr;
-    float min           = -FLT_MAX;
-    float max           = FLT_MAX;
-    int cursor          = 0;
-    bool editing        = false;
+    float value                 = 0.0f;
+    float *binding              = nullptr;
+    float pre_scroll_value      = 0.0f;
+    float min                   = -FLT_MAX;
+    float max                   = FLT_MAX;
+    int cursor                  = 0;
+    bool editing                = false;
     char buf[SYN_IM_BUFFER_LEN] = {};
-
+    
     // scroll
-    float scroll_offset = 0.0f;
+    float scroll_offset         = 0.0f;
     
 };
 
