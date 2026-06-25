@@ -25,7 +25,7 @@ int main()
     if (!hdr_tex.is_valid()) {
         SYN_WARNING("failed to load HDR skybox '%s'.\n", filepath);
     }
-    cubemap_handle_t cm = renderer.convert_equirect_to_cubemap(hdr_tex, 4096);
+    cubemap_handle_t cm = renderer.convert_equirect_to_cubemap(hdr_tex, 2048);
     if (!cm.is_valid()) {
         SYN_WARNING("failed to convert HDR to skybox.\n");
     }

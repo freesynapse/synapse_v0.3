@@ -120,6 +120,11 @@ private:
     glm::quat m_drag_start_quat;    // rotation
     glm::vec3 m_drag_start_scale;   // scaling
 
+public:
+    glm::vec3 m_drag_prev_pos;
+    glm::vec3 m_drag_prev_rot;
+    glm::vec3 m_drag_prev_scale;
+
     // color picker
 public:
     glm::vec3 m_color_picker_hsv = { 0.0f, 1.0f, 1.0f };
@@ -127,6 +132,15 @@ public:
 private:
     glm::vec4 m_color_picker_prev_color = {};   // for 'Cancel'
 
+    // undo stack variables
+    glm::vec3 m_prev_transform_position;
+    glm::vec3 m_prev_transform_rotation;
+    glm::vec3 m_prev_transform_scale;
+    
+    int m_texture_selected_index = -1;
+    texture_handle_t m_texture_preview_handle = { 0 };
+
+    
     // undo
     undo_stack_t m_undo_stack;
     

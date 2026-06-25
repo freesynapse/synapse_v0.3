@@ -232,8 +232,6 @@ void renderer_t::set_skybox(const cubemap_handle_t &_handle)
         m_skybox.is_active = true;
     }
   
-    SYN_INFO("m_skybox.is_active = %s.\n", m_skybox.is_active ? "true" : "false");
-    
 }
 
 //

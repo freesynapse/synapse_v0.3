@@ -83,7 +83,6 @@ entity_t *entity_library_t::get_entity(entity_handle_t _handle)
 {
     uint32_t idx = _handle.id - 1;
     if (_handle.id == 0 || idx >= SYN_MAX_ENTITY_COUNT) {
-        SYN_WARNING("invalid entity_handle_t: id = %d.\n", _handle.id);
         return nullptr;
     }
 

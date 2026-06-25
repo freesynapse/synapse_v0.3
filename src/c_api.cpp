@@ -695,6 +695,10 @@ void syn_float_field(window_handle_t _handle,
 
     // consume scroll
     if (state->is_hovered && !state->editing && w->im_scroll_delta != 0.0f) {
+        if (!state->is_scrolling) {
+            state->pre_scroll_value = state->value;
+            state->is_scrolling = true;
+        }
         float speed = 1.0f;
         if (input.is_key_down(SYN_KEY_LEFT_SHIFT))  speed = 10.0f;
         if (input.is_key_down(SYN_KEY_LEFT_ALT))    speed = 0.1f;
@@ -702,9 +706,13 @@ void syn_float_field(window_handle_t _handle,
         float new_val = glm::clamp(state->value - w->im_scroll_delta * speed, state->min, state->max);
         state->value = new_val;
         if (state->binding) *state->binding = new_val;
-        state->is_dirty = true;
         w->im_scroll_delta = 0.0f;
         
+    }
+
+    else if (state->is_scrolling && w->im_scroll_delta == 0.0f) {
+        state->is_scrolling = false;
+        state->is_dirty = true;
     }
     
     im_update_cursor_y(w, &wp);

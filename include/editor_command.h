@@ -52,7 +52,7 @@ struct undo_stack_t {
     // 
     void push(const editor_command_t &_cmd)
     {
-        top = (top + 1) & SYN_UNDO_STACK_SIZE;
+        top = (top + 1) % SYN_UNDO_STACK_SIZE;
         commands[top] = _cmd;
     }
 

@@ -529,8 +529,21 @@ void editor_t::draw_transform_window()
             syn_float_field(m_transform_window_handle, "sz", &e->t_scale.z, 0.001f, 10000.0f);
         syn_end_row(m_transform_window_handle);
 
+
         if (im_needs_update(window_manager.get_window(m_transform_window_handle))) {
             e->transform = entity_t::make_transform(e->t_position, e->t_rotation, e->t_scale);
+            if (e->t_position != m_prev_transform_position || 
+                e->t_rotation != m_prev_transform_rotation || 
+                e->t_scale != m_prev_transform_scale) {
+                push_transform_command(selected_entity_handle,
+                                       m_prev_transform_position, 
+                                       m_prev_transform_rotation, 
+                                       m_prev_transform_scale,
+                                       e->t_position, e->t_rotation, e->t_scale);
+                m_prev_transform_position = e->t_position; 
+                m_prev_transform_rotation = e->t_rotation; 
+                m_prev_transform_scale    = e->t_scale;
+            }
         }
     }
     
@@ -545,10 +558,19 @@ void editor_t::draw_material_window()
     if (!selected_entity_handle.is_valid()) return;
     entity_t *e = entity_lib.get_entity(selected_entity_handle);
 
-    syn_begin_window(m_material_window_handle);
+    material_pbr_payload_t prev_pbr = {};
+    material_internal_t *mat = nullptr;
 
     if (e) {
-        material_internal_t *mat = mat_lib.get_material(e->material_handle);
+        mat = mat_lib.get_material(e->material_handle);
+        if (mat && mat->data_size >= sizeof(material_pbr_payload_t)) {
+            prev_pbr = *(material_pbr_payload_t *)mat->data;
+        }
+    }
+    
+    syn_begin_window(m_material_window_handle);
+
+    if (e && mat) {
         material_pbr_payload_t *pbr = mat ? (material_pbr_payload_t *)mat->data : nullptr;
         if (pbr) {
             syn_begin_row(m_material_window_handle, { 1.0f, 3.0f, 3.0f, 3.0f });
@@ -565,6 +587,13 @@ void editor_t::draw_material_window()
 
             if (syn_button(m_material_window_handle, "albedo texture")) {
                 editor.open_texture_select();
+            }
+
+            if (im_needs_update(window_manager.get_window(m_material_window_handle))) {
+                material_pbr_payload_t current_pbr = *(material_pbr_payload_t *)mat->data;
+                if (memcmp(&prev_pbr, &current_pbr, sizeof(material_pbr_payload_t)) != 0) {
+                    push_material_command(selected_entity_handle, prev_pbr, current_pbr);
+                }
             }
         }
     }
@@ -642,6 +671,14 @@ void editor_t::draw_hierarchy_window()
     syn_begin_window(m_hierarchy_window_handle);
     if (syn_list(m_hierarchy_window_handle, names, count, &selected_index)) {
         selected_entity_handle = handles[selected_index];
+        entity_t *e = entity_lib.get_entity(selected_entity_handle);
+        // entity selected, store prev transform for undo stack
+        if (e) {
+            m_prev_transform_position = e->t_position;
+            m_prev_transform_rotation = e->t_rotation;
+            m_prev_transform_scale    = e->t_scale;
+        }
+        
         window_t *tw = window_manager.get_window(m_transform_window_handle);
         if (tw) tw->im_clear_states();
         window_t *mw = window_manager.get_window(m_material_window_handle);
@@ -676,8 +713,8 @@ void editor_t::draw_texture_select_window()
         count++;
     }
 
-    static int selected_index = -1;
-    static texture_handle_t preview_handle = { 0 };
+    int &selected_index = m_texture_selected_index;
+    texture_handle_t &preview_handle = m_texture_preview_handle;
 
     syn_begin_window(m_texture_select_window_handle);
 
@@ -772,6 +809,9 @@ void editor_t::hide_create_menu()
 // 
 void editor_t::open_texture_select()
 {
+    m_texture_selected_index = -1;
+    m_texture_preview_handle = { 0 };
+    
     window_t *pw = window_manager.get_window(m_texture_select_window_handle);
     if (!pw) return;
 
@@ -809,6 +849,9 @@ void editor_t::assign_texture_to_selected(const std::string &_name)
     if (!mat) return;
 
     // 
+    texture_handle_t prev_texture = mat->textures[(uint32_t)texture_map_type_t::ALBEDO];
+    
+    // 
     if (_name == "(no texture)") {
         mat->textures[(uint32_t)texture_map_type_t::ALBEDO] = { 0 };
         material_pbr_payload_t *pbr = (material_pbr_payload_t *)mat->data;
@@ -826,6 +869,11 @@ void editor_t::assign_texture_to_selected(const std::string &_name)
     }
     e->is_material_dirty = true;
 
+    texture_handle_t next_texture = mat->textures[(uint32_t)texture_map_type_t::ALBEDO];
+    if (prev_texture.id != next_texture.id) {
+        push_texture_command(selected_entity_handle, prev_texture, next_texture);
+    }
+    
     // close after select
     window_t *pw = window_manager.get_window(m_texture_select_window_handle);
     pw->set_visible(false);
@@ -969,6 +1017,8 @@ entity_handle_t editor_t::pick_entity(const glm::vec2 &_screen_pos)
         entity_t *e = entity_lib.get_entity_from_index(i);
         if (!e->is_active) continue;
 
+        
+        
         mesh_internal_t *mesh = mesh_lib.get_mesh(e->mesh_handle);
         if (!mesh) continue;
         
@@ -992,6 +1042,14 @@ entity_handle_t editor_t::pick_entity(const glm::vec2 &_screen_pos)
         }
     }
 
+    // entity selected, store prev transform for undo stack
+    entity_t *e = entity_lib.get_entity(closest_entity);
+    if (e) {
+        m_prev_transform_position = e->t_position;
+        m_prev_transform_rotation = e->t_rotation;
+        m_prev_transform_scale    = e->t_scale;
+    }
+    
     return closest_entity;
 }
 
@@ -1060,6 +1118,12 @@ void editor_t::begin_ui_transform_drag()
     entity_t *e = entity_lib.get_entity(selected_entity_handle);
     if (!e) return;
 
+    // store for undo stack
+    m_drag_prev_pos   = e->t_position;
+    m_drag_prev_rot   = e->t_rotation;
+    m_drag_prev_scale = e->t_scale;
+
+    // 
     m_grabbed_ui_transform_axis = m_hovered_ui_transform_axis;
     m_drag_start_world = e->t_position;
     m_drag_start_screen = input.mouse_position;
@@ -1320,9 +1384,10 @@ void editor_t::push_material_command(entity_handle_t _entity_handle,
                                      const material_pbr_payload_t &_next)
 {
     editor_command_t cmd;
-    cmd.type     = editor_command_type_t::MATERIAL_CHANGE;
-    cmd.prev_pbr = _prev;
-    cmd.next_pbr = _next;
+    cmd.type          = editor_command_type_t::MATERIAL_CHANGE;
+    cmd.entity_handle = _entity_handle;
+    cmd.prev_pbr      = _prev;
+    cmd.next_pbr      = _next;
     m_undo_stack.push(cmd);
     
 }
@@ -1333,9 +1398,10 @@ void editor_t::push_texture_command(entity_handle_t _entity_handle,
                                     texture_handle_t _next)
 {
     editor_command_t cmd;
-    cmd.type         = editor_command_type_t::TEXTURE_CHANGE;
-    cmd.prev_texture = _prev;
-    cmd.next_texture = _next;
+    cmd.type          = editor_command_type_t::TEXTURE_CHANGE;
+    cmd.entity_handle = _entity_handle;
+    cmd.prev_texture  = _prev;
+    cmd.next_texture  = _next;
     m_undo_stack.push(cmd);
     
 }
@@ -1349,7 +1415,7 @@ void editor_t::undo()
     entity_t *e = entity_lib.get_entity(cmd->entity_handle);
     if (!e) return;
 
-    switch (cmd.type) {
+    switch (cmd->type) {
         case editor_command_type_t::TRANSFORM_CHANGE: {
             e->t_position = cmd->prev_position;
             e->t_rotation = cmd->prev_rotation;

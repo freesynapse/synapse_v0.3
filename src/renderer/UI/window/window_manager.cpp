@@ -180,12 +180,20 @@ void window_manager_t::on_mouse_button_event(const event_t &_e)
             cam.enable();
             editor.set_grabbed_ui_transform_axis(ui_transform_axis_t::NONE);
 
-            if (editor.get_ui_transform_mode() == ui_transform_mode_t::ROTATE) {
-                entity_t *e = entity_lib.get_entity(selected_entity_handle);
-                if (e) {
+            entity_t *e = entity_lib.get_entity(selected_entity_handle);
+            if (e) {
+                if (editor.get_ui_transform_mode() == ui_transform_mode_t::ROTATE) {       
                     glm::quat final_rot = glm::quat_cast(e->transform);
                     e->t_rotation = glm::degrees(glm::eulerAngles(final_rot));
                 }
+                //
+                editor.push_transform_command(selected_entity_handle,
+                                              editor.m_drag_prev_pos,
+                                              editor.m_drag_prev_rot,
+                                              editor.m_drag_prev_scale,
+                                              e->t_position,
+                                              e->t_rotation,
+                                              e->t_scale);
             }
         }
         
