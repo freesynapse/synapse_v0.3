@@ -19,6 +19,8 @@ public:
 	framebuffer_base_t() {};
 	virtual ~framebuffer_base_t();
 
+	virtual void destroy();
+	
 	/* Binds the Framebuffer as the current GL_FRAMEBUFFER. */
 	virtual void bind(bool _set_viewport=true);
 	/* Unbinds, through binding GL_FRAMEBUFFER to 0. */

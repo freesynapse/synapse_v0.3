@@ -107,6 +107,12 @@ void syn_mode_3d()
 {
     glm::ivec2 dims = root_window.get_window_dims();
     orbit_camera.init(60.0f, dims.x, dims.y, 0.1f, 1000.0f);
+    // sensible defaults
+    orbit_camera.m_orbit_speed = 0.5f;
+    orbit_camera.m_x_angle = 315.0f;
+    orbit_camera.m_y_angle = 60.0f;
+    orbit_camera.m_distance = 14.0f;
+    
     perspective_camera.init(60.0f, dims.x, dims.y, 0.1f, 1000.0f);
     cam.init(&orbit_camera, &perspective_camera);
 }
@@ -141,8 +147,7 @@ void syn_load_assets(const char *_asset_file)
     // bake hdr maps if skybox is loaded
     if (renderer.m_skybox.is_active) {
         SYN_INFO("baking HDR irradiance and specular maps.\n");
-        renderer.bake_irradiance_hdr();
-        renderer.bake_specular_hdr();
+        renderer.bake_ibl();
     }
 
     SYN_INFO("assets loaded in %.2f ms.\n", t.get_dt_ms());

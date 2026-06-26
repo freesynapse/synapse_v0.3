@@ -19,19 +19,7 @@ int main()
 
     syn_load_assets("../assets/manifest.syn");
     syn_load_ui_layout("../assets/layout.syn");
-    // load hdr skybox
-    const char *filepath = "../assets/textures/skybox/HDR/kloppenheim_07_puresky_4k.hdr";
-    texture_handle_t hdr_tex = tex_lib.load_texture_hdr(filepath);
-    if (!hdr_tex.is_valid()) {
-        SYN_WARNING("failed to load HDR skybox '%s'.\n", filepath);
-    }
-    cubemap_handle_t cm = renderer.convert_equirect_to_cubemap(hdr_tex, 2048);
-    if (!cm.is_valid()) {
-        SYN_WARNING("failed to convert HDR to skybox.\n");
-    }
-    renderer.set_skybox(cm);
-    renderer.bake_ibl();
-    
+
     //
     time_step.fps_limit = 60.0f;
     perspective_camera.m_position = { 0.0f, 2.0f, 20.0f };
@@ -43,14 +31,8 @@ int main()
     // get/create entities
     helmet = assets.get_entity("helmet");
     sphere = editor.create_entity_from_primitive(primitive_type_t::SPHERE_UV, "test_sphere", { 0.0f, 1.0f, 2.0f }, "chrome");
-    editor.create_entity_from_primitive(primitive_type_t::PLANE, "ground", { 0.0f, 0.0f, 0.0f }, "chrome");
+    editor.create_entity_from_primitive(primitive_type_t::PLANE, "ground", { 0.0f, 0.1f, 0.0f }, "rough_plastic");
     
-    // 
-    orbit_camera.m_orbit_speed = 0.5f;
-    orbit_camera.m_x_angle = 45.0f;
-    orbit_camera.m_y_angle = 60.0f;
-    orbit_camera.m_distance = 14.0f;
-
     //
     while (!root_window.should_close()) {
 

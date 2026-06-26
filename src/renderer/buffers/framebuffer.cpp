@@ -14,10 +14,17 @@
 // 
 framebuffer_base_t::~framebuffer_base_t()
 {
-	glDeleteFramebuffers(1, &m_framebuffer_id);
+    destroy();
+}
+
+// 
+void framebuffer_base_t::destroy()
+{
+    glDeleteFramebuffers(1, &m_framebuffer_id);
 	
 	if (m_color_attachment_ids != nullptr)
 		delete[] m_color_attachment_ids;
+    
 }
 
 //

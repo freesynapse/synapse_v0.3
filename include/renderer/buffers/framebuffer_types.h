@@ -112,7 +112,4 @@ struct framebuffer_handle_t {
 };
 
 
-
-
-
 #endif // __FRAMEBUFFER_TYPES_H

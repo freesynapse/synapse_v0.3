@@ -38,6 +38,15 @@
 // just a string logged, no sugar added
 #define SYN_MSG(msg, ...) do { zero_log_buffer(); sprintf(__tmp_log_buffer, "" msg "", ##__VA_ARGS__); syn_log(INFO_COLOR); } while(0)
 
+#define SYN_ASSERT(_condition, _msg)        \
+    do {                                    \
+        if (!(_condition))                  \
+        {                                   \
+            SYN_ERROR("assertion failed: %s\n  %s : %d\n", _msg, __FILE__, __LINE__); \
+            __builtin_trap();               \
+        }                                   \
+    } while(0)
+
 //
 #define SYN_TMP_FNC_BUFFER_SIZE 128
 inline char __tmp_fnc_buffer[SYN_TMP_FNC_BUFFER_SIZE];

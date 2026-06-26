@@ -533,27 +533,41 @@ void asset_manager_t::assign_texture_slot(material_internal_t *_mat, size_t _slo
 //
 void asset_manager_t::parse_skybox(const std::vector<std::string> &_tokens)
 {
-    // format: skybox <name> <+x> <-x> <+y> <-y> <+z> <-z>
-    if (_tokens.size() < 8) {
+    // format: skybox <name> <+x> <-x> <+y> <-y> <+z> <-z> OR a single asset path for HDR maps
+    if (_tokens.size() < 8 && _tokens.size() != 3) {
         SYN_ERROR("Invalid skybox entry: expected 'skybox <name> <+x> <-x> <+y> <-y> <+z> <-z>'.\n");
         return;
     }
 
     const std::string& name = _tokens[1];
-    std::vector<std::string> faces = {
-        _tokens[2], // +x
-        _tokens[3], // -x
-        _tokens[4], // +y
-        _tokens[5], // -y
-        _tokens[6], // +z
-        _tokens[7]  // -z
-    };
 
+    cubemap_handle_t handle;
     update_load_progress("cubemap", name);
+    if (_tokens.size() == 8) {
+        std::vector<std::string> faces = {
+            _tokens[2], // +x
+            _tokens[3], // -x
+            _tokens[4], // +y
+            _tokens[5], // -y
+            _tokens[6], // +z
+            _tokens[7]  // -z
+        };
+        handle = cubemap_lib.load_cubemap(faces);
+    } else if (_tokens.size() == 3) {
+        texture_handle_t hdr_tex = tex_lib.load_texture_hdr(_tokens[2]);
+        if (!hdr_tex.is_valid()) {
+            SYN_WARNING("failed to load HDR texture '%s'.\n", _tokens[2].c_str());
+            return;
+        }
 
-    cubemap_handle_t handle = cubemap_lib.load_cubemap(faces);
+        handle = renderer.convert_equirect_to_cubemap(hdr_tex, 2048);
+        if (!handle.is_valid()) {
+            SYN_WARNING("failed to convert HDR texture '%s' to cubemap.\n", _tokens[2].c_str());
+            return;
+        }
+    }
+
     m_cubemap_map[name] = handle;
-
     renderer.set_skybox(handle);
 
     SYN_INFO("loaded skybox '%s'.\n", name.c_str());
