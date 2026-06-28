@@ -439,7 +439,9 @@ void syn_render_end_3d()
     // dev tools
     if (renderer.debug.show_normals || renderer.debug.show_tangents) {
         entity_t *e = entity_lib.get_entity(selected_entity_handle);
-        renderer.render_debug_normals(e->mesh_handle, e->transform);
+        if (e){
+            renderer.render_debug_normals(e->mesh_handle, e->transform);
+        }
     }
     if (renderer.debug.show_bounding_boxes) { renderer.render_debug_bounding_box_entities(); }
     if (renderer.debug.show_grid) { renderer.render_debug_grid(); }
@@ -1050,10 +1052,8 @@ void syn_log_window()
             default:                   color = { 1.0f, 1.0f, 1.0f, 1.0f }; break;
         }
         font.set_color(color);
-        font.render_text_clipped(wp.p.x + 4.0f, 
-                                 wp.p.y + i * line_h + line_h, 
-                                 wp.s.x - 8.0f, 
-                                 "%s", e.msg);
+        float text_w = wp.s.x - 14.0f;
+        font.render_text_clipped(wp.p.x + 4.0f, wp.p.y + i * line_h + line_h, text_w, e.msg);
     }
 
     // scroll
@@ -1063,6 +1063,27 @@ void syn_log_window()
         w->im_scroll_delta = 0.0f;
     }
 
+    // scroll-bar
+    if (count > max_lines) {
+        const float bar_w = 4.0f;
+        const float bar_x = wp.p.x + wp.s.x - bar_w - 2.0f;
+        const float bar_y = wp.p.y;
+        const float bar_h = wp.s.y;
+        const float depth = w->depth + window_manager.ddepth_layer_widget;
+
+        // track
+        renderer_2d.batch.add_quad({ bar_x, bar_y }, { bar_w, bar_h }, { 1.0f, 1.0f, 1.0f, 0.1f }, depth);
+
+        // thumb -- position reflects where we are in the buffer
+        // scroll_offset=0 means bottom, max_scroll means top
+        float max_scroll = (float)(count - max_lines);
+        float scroll_t   = 1.0f - glm::clamp(state->scroll_offset / max_scroll, 0.0f, 1.0f);
+        float thumb_h    = glm::max(8.0f, bar_h * ((float)max_lines / (float)count));
+        float thumb_y    = bar_y + scroll_t * (bar_h - thumb_h);
+
+        renderer_2d.batch.add_quad({ bar_x, thumb_y }, { bar_w, thumb_h }, { 1.0f, 1.0f, 1.0f, 0.5f }, depth);
+    }
+    
     im_update_cursor_y(w, &wp);
 
     syn_end_window(handle);

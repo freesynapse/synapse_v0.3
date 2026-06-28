@@ -1293,6 +1293,7 @@ void renderer_t::toggle_normals()        { debug.show_normals        = !debug.sh
 void renderer_t::toggle_tangents()       { debug.show_tangents       = !debug.show_tangents;        }
 void renderer_t::toggle_bounding_boxes() { debug.show_bounding_boxes = !debug.show_bounding_boxes;  }
 void renderer_t::toggle_grid()           { debug.show_grid           = !debug.show_grid;            }
+
 //
 void renderer_t::render_debug_normals(mesh_handle_t _mesh_handle, const glm::mat4 &_transform)
 {
