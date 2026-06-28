@@ -197,10 +197,10 @@ void renderer_t::set_light(uint32_t _index, const light_t &_light)
 void renderer_t::init_skybox()
 {
     m_skybox.cubemap_handle = { 0 };
-    m_skybox.mesh_handle = { 0 };
-    m_skybox.shader_handle = { 0 };
+    m_skybox.mesh_handle    = { 0 };
+    m_skybox.shader_handle  = { 0 };
     
-    mesh_handle_t mesh_handle = mesh_generator.create_skybox_cube_mesh();
+    mesh_handle_t   mesh_handle   = mesh_generator.create_skybox_cube_mesh();
     shader_handle_t shader_handle = shader_lib.load_from_file("skybox_shader", "../assets/shaders/skybox.glsl");
     
     if (!mesh_handle.is_valid() || !shader_handle.is_valid()) {
@@ -209,7 +209,7 @@ void renderer_t::init_skybox()
         return;
     }
     
-    m_skybox.mesh_handle = mesh_handle;
+    m_skybox.mesh_handle   = mesh_handle;
     m_skybox.shader_handle = shader_handle;
     
 }
@@ -261,6 +261,54 @@ void renderer_t::render_skybox()
     m_perf_stats.draw_calls_per_frame++;
 
     glDepthFunc(GL_LESS);
+    
+}
+
+// 
+glm::vec4 renderer_t::skybox_find_sun_direction()
+{
+    if (!m_skybox.is_active) return glm::vec4(-1.0f, -1.0f, -1.0f, 0.0f);
+
+    cubemap_internal_t *cm = cubemap_lib.get_cubemap(m_skybox.cubemap_handle);
+    if (!cm) return glm::vec4(-1.0f, -1.0f, -1.0f, 0.0f);
+
+    std::vector<float> pixels(cm->width * cm->height * 3);
+
+    glm::vec3 brightest_dir = { 0.0f, 1.0f, 0.0f };
+    float brightest = 0.0f;
+
+    const glm::vec3 face_forward[6] = {{1,0,0},{-1,0,0 },{0,1,0},{0,-1,0},{0,0,1},{0,0,-1}};
+    const glm::vec3 face_right[6]   = {{0,0,-1},{0,0,1},{1,0,0},{1,0,0},{1,0,0},{-1,0,0}};
+    const glm::vec3 face_up[6]      = {{0,-1,0},{0,-1,0},{0,0,1},{0,0,-1},{0,-1,0},{0,-1,0}};
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, cm->opengl_id);
+
+    for (int face = 0; face < 6; face++) {
+        glGetTexImage(GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, 0, GL_RGB, GL_FLOAT, pixels.data());
+        for (uint32_t y = 0; y < cm->height; y++) {
+            for (uint32_t x = 0; x < cm->width; x++) {
+                int idx = (y * cm->width + x) * 3;
+                float r = pixels[idx + 0];
+                float g = pixels[idx + 1];
+                float b = pixels[idx + 2];
+
+                // luminance since HDR values can be >> 1
+                float lum = 0.2126f * r + 0.7152f * g + 0.0722f * b;
+                if (lum > brightest) {
+                    brightest = lum;
+                    // convert texel to normalized [-1..1] face coordinates
+                    float u = (x + 0.5f) / cm->width  * 2.0f - 1.0f;
+                    float v = (y + 0.5f) / cm->height * 2.0f - 1.0f;
+                    // reconstruct world-space directions for this texel
+                    glm::vec3 dir = glm::normalize(face_forward[face] + face_right[face] * u + face_up[face] * v);
+                    brightest_dir = dir;
+                }
+            }
+        }
+    }
+
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    return -glm::vec4(brightest_dir, 0.0f);
     
 }
 

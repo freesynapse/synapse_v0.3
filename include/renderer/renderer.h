@@ -48,6 +48,7 @@ public:
 	void set_skybox_render(bool _bool) { m_do_render_skybox = _bool; }
 	void toggle_skybox() { m_do_render_skybox = !m_do_render_skybox; }
 	void render_skybox();
+	glm::vec4 skybox_find_sun_direction();
 
 	// IBL
 	void bake_ibl();

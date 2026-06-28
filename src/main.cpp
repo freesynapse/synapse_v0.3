@@ -1,5 +1,6 @@
 
 #include "synapse.h"
+#include "mplc/mplc.h"
 
 
 entity_handle_t helmet;
@@ -62,7 +63,8 @@ int main()
     }
 
     syn_shutdown();
-
+    mplc.shutdown();
+    
     return 0;
 
 }
@@ -105,8 +107,9 @@ void setup_lights()
 
     light_t sun;
     sun.position = glm::vec4(0, 0, 0, 1.0f);            // .w = 1 --> directional light
-    sun.direction = glm::vec4(-1.0f, -1.0f, -1.0f, 0.0f); // Top-down angle
-    // sun.direction = glm::vec4(0.0f, -1.0f, 0.0f, 0.0f);
+    // sun.direction = glm::vec4(-1.0f, -1.0f, -1.0f, 0.0f); // Top-down angle
+    // sun.direction = glm::vec4(0.5f, 0.8f, 0.34f, 0.0f);
+    sun.direction = renderer.skybox_find_sun_direction();
     sun.color = glm::vec4(1.0f, 1.0f, 0.9f, 1.0f); // Sun doesn't need 100+ intensity
     // renderer.set_light(3, sun);
     renderer.set_light(0, sun);
