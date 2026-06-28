@@ -46,11 +46,12 @@ public:
 	
 	void begin_render_block();
 	void end_render_block(bool _use_depth_test);
+	void end_render_block_with_proj(const glm::mat4 &_proj);
 	void render_text(const float &_x, const float &_y, const char *_str, ...);
-	// void render_text(const float &_x, const float &_y, const char *_str);
 	void render_text_clipped(const float &_x, const float &_y, float _max_width, const char *_str, ...);
-	// void render_text_clipped(const float &_x, const float &_y, float _max_width, const char *_str);
-
+	void render_text_centered(const float &_x, const float &_y, const char *_str, ...);
+	void render_text_right(const float &_x, const float &_y, const char *_str, ...);
+	
 	// in pixels
 	float get_string_width(const char *_str, ...);
 	// float get_string_width(const char *_str);
@@ -60,10 +61,12 @@ public:
 	const glm::vec4 &get_color() { return m_text_color; }
 	float get_font_height() { return (float)(m_texture_height); }
 	float get_font_glyph_height() { return (float)(m_font_ascender); }
-
+	const std::vector<font_vertex_t> &get_vertices() { return m_vertices; }
+	
 private:
 	int init_font_atlas(const char *_filename, const int &_pixel_size, const glm::vec2 &_vp_sz);
-
+	void render_text_raw(const float &_x, const float &_y, const char *_str);
+	
 private:
 	// FreeType
 	FT_Library m_ft_lib;

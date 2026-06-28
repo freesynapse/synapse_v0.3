@@ -6,7 +6,6 @@
 #include "mplc/figure_utils.h"
 
 #include "mplc/figure_params.h"
-#include "mplc/figure_render_obj.h"
 
 
 //-------------------------------------------------------------------------------
@@ -108,7 +107,7 @@ void range_converter_t::print(const std::string& _info)
 //
 axes_t::axes_t(const figure_params_t &_fig_params)
 {
-    normalized_params_t params = n(_fig_params);
+    normalized_params_t params(_fig_params);
     
     converters[0].plot_lim = { params.x_axis_lim[0], params.x_axis_lim[1] };
     converters[0].update_plot_range();
@@ -130,7 +129,7 @@ void axes_t::set_x_lim(const glm::vec2& _x_lim, bool _x_nice_scale)
 //
 void axes_t::set_y_lim(const glm::vec2& _y_lim, bool _y_nice_scale)
 {
-    scalers[1] = NiceScale(_y_lim, _y_nice_scale);
+    scalers[1] = nice_scale_t(_y_lim, _y_nice_scale);
     converters[1].xy_lim = scalers[1].nice_lim;
     converters[1].update_xy_range();
     
@@ -171,7 +170,7 @@ size_t figer_marker_vertex_count(figure_marker_t _marker)
 }
 
 //
-size_t figure_marker_vertices(normalized_params_t  &_params,
+size_t figure_marker_vertices(const normalized_params_t  &_params,
                               std::vector<glm::vec2>& _vertices)
 {
     _vertices.clear();

@@ -49,7 +49,7 @@ glm::vec2 iqr(const T& _x)
 // Helper struct for rendering tick labels.
 struct tick_labels_t
 {
-    size_t label_count = 0;
+    size_t count = 0;
     std::vector<std::string> labels;
     float max_label_width = 0.0f;
     float min_label_width = 0.0f;

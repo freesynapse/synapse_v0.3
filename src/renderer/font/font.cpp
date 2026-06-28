@@ -32,6 +32,8 @@ void font_t::destroy()
 {
     m_vao.destroy();
     glDeleteTextures(1, &m_atlas_texture_id);
+    FT_Done_Face(m_ft_face);
+    FT_Done_FreeType(m_ft_lib);
 
 }
 
@@ -161,23 +163,21 @@ void font_t::render_text(const float &_x, const float &_y, const char* _str, ...
 {
     if (!_str) return;
 
-	//
 	va_list arglist;
 	memset(m_tmp_buffer, 0, SYN_FONT_MAX_STRING_LENGTH);
 	va_start(arglist, _str);
 	size_t str_len = vsnprintf(m_tmp_buffer, SYN_FONT_MAX_STRING_LENGTH, _str, arglist);
 	va_end(arglist);
 
-// 	render_text(_x, _y, m_tmp_buffer);
-// }
+	render_text_raw(_x, _y, m_tmp_buffer);
+	return;
 
-// // 
-// void font_t::render_text(const float &_x, const float &_y, const char* _str)
-// {
+	// TODO : remove
 	// add vertices to the buffer
 	float x = std::round(_x);
 	float y = std::round(_y);
-	
+
+	// 
 	for (size_t i = 0; i < str_len; i++) {
     	if (m_tmp_buffer[i] == '\0' || m_tmp_buffer[i] == '\n') break;
 
@@ -261,6 +261,75 @@ void font_t::render_text_clipped(const float &_x, const float &_y, float _max_wi
     }
 }
 
+// 
+void font_t::render_text_centered(const float &_x, const float &_y, const char *_str, ...)
+{
+    if (!_str) return;
+
+    char buf[SYN_FONT_MAX_STRING_LENGTH];
+    va_list arglist;
+    memset(buf, 0, SYN_FONT_MAX_STRING_LENGTH);
+    va_start(arglist, _str);
+    vsnprintf(buf, SYN_FONT_MAX_STRING_LENGTH, _str, arglist);
+    va_end(arglist);
+
+    float w = get_string_width(buf);
+    render_text_raw(_x - w * 0.5f, _y, buf);
+    
+}
+
+// 
+void font_t::render_text_right(const float &_x, const float &_y, const char *_str, ...)
+{
+    if (!_str) return;
+    
+    char buf[SYN_FONT_MAX_STRING_LENGTH];
+    va_list arglist;
+    memset(buf, 0, SYN_FONT_MAX_STRING_LENGTH);
+    va_start(arglist, _str);
+    vsnprintf(buf, SYN_FONT_MAX_STRING_LENGTH, _str, arglist);
+    va_end(arglist);
+
+    float w = get_string_width(buf);
+    render_text_raw(_x - w, _y, buf);
+    
+}
+
+// 
+void font_t::render_text_raw(const float &_x, const float &_y, const char *_str)
+{
+    float x = std::round(_x);
+    float y = std::round(_y);
+    for (size_t i = 0; _str[i] != '\0' && _str[i] != '\n'; i++) {
+        uint8_t ascii_val = (uint8_t)_str[i];
+        if (ascii_val < 32 || ascii_val >= SYN_FONT_MAX_CHAR_SET_SIZE) continue;
+        character_info_s c = m_chars[ascii_val];
+        float x2 = std::round(x + c.bl);
+        float y2 = std::round(y - c.bt);
+        float w = c.bw;
+        float h = c.bh;
+        x += c.ax;
+        y += c.ay;
+        if (!w || !h) continue;
+        float u0 = c.tx, v0 = c.ty;
+        float u1 = c.tx + c.bw / (float)m_texture_width;
+        float v1 = c.ty + c.bh / (float)m_texture_height;
+        m_vertices.push_back(font_vertex_t({ x2,     y2 + h }, { u0, v1 }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2 + w, y2 + h }, { u1, v1 }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2 + w, y2     }, { u1, v0 }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2,     y2 + h }, { u0, v1 }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2 + w, y2     }, { u1, v0 }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2,     y2     }, { u0, v0 }, m_text_color, m_current_depth));
+    }
+}
+
+//
+void font_t::begin_render_block()
+{
+    m_vertices.clear();
+    
+}
+
 //
 void font_t::end_render_block(bool _use_depth_test)
 {    
@@ -296,6 +365,27 @@ void font_t::end_render_block(bool _use_depth_test)
     }
 
 	m_vertices.clear();
+}
+
+void font_t::end_render_block_with_proj(const glm::mat4 &_proj)
+{
+    if (m_vertices.empty()) return;
+
+    shader_t *shader = shader_lib.get_shader(m_shader_handle);
+    shader->enable();
+    shader->set_matrix_4fv("u_projection", _proj);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_atlas_texture_id);
+
+    m_vao.bind();
+    m_vao.update_vertices(&m_vertices[0], sizeof(font_vertex_t) * m_vertices.size(), 0);
+    glDrawArrays(GL_TRIANGLES, 0, m_vertices.size());    
+    m_vao.unbind();
+
+    shader->disable();
+    m_vertices.clear();
+    
 }
 
 //

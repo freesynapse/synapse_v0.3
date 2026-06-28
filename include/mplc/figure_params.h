@@ -175,20 +175,20 @@ struct figure_params_t
     float title_font_size_px            = 16.0f;
 
     // Matches the default ImGui palette.
-    glm::vec4 tick_color                = {   1.0f,   1.0f,   1.0f,  1.0f };
-    glm::vec4 axis_color                = {   1.0f,   1.0f,   1.0f,  1.0f };
-    glm::vec4 title_color               = {   1.0f,   1.0f,   1.0f,  1.0f };
-    glm::vec4 axis_label_color          = {   1.0f,   1.0f,   1.0f,  1.0f };
-    glm::vec4 tick_label_color          = {   1.0f,   1.0f,   1.0f,  1.0f };
-    glm::vec4 figure_background         = {   0.0f,   0.0f,   0.0f,  0.7f };
-    glm::vec4 data_color                = { 0.298f, 0.361f, 0.490f,  1.0f };
-    glm::vec4 fill_between_color        = {   1.0f,   1.0f,   1.0f,  0.2f };
+    glm::vec4 tick_color                = {  1.0f,   1.0f,   1.0f,  1.0f };
+    glm::vec4 axis_color                = {  1.0f,   1.0f,   1.0f,  1.0f };
+    glm::vec4 title_color               = {  1.0f,   1.0f,   1.0f,  1.0f };
+    glm::vec4 axis_label_color          = {  1.0f,   1.0f,   1.0f,  1.0f };
+    glm::vec4 tick_label_color          = {  1.0f,   1.0f,   1.0f,  1.0f };
+    glm::vec4 figure_background         = {  0.2f,   0.2f,   0.2f,  1.0f };
+    glm::vec4 data_color                = { 0.85f,  0.50f,  0.15f,  1.0f };
+    glm::vec4 fill_between_color        = {  1.0f,   1.0f,   1.0f,  0.2f };
 
 
     // histogram parameters
     
     // Space between bars in pixels.
-    float bar_spacing_px                = 1;
+    float bar_spacing_px                = 1.0f;
 
     // Number of bins.
     int bin_count                       = -1;
@@ -319,9 +319,6 @@ private:
     inline glm::vec2 norm2(const glm::vec2 &_v, const glm::vec2 &_ax) const { return { norm(_v[0], _ax.x), norm(_v[1], _ax.y) }; }
     
 };
-
-// global (namespace) instance
-extern figure_params_t rc_params;
 
 
 #endif // __FIGURE_PARAMS_H

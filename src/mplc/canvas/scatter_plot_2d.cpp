@@ -1,5 +1,7 @@
 
 #include "mplc/canvas/scatter_plot_2d.h"
+
+#include "mplc/figure_utils.h"
 #include "utils/log.h"
 
 #include "c_api.h"
@@ -45,6 +47,7 @@ void scatter_data(canvas_2d_t &_c, const std::vector<float> &_x, const std::vect
 // 
 void scatter_redraw(canvas_2d_t &_c, const axes_t &_axes)
 {
+
     scatter_data_t &s = _c.scatter;
     normalized_params_t p(_c.params);
 
@@ -65,11 +68,9 @@ void scatter_redraw(canvas_2d_t &_c, const axes_t &_axes)
     }
 
     _c.vao_data.destroy();
-    _c.vao_data.set_buffer_layout({
-        { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT3 }
-    });
+    _c.vao_data.set_buffer_layout({{ VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT3 }});
     _c.vao_data.create(V.data(), (uint32_t)V.size());
-    
+
 }
 
 // 

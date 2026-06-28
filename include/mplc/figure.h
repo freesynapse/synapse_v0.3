@@ -13,6 +13,7 @@
 #include "renderer/UI/window/window_types.h"
 
 #include "mplc/figure_params.h"
+#include "mplc/figure_types.h"
 #include "mplc/figure_utils.h"
 #include "mplc/canvas/canvas_2d.h"
 #include "mplc/canvas/canvas_params.h"
@@ -38,7 +39,7 @@ public:
 
 public:
     figure_t() = default;
-    ~figure_t();
+    ~figure_t() { destroy(); }
 
 
     //-------------------------------------------------------------------------
@@ -78,6 +79,8 @@ public:
     void set_title(const std::string &_title) { m_title = _title; m_redraw_flags |= FIGURE_REDRAW_ALL; }
     void set_x_lim(const glm::vec2 &_lim);
     void set_y_lim(const glm::vec2 &_lim);
+    void set_placement(figure_placement_t _p) { m_placement = _p; }
+    void set_placement_offset(const glm::vec2 &_offset) { m_placement_offset = _offset; }
     void enable_grid()  { m_aux_flags |=  FIGURE_AUX_GRIDLINES; m_redraw_flags |= FIGURE_REDRAW_ALL; }
     void disable_grid() { m_aux_flags &= ~FIGURE_AUX_GRIDLINES; m_redraw_flags |= FIGURE_REDRAW_ALL; }
     void fill_x(const glm::vec2 &_lim);
@@ -101,45 +104,50 @@ private:
     void add_canvas(canvas_2d_t &_canvas);
     void update_data_limits();
 
-    void redraw_axes(const normalized_params_t &_nparams);
-    void redraw_ticks(const normalized_params_t &_nparams);
-    void redraw_tick_labels(const normalized_params_t &_nparams);
-    void redraw_fill(const normalized_params_t &_nparams);
-    void redraw_tick_labels(nice_scale_t &_ticks, const std::vector<glm::vec2> &_positions);
+    void redraw_axes(const normalized_params_t &_p);
+    void redraw_ticks(const normalized_params_t &_p);
+    void format_tick_labels(nice_scale_t &_ticks, const std::vector<glm::vec2> &_positions);
+    void redraw_tick_labels(const normalized_params_t &_p);
+    void redraw_fill(const normalized_params_t &_p);
 
 private:
-    bool                     m_initialized          = false;
-    std::string              m_title;
-    glm::vec2                m_size_px              = { 0.0f, 0.0f };
+    bool                    m_initialized           = false;
+    std::string             m_title;
+    glm::vec2               m_size_px               = { 0.0f, 0.0f };
 
-    figure_params_t          m_params;
-    axes_t                   m_axes;
+    figure_params_t         m_params;
+    axes_t                  m_axes;
 
     std::vector<std::unique_ptr<canvas_2d_t>> m_canvases;
 
-    glm::vec2                m_data_lim_x           = { 0.0f, 1.0f };
-    glm::vec2                m_data_lim_y           = { 0.0f, 1.0f };
-    glm::vec2                m_data_lim_x_prev      = { 0.0f, 1.0f };
-    glm::vec2                m_data_lim_y_prev      = { 0.0f, 1.0f };
+    figure_placement_t      m_placement             = figure_placement_t::TOP_LEFT;
+    glm::vec2               m_placement_offset      = { 0.0f, 0.0f };
+    
+    glm::vec2               m_data_lim_x            = { 0.0f, 1.0f };
+    glm::vec2               m_data_lim_y            = { 0.0f, 1.0f };
+    glm::vec2               m_data_lim_x_prev       = { 0.0f, 1.0f };
+    glm::vec2               m_data_lim_y_prev       = { 0.0f, 1.0f };
 
-    vertex_array_t           m_vao_axes;
-    vertex_array_t           m_vao_ticks;
-    vertex_array_t           m_vao_grid;
-    vertex_array_t           m_vao_fill;
+    vertex_array_t          m_vao_axes;
+    vertex_array_t          m_vao_ticks;
+    vertex_array_t          m_vao_grid;
+    vertex_array_t          m_vao_fill;
+    vertex_array_t          m_vao_canvas_clear_rect;
 
-    std::vector<glm::vec2>   m_tick_label_pos_x;
-    std::vector<glm::vec2>   m_tick_label_pos_y;
+    std::vector<glm::vec2>  m_tick_label_pos_x;
+    std::vector<glm::vec2>  m_tick_label_pos_y;
 
-    font_t                  *m_font_tick_label      = nullptr;
-    font_t                  *m_font_title           = nullptr;
+    font_t                 *m_font_tick_label       = nullptr;
+    font_t                 *m_font_title            = nullptr;
 
-    framebuffer_handle_t     m_fbo_handle;
+    framebuffer_handle_t    m_fbo_handle;
+    shader_handle_t         m_geom_shader_handle    = { 0 };
+    
+    uint32_t                m_redraw_flags          = FIGURE_REDRAW_ALL;
+    uint32_t                m_aux_flags             = FIGURE_AUX_GRIDLINES;
 
-    uint32_t                 m_redraw_flags         = FIGURE_REDRAW_ALL;
-    uint32_t                 m_aux_flags            = FIGURE_AUX_GRIDLINES;
-
-    glm::vec2                m_fill_lim_x           = { 1.0f, -1.0f };
-    glm::vec2                m_fill_lim_y           = { 1.0f, -1.0f };
+    glm::vec2               m_fill_lim_x            = { 1.0f, -1.0f };
+    glm::vec2               m_fill_lim_y            = { 1.0f, -1.0f };
     
 };
 

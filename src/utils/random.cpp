@@ -6,6 +6,7 @@ static const char* k_alphanum =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     "abcdefghijklmnopqrstuvwxyz";
 
+// 
 void random_t::init()
 {
     m_random_engine.seed(std::random_device()());
@@ -147,6 +148,14 @@ glm::vec4 random_t::rand4_fC_r(float _lo, float _hi)
                      (float)rand() * m_inv_max_floatC / (_hi - _lo) + _lo);
 }
 
+std::vector<float> random_t::rand_normal(size_t _n, float _mean, float _sd)
+{
+    std::normal_distribution<float> dist(_mean, _sd);
+    std::vector<float> data(_n);
+    for (size_t i = 0; i < _n; i++)
+        data[i] = dist(m_random_engine);
+    return data;
+}
 
 // -- misc --
 

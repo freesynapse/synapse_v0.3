@@ -1,6 +1,7 @@
 
 #include "mplc/canvas/line_plot_2d.h"
 
+#include "mplc/figure_utils.h"
 #include "renderer/shader/shader.h"
 #include "utils/log.h"
 
@@ -10,7 +11,7 @@ void lineplot_finalize_data(canvas_2d_t &_c)
 {
     lineplot_data_t &lp = _c.lineplot;
 
-    SYN_ASSERT(lp.x.size() != lp.y.size(), "X and Y must have equal number of series.");
+    SYN_ASSERT(lp.x.size() == lp.y.size(), "X and Y must have equal number of series.");
 
     _c.data_lim_x = { std::numeric_limits<float>::max(),
                       std::numeric_limits<float>::lowest() };
@@ -89,38 +90,33 @@ void lineplot_redraw(canvas_2d_t &_c, const axes_t &_axes)
     std::vector<glm::vec3> V;
     std::vector<glm::vec3> V_markers;
 
+    glm::vec3 v0, v1;
     for (int m = 0; m < lp.row_count; m++) {
         for (size_t n = 1; n < lp.x[m].size(); n++) {
-            glm::vec3 v0 = { _axes.eval_x(lp.x[m][n-1]),
-                             _axes.eval_y(lp.y[m][n-1]),
-                             p.z_value_data };
-            glm::vec3 v1 = { _axes.eval_x(lp.x[m][n]),
-                             _axes.eval_y(lp.y[m][n]),
-                             p.z_value_data };
+            v0 = { _axes.eval_x(lp.x[m][n-1]), _axes.eval_y(lp.y[m][n-1]), p.z_value_data };
+            v1 = { _axes.eval_x(lp.x[m][  n]), _axes.eval_y(lp.y[m][  n]), p.z_value_data };
             V.push_back(v0);
             V.push_back(v1);
 
             for (size_t i = 0; i < marker_vcount; i++) {
-                V_markers.push_back({ v0.x + marker_verts[i].x,
-                                      v0.y + marker_verts[i].y,
-                                      p.z_value_data });
+                V_markers.push_back({ v0.x + marker_verts[i].x, v0.y + marker_verts[i].y, p.z_value_data });
             }
+        }
+        // add marker for last segment vertex
+        for (size_t i = 0; i < marker_vcount; i++) {
+            V_markers.push_back({ v1.x + marker_verts[i].x, v1.y + marker_verts[i].y, p.z_value_data });
         }
     }
 
     // line geometry
     _c.vao_data.destroy();
-    _c.vao_data.set_buffer_layout({
-        { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT3 }
-    });
+    _c.vao_data.set_buffer_layout({{ VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT3 }});
     _c.vao_data.create(V.data(), (uint32_t)V.size());
 
     if (marker_vcount > 0 && !V_markers.empty()) {
         lp.marker_vcount = marker_vcount;
         lp.vao_markers.destroy();
-        lp.vao_markers.set_buffer_layout({
-            { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT3 }            
-        });
+        lp.vao_markers.set_buffer_layout({{ VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT3 }});
         lp.vao_markers.create(V_markers.data(), (uint32_t)V_markers.size());
         
         
@@ -144,7 +140,7 @@ void lineplot_render(const canvas_2d_t &_c, shader_t &_shader)
 
     if (lp.marker_vcount > 0) {
         lp.vao_markers.bind();
-        glDrawArrays(GL_TRIANGLES, 0, lp.marker_vcount);
+        glDrawArrays(GL_TRIANGLES, 0, lp.vao_markers.m_vertex_count);
         lp.vao_markers.unbind();
     }
 

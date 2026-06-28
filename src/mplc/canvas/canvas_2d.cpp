@@ -100,13 +100,6 @@ void canvas_destroy(canvas_2d_t &_c)
     _c.vao_data.destroy();
     if (_c.type == canvas_type_t::LINEPLOT) _c.lineplot.vao_markers.destroy();
 
-    // destroy active union members
-    switch (_c.type) {
-        case canvas_type_t::SCATTER:    _c.scatter.~scatter_data_t();       break;
-        case canvas_type_t::LINEPLOT:   _c.lineplot.~lineplot_data_t();     break;
-        case canvas_type_t::HISTOGRAM:  _c.histogram.~histogram_data_t();   break;    
-    }
-    
 }
 
 // 

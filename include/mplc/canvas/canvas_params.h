@@ -11,31 +11,32 @@
 // 
 struct scatter_params_t
 {
-    figure_marker_t marker;
-    float           marker_size;
-    glm::vec4       marker_color;
-    size_t          x_tick_count;
-    size_t          y_tick_count;    
+    figure_marker_t marker          = figure_marker_t::SQUARE;
+    float           marker_size     = 7.0f;
+    glm::vec4       marker_color    = glm::vec4(0.85f, 0.50f, 0.15f, 1.0f);
+    size_t          x_tick_count    = 2;
+    size_t          y_tick_count    = 2;    
 };
 
 //
 struct lineplot_params_t
 {
-    float           line_width_px;
-    figure_marker_t marker;
-    float           marker_size;
-    glm::vec4       line_color;
-    size_t          x_tick_count;
-    size_t          y_tick_count;
-    bool            x_nice_scale;
-    bool            y_nice_scale;
+    float           line_width_px   = 1.0f;
+    figure_marker_t marker          = figure_marker_t::NONE;
+    float           marker_size     = 7.0f;
+    glm::vec4       line_color      = glm::vec4(0.85f, 0.50f, 0.15f, 1.0f);
+    size_t          x_tick_count    = 2;
+    size_t          y_tick_count    = 2;
+    bool            x_nice_scale    = true;
+    bool            y_nice_scale    = true;
 };
 
 //
 struct histogram_params_t
 {
-    size_t          bin_count;
-    bool            hist_line_plot;
+    size_t          bin_count       = -1;
+    bool            hist_line_plot  = false;
+    glm::vec4       bin_color       = glm::vec4(0.85f, 0.50f, 0.15f, 1.0f);
 };
 
 

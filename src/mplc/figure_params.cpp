@@ -8,9 +8,6 @@
 #include "utils/log.h"
 
 
-// global default instance
-figure_params_t rc_params = figure_params_t();
-
 // 
 void normalized_params_t::set(const figure_params_t &_params)
 {
@@ -92,7 +89,8 @@ void figure_params_t::set_from_scatter_params(const scatter_params_t &_p)
     marker_sz_px    = _p.marker_size;
     x_tick_count    = _p.x_tick_count;
     y_tick_count    = _p.y_tick_count;
-    data_color      = _p.marker_color;
+    if (_p.marker_color != glm::vec4(0.0f))
+        data_color      = _p.marker_color;
 }
 
 // 
@@ -102,7 +100,8 @@ void figure_params_t::set_from_lineplot_params(const lineplot_params_t &_p)
     marker          = _p.marker;
     marker_sz_px    = _p.marker_size;
     line_width_px   = _p.line_width_px;
-    data_color      = _p.line_color;
+    if (_p.line_color != glm::vec4(0.0f))
+        data_color      = _p.line_color;
     x_tick_count    = _p.x_tick_count;
     y_tick_count    = _p.y_tick_count;
     x_nice_scale    = _p.x_nice_scale;
@@ -115,6 +114,8 @@ void figure_params_t::set_from_histogram_params(const histogram_params_t &_p)
     figure_type     = figure_type_t::HISTOGRAM;
     bin_count       = _p.bin_count;
     hist_line_plot  = _p.hist_line_plot;
+    if (_p.bin_color != glm::vec4(0.0f))
+        data_color      = _p.bin_color;
 }
 
 // 

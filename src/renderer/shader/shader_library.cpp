@@ -12,10 +12,8 @@ void shader_library_t::shutdown()
 {
     SYN_INFO("deleting shaders...\n");
     
-    for (size_t i = 0; i < m_shader_count; ++i) {
-        SYN_INFO("%s\n", m_shaders[i].get_name().c_str());
+    for (size_t i = 0; i < m_shader_count; ++i)
         m_shaders[i].destroy();
-    }
     m_shader_count = 0;
     
     SYN_INFO("clearing shader handles...\n");

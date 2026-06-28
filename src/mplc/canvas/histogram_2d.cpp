@@ -4,6 +4,7 @@
 
 #include "mplc/canvas/histogram_2d.h"
 
+#include "mplc/figure_utils.h"
 #include "renderer/shader/shader.h"
 #include "mplc/figure_utils.h"
 
@@ -13,12 +14,20 @@ static void histogram_setup_bins(canvas_2d_t &_c, const glm::vec2 &_lim)
     histogram_data_t &h = _c.histogram;
     h.bins.clear();
 
-    if (h.bin_count < 0) {
+    if (h.bin_count <= 0) {
         std::vector<float> sorted = h.data;
         std::sort(sorted.begin(), sorted.end());
         glm::vec2 q = iqr(sorted);
         float w = (2.0f * (q[1] - q[0])) / cbrtf((float)h.data.size());
-        h.bin_count = (w > 0.0f) ? (int)floorf((_lim[1] - _lim[0])) / w : 1;
+        h.bin_count = (int)floorf((_lim[1] - _lim[0])) / w;
+
+        // fallback to Sturge's ruel if Freedman-Draconis gives too few bins
+        if (h.bin_count < 2) {
+            h.bin_count = (int)ceilf(log2f((float)h.data.size())) + 1;
+        }
+
+        // minimum of 2 bins
+        h.bin_count = std::max(2, h.bin_count);
     }
 
     if (h.bin_count > 1) h.bins_dx = (_lim[1] - _lim[0]) / (h.bin_count - 1);
@@ -31,7 +40,7 @@ static void histogram_setup_bins(canvas_2d_t &_c, const glm::vec2 &_lim)
     }
     
     h.bins[_lim[1]] = 0;    // last bin set manually to avoid rounding error
-    
+
 }
 
 // 
@@ -48,6 +57,17 @@ void histogram_finalize_data(canvas_2d_t &_c)
     }
 
     histogram_setup_bins(_c, lim);
+
+    nice_scale_t ns(lim, true);
+    if (ns.lower_bound < lim[0]) {
+        std::map<float, size_t> new_bins;
+        float x = ns.lower_bound;
+        for (size_t i = 0; i < (size_t)h.bin_count; i++) {
+            new_bins[x] = 0;
+            x += h.bins_dx;
+        }
+        h.bins = new_bins;
+    }
 
     for (float v : h.data) {
         if (v < lim[0] || v > lim[1]) continue;
@@ -85,10 +105,11 @@ void histogram_redraw(canvas_2d_t &_c, const axes_t &_axes)
     const float xoff = 0.5f * p.bar_spacing;
 
     uint32_t idx = 0;
+    int i = 0;
     for (auto it = h.bins.begin(); it != h.bins.end(); it++) {
         float x0 = _axes.eval_x(it->first) + xoff;
         float x1 = _axes.eval_x(it->first + h.bins_dx) - xoff;
-        float y0 = _axes.eval_y(0.0f);
+        float y0 = _axes.eval_y(0.0f) + (1.0f / p.figure_sz_px.y);
         float y1 = _axes.eval_y((float)it->second);
 
         V.push_back({ x0, y0, z }); V.push_back({ x1, y0, z }); V.push_back({ x1, y1, z }); V.push_back({ x0, y1, z });
@@ -98,9 +119,7 @@ void histogram_redraw(canvas_2d_t &_c, const axes_t &_axes)
     }
 
     _c.vao_data.destroy();
-    _c.vao_data.set_buffer_layout({
-        { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT3 }
-    });
+    _c.vao_data.set_buffer_layout({{ VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT3 }});
     _c.vao_data.create(V.data(), (uint32_t)V.size(), I.data(), (uint32_t)I.size());
     
 }

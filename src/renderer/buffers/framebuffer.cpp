@@ -206,9 +206,8 @@ void framebuffer_base_t::clear(const glm::vec4 &_clear_color, uint32_t _buffer_m
 	glClearColor(_clear_color.r, _clear_color.g, _clear_color.b, _clear_color.a);
 	glClear(_buffer_mask);
 
-	api.set_clear_color(renderer_clear_color);
-
 	// restore clear color
+	api.set_clear_color(renderer_clear_color);
 
 }
 

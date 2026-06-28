@@ -45,7 +45,7 @@ struct lineplot_data_t {
 // 
 struct histogram_data_t {
     std::vector<float>      data;
-    int                     bin_count = 0;
+    int                     bin_count = -1;
     float                   bins_dx = 0.0f;
     std::map<float, size_t> bins;
 };
@@ -70,16 +70,19 @@ struct canvas_2d_t {
 
 
     // type-specific payload
-    union {
-        scatter_data_t   scatter;
-        lineplot_data_t  lineplot;
-        histogram_data_t histogram;
-    };
+    scatter_data_t   scatter;
+    lineplot_data_t  lineplot;
+    histogram_data_t histogram;
     
     // 
     canvas_2d_t() {}
     ~canvas_2d_t() {}
 
+    canvas_2d_t(canvas_2d_t &&_o) = default;
+    canvas_2d_t &operator=(canvas_2d_t &&_o) = default;
+    canvas_2d_t(const canvas_2d_t &) = delete;
+    canvas_2d_t &operator=(const canvas_2d_t &) = delete;
+    
 };
 
 //---------------------------------------------------------------------------
