@@ -11,7 +11,7 @@ include/external/
 src/external/
 lib/
 
-cmake_notes.md
+cmake_info.md
 notes.md
 compile_commands.json
 .clangd
