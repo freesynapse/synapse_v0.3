@@ -3,11 +3,22 @@ name        Viewport
 position    0.00 0.00
 size        0.85 0.80
 
+# Log window
+# Rendered with syn_log_window() in immediate mode
 #log
 name        Log
 position    0.00 0.80
-size        0.85 0.20
+size        0.70 0.20
 
+# Performance counters and FPS graph
+# Rendered with syn_perf_window() in immediate mode
+#perf
+name        Performance
+position    0.70 0.80 
+size        0.15 0.20
+
+# Entity hierarchy window
+# Rendered with editor.draw_hierarchy_window() in immediate mode
 #hierarchy
 name        Hierarchy
 position    0.85 0.00

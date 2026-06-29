@@ -13,6 +13,7 @@
 #include "utils/log.h"
 #include "utils/time_step.h"
 #include "utils/scope_timer.h"
+#include "mplc/mplc.h"
 
 
 //---------------------------------------------------------------------------------------
@@ -86,6 +87,8 @@ void syn_init(const char *_name, int _width, int _height, int _mode)
     window_manager.init();
     editor.init();
 
+    mplc.init();
+    
     // select main rendering mode
     switch (_mode) {
         case SYN_MODE_2D: syn_mode_2d(); SYN_INFO("SYN_MODE_2D enabled.\n"); break;
@@ -120,8 +123,10 @@ void syn_mode_3d()
 //
 void syn_shutdown()
 {
+    mplc.shutdown();
+    
     font.destroy();
-
+    
     shader_lib.shutdown();
     mesh_lib.shutdown();
     cubemap_lib.shutdown();
@@ -183,6 +188,7 @@ void syn_load_ui_layout(const char *_filepath)
         glm::vec2 abs_size = { size.x * sw,     size.y * sh     };
         if      (strcmp(type, "viewport")       == 0) syn_create_viewport_window(name, abs_pos, abs_size);
         else if (strcmp(type, "log")            == 0) syn_create_log_window(name, abs_pos, abs_size);
+        else if (strcmp(type, "perf")           == 0) syn_create_perf_window(name, abs_pos, abs_size);
         else if (strcmp(type, "hierarchy")      == 0) syn_create_hierarchy_window(name, abs_pos, abs_size);
         else if (strcmp(type, "transform")      == 0) syn_create_transform_window(name, abs_pos, abs_size);
         else if (strcmp(type, "material")       == 0) syn_create_material_window(name, abs_pos, abs_size);
@@ -296,6 +302,22 @@ void syn_create_log_window(const char *_name, const glm::vec2 &_pos, const glm::
     window_handle_t handle = window_manager.add_window(win);
     window_manager.set_log_window_handle(handle);
 
+}
+
+void syn_create_perf_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size)
+{
+    window_t win;
+    win.name     = _name;
+    win.position = _pos;
+    win.size     = _size;
+
+    window_handle_t handle = window_manager.add_window(win);
+    window_manager.set_perf_window_handle(handle);
+
+    renderer.m_perf_figure = mplc.create_figure({ _size.x, 200.0f });
+    renderer.m_perf_figure.lineplot({ 0 }, "fps_plot");
+    renderer.m_perf_figure.set_title("FPS");
+    
 }
 
 // 
@@ -492,7 +514,6 @@ void syn_render_end()
     window_manager.draw_windows();
 
     // 
-    renderer.draw_perf_stats();
     renderer.draw_notifications();
     font.end_render_block(false);
 
@@ -527,28 +548,30 @@ void syn_im_end()
     font.end_render_block(true);
 }
 
-void syn_begin_window(window_handle_t _handle)
+window_t *syn_im_begin_window(window_handle_t _handle)
 {
     window_t *w = window_manager.get_window(_handle);
-    if (!w || !w->is_visible()) return;
+    if (!w || !w->is_visible()) return nullptr;
     w->im_begin();
+
+    return w;
 }
 
 // 
-void syn_end_window(window_handle_t _handle)
+void syn_im_end_window(window_handle_t _handle)
 {
     
 }
 
 // 
-void syn_begin_row(window_handle_t _handle, const std::vector<float> &_ratios)
+void syn_im_begin_row(window_handle_t _handle, const std::vector<float> &_ratios)
 {
     window_t *w = window_manager.get_window(_handle);
     if (w) w->im_begin_row(_ratios);
 }
 
 // 
-void syn_end_row(window_handle_t _handle)
+void syn_im_end_row(window_handle_t _handle)
 {
     window_t *w = window_manager.get_window(_handle);
     if (w) w->im_end_row();
@@ -557,7 +580,7 @@ void syn_end_row(window_handle_t _handle)
 
 // immediate mode widgets
 // 
-void syn_label(window_handle_t _handle, const char *_text)
+void syn_im_label(window_handle_t _handle, const char *_text)
 {
     window_t *w = window_manager.get_window(_handle);
     if (!w) return;
@@ -575,7 +598,7 @@ void syn_label(window_handle_t _handle, const char *_text)
 }
 
 // 
-bool syn_button(window_handle_t _handle, const char *_text)
+bool syn_im_button(window_handle_t _handle, const char *_text)
 {
     window_t *w = window_manager.get_window(_handle);
     if (!w) return false;
@@ -615,7 +638,7 @@ bool syn_button(window_handle_t _handle, const char *_text)
 }
 
 // 
-void syn_float_field(window_handle_t _handle,
+void syn_im_float_field(window_handle_t _handle,
                      const char *_label,
                      float *_value,
                      float _min,
@@ -727,7 +750,7 @@ void syn_float_field(window_handle_t _handle,
 }
 
 // 
-void syn_color_picker_sv(window_handle_t _handle, float *_hue, float *_saturation, float *_value)
+void syn_im_color_picker_sv(window_handle_t _handle, float *_hue, float *_saturation, float *_value)
 {
     window_t *w = window_manager.get_window(_handle);
     if (!w || !_hue || !_saturation || !_value) return;
@@ -789,7 +812,7 @@ void syn_color_picker_sv(window_handle_t _handle, float *_hue, float *_saturatio
 }
 
 // 
-void syn_color_picker_hue(window_handle_t _handle, float *_hue)
+void syn_im_color_picker_hue(window_handle_t _handle, float *_hue)
 {
     window_t *w = window_manager.get_window(_handle);
     if (!w || !_hue) return;
@@ -845,7 +868,7 @@ void syn_color_picker_hue(window_handle_t _handle, float *_hue)
 }
 
 // 
-void syn_color_swatch(window_handle_t _handle, float *_r, float *_g, float *_b)
+void syn_im_color_swatch(window_handle_t _handle, float *_r, float *_g, float *_b)
 {
     window_t *w = window_manager.get_window(_handle);
     if (!w || !_r || !_g || !_b) return;
@@ -883,12 +906,12 @@ void syn_color_swatch(window_handle_t _handle, float *_r, float *_g, float *_b)
     
 }
 
-bool syn_list(window_handle_t _handle,
-              const char **_items,
-              uint32_t _count,
-              int *_selected_index,
-              int *_hovered_index,
-              float _max_height)
+bool syn_im_list(window_handle_t _handle,
+                 const char **_items,
+                 uint32_t _count,
+                 int *_selected_index,
+                 int *_hovered_index,
+                 float _max_height)
 {
     window_t *w = window_manager.get_window(_handle);
     if (!w || !_items || !_selected_index) return false;
@@ -967,7 +990,7 @@ bool syn_list(window_handle_t _handle,
 }
 
 // 
-void syn_tex_quad(window_handle_t _handle, texture_handle_t _tex_handle, const glm::vec2 &_size, const glm::vec2 &_pos)
+void syn_im_tex_quad(window_handle_t _handle, texture_handle_t _tex_handle, const glm::vec2 &_size, const glm::vec2 &_pos)
 {
     window_t *w = window_manager.get_window(_handle);
     if (!w) return;
@@ -1011,9 +1034,7 @@ void syn_log_window()
 {
     window_handle_t handle = window_manager.get_log_window_handle();
     
-    syn_begin_window(handle);
-    
-    window_t *w = window_manager.get_window(handle);
+    window_t *w = syn_im_begin_window(handle);
     if (!w) return;
 
     uint32_t id = im_widget_hash("__log", w);
@@ -1056,7 +1077,7 @@ void syn_log_window()
         font.render_text_clipped(wp.p.x + 4.0f, wp.p.y + i * line_h + line_h, text_w, e.msg);
     }
 
-    // scroll
+    // scroll 
     if (w->im_is_hovered(wp.p, wp.s) && w->im_scroll_delta != 0.0f) {
         float max_scroll = (float)(count > max_lines ? count - max_lines : 0);
         state->scroll_offset = glm::clamp(state->scroll_offset + w->im_scroll_delta, 0.0f, max_scroll);
@@ -1066,9 +1087,9 @@ void syn_log_window()
     // scroll-bar
     if (count > max_lines) {
         const float bar_w = 4.0f;
-        const float bar_x = wp.p.x + wp.s.x - bar_w - 2.0f;
-        const float bar_y = wp.p.y;
-        const float bar_h = wp.s.y;
+        const float bar_x = wp.content_pos.x + wp.content_size.x - bar_w;
+        const float bar_y = wp.content_pos.y;
+        const float bar_h = wp.content_size.y;
         const float depth = w->depth + window_manager.ddepth_layer_widget;
 
         // track
@@ -1086,7 +1107,44 @@ void syn_log_window()
     
     im_update_cursor_y(w, &wp);
 
-    syn_end_window(handle);
+    syn_im_end_window(handle);
+    
+}
+
+// 
+void syn_perf_window()
+{
+    window_handle_t handle = window_manager.get_perf_window_handle();
+    if (!handle.id) return;
+
+    window_t *w = syn_im_begin_window(handle);
+    if (!w) return;
+
+    widget_params_t wp;
+    im_set_widget_params(w, &wp);
+
+    std::vector<float> frame_times;
+    for (uint32_t i = 0; i < SYN_PERF_GRAPH_SAMPLE_COUNT; i++) {
+        uint32_t sample_idx = (renderer.m_perf_stats.frame_time_idx + i) % SYN_PERF_GRAPH_SAMPLE_COUNT;
+        float frame_time = renderer.m_perf_stats.frame_times[sample_idx];
+        frame_times.push_back(frame_time);
+    }
+    
+    renderer.m_perf_figure.data(frame_times);
+    renderer.m_perf_figure.set_y_lim({ 16.66665f, 16.66695f });
+    renderer.m_perf_figure.render();
+    renderer.m_perf_figure.draw(handle);
+    wp.p.y += renderer.m_perf_figure.get().size_px().y;
+
+    float text_y = wp.p.y;
+    float text_h = font.get_font_height();
+    font.set_depth(w->depth + window_manager.ddepth_layer_text);
+    font.render_text(wp.p.x, text_y += text_h, "    FPS: %d (%.2f ms)", time_step.fps, time_step.dt * 1000.0f);
+    font.render_text(wp.p.x, text_y += text_h, "    Draw Calls: %d", renderer.m_perf_stats.draw_calls_per_frame);
+
+    wp.p.y = text_y;
+    
+    syn_im_end_window(handle);
     
 }
 
@@ -1095,13 +1153,12 @@ void syn_help_window() {
     window_handle_t handle = window_manager.get_help_window_handle();
     if (!handle.id) return;
     
-    window_t *w = window_manager.get_window(handle);
-    if (!w || !w->is_visible()) return;
-
-    syn_begin_window(handle);
+    window_t *w = syn_im_begin_window(handle);
+    if (!w) return;
 
     widget_params_t wp;
     im_set_widget_params(w, &wp);
+    // use the whole content area for drawing
     wp.s.y = w->get_content_size().y - w->im_cursor_y;
     wp.p.y = wp.content_pos.y + w->im_cursor_y;
 
@@ -1112,7 +1169,7 @@ void syn_help_window() {
 
     uint32_t id = im_widget_hash("__help", w);
     widget_state_t *state = w->im_get_or_create_state(id);
-    if (!state) { syn_end_window(handle); return; }
+    if (!state) { syn_im_end_window(handle); return; }
 
     uint32_t start = 0;
     if (count > max_lines) {
@@ -1140,6 +1197,6 @@ void syn_help_window() {
         w->im_scroll_delta = 0.0f;
     }
 
-    syn_end_window(handle);    
+    syn_im_end_window(handle);    
     
 }

@@ -46,16 +46,15 @@ int main()
 
         // immediate mode ui
         syn_im_begin();
-    
         editor.draw_color_picker_window();
         editor.draw_material_window();
         editor.draw_transform_window();
         editor.draw_hierarchy_window();
         editor.draw_texture_select_window();
         editor.draw_create_primitive_window();
-        
-        syn_log_window();
-        syn_help_window();
+        syn_log_window();   // common ui windows
+        syn_perf_window();  // common ui windows
+        syn_help_window();  // common ui windows
     
         syn_im_end();
 

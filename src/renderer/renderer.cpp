@@ -929,43 +929,11 @@ void renderer_t::record_frame_time(float _dt_ms)
 }
 
 //
-void renderer_t::toggle_perf_overlay()
-{
-    m_perf_stats.show_overlay = !m_perf_stats.show_overlay;
-    m_perf_stats.show_graph = !m_perf_stats.show_graph;
-}
-
-//
 void renderer_t::show_notification(const std::string &_msg, float _duration_s)
 {
     m_notification.msg = _msg;
     m_notification.duration = _duration_s;
     m_notification.display_time = _duration_s;
-}
-
-//
-void renderer_t::draw_perf_stats()
-{
-    if (!m_perf_stats.show_overlay) return;
-    
-    float padding = 10.0f;
-    float line_height = font.get_font_height();
-    
-    float x = padding;
-    float y = padding;
-    
-    // text
-    float text_y = y + line_height;
-    font.render_text(x, text_y += line_height, "FPS: %d (%.2f ms)", time_step.fps, time_step.dt * 1000.0f);
-    font.render_text(x, text_y += line_height, "Draw Calls: %d", m_perf_stats.draw_calls_per_frame);
-    
-    if (m_perf_stats.show_graph) {
-        static float w = 250.0f;
-        static float h = 40.0f;
-        text_y += padding;
-        draw_frame_time_graph(x, text_y, w, h);
-    }
-    
 }
 
 // 
@@ -988,54 +956,6 @@ void renderer_t::draw_notifications()
     
         m_notification.display_time -= time_step.dt;
     }
-    
-}
-
-//
-void renderer_t::draw_frame_time_graph(float _x, float _y, float _w, float _h)
-{
-    if (!m_perf_stats.show_graph) return;
-
-    float bar_width = _w / (float)SYN_PERF_GRAPH_SAMPLE_COUNT;
-    float max_frame_time = (m_perf_stats.max_frame_time < 20.0f ? 20.0f : m_perf_stats.max_frame_time);
-
-    renderer_2d.batch.begin_batch();
-    
-    // background and outline
-    renderer_2d.batch.add_quad({ _x, _y }, { _w, _h }, glm::vec4(0.1f, 0.1f, 0.1f, 0.8f), -1.0f);
-    ui_render_vertex_t outline[] = {
-        ui_render_vertex_t({ _x,      _y      }, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f), -0.9f),
-        ui_render_vertex_t({ _x + _w, _y      }, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f), -0.9f),
-        ui_render_vertex_t({ _x + _w, _y + _h }, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f), -0.9f),
-        ui_render_vertex_t({ _x,      _y + _h }, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f), -0.9f),
-        ui_render_vertex_t({ _x,      _y      }, glm::vec4(0.5f, 0.5f, 0.5f, 1.0f), -0.9f),
-    };
-    renderer_2d.batch.add_line_strip(outline, 5);
-
-    // bars
-    for (uint32_t i = 0; i < SYN_PERF_GRAPH_SAMPLE_COUNT; i++) {
-        uint32_t sample_idx = (m_perf_stats.frame_time_idx + i) % SYN_PERF_GRAPH_SAMPLE_COUNT;
-        float frame_time = m_perf_stats.frame_times[sample_idx];
-        if (frame_time == 0.0f) continue;
-
-        float normalized  = frame_time / max_frame_time;
-        float bar_height  = normalized * _h;
-        float bar_x       = _x + i * bar_width;
-        float bar_y       = _y + _h - bar_height;
-
-        glm::vec4 color;
-        if      (frame_time <= 16.67f) color = glm::vec4(0.0f, 1.0f, 0.0f, 1.0f);
-        else if (frame_time <= 33.33f) color = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
-        else                           color = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
-
-        renderer_2d.batch.add_quad({ bar_x, bar_y }, { bar_width, bar_height }, color, -0.5f);
-    }
-
-    renderer_2d.batch.end_batch();
-
-    // labels
-    font.render_text(_x + _w + 5.0f, _y, "%.1f ms", max_frame_time);
-    font.render_text(_x + _w + 5.0f, _y + _h, "0 ms");
     
 }
 

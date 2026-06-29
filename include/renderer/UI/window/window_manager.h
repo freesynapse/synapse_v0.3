@@ -46,12 +46,14 @@ public:
 
     // static window types
     void set_log_window_handle(const window_handle_t &_handle) { m_log_window_handle = _handle; }
+    void set_perf_window_handle(const window_handle_t &_handle) { m_perf_window_handle = _handle; }
     void set_hierarchy_window_handle(const window_handle_t &_handle) { m_hierarchy_window_handle = _handle; }
     void set_transform_window_handle(const window_handle_t &_handle) { m_transform_window_handle = _handle; }
     void set_material_window_handle(const window_handle_t &_handle) { m_material_window_handle = _handle; }
     void set_help_window_handle(const window_handle_t &_handle) { m_help_window_handle = _handle; }
 
     window_handle_t get_log_window_handle() { return m_log_window_handle; }
+    window_handle_t get_perf_window_handle() { return m_perf_window_handle; }
     window_handle_t get_hierarchy_window_handle() { return m_hierarchy_window_handle; }
     window_handle_t get_transform_window_handle() { return m_transform_window_handle; }
     window_handle_t get_material_window_handle() { return m_material_window_handle; }
@@ -93,6 +95,7 @@ private:
     // static window handles
     window_handle_t m_viewport_window_handle   = { 0 };
     window_handle_t m_log_window_handle        = { 0 };
+    window_handle_t m_perf_window_handle       = { 0 };
     window_handle_t m_hierarchy_window_handle  = { 0 };
     window_handle_t m_transform_window_handle  = { 0 };
     window_handle_t m_material_window_handle   = { 0 };

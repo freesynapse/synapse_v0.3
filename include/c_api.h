@@ -107,6 +107,7 @@ void syn_load_ui_layout(const char *_filepath);
 void syn_save_ui_layout(const char *_filepath);
 void syn_create_viewport_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 void syn_create_log_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
+void syn_create_perf_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 void syn_create_hierarchy_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 void syn_create_transform_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
 void syn_create_material_window(const char *_name, const glm::vec2 &_pos, const glm::vec2 &_size);
@@ -133,20 +134,22 @@ extern bool __was_prerender_called;
 // 
 void syn_im_begin();
 void syn_im_end();
-void syn_begin_window(window_handle_t _handle);
-void syn_end_window(window_handle_t _handle);
-void syn_begin_row(window_handle_t _handle, const std::vector<float> &_ratios);
-void syn_end_row(window_handle_t _handle);
+window_t *syn_im_begin_window(window_handle_t _handle);
+void syn_im_end_window(window_handle_t _handle);
+void syn_im_begin_row(window_handle_t _handle, const std::vector<float> &_ratios);
+void syn_im_end_row(window_handle_t _handle);
 
-void syn_label(window_handle_t _handle, const char *_text);
-bool syn_button(window_handle_t _handle, const char *_text);
-void syn_float_field(window_handle_t _handle, const char *_label, float *_value, float _min=-FLT_MAX, float _max=FLT_MAX);
-void syn_color_picker_sv(window_handle_t _handle, float *_hue, float *_saturation, float *_value);
-void syn_color_picker_hue(window_handle_t _handle, float *_hue);
-void syn_color_swatch(window_handle_t _handle, float *_r, float *_g, float *_b);
-bool syn_list(window_handle_t _handle, const char **_items, uint32_t _count, int *_selected_index, int *_hovered_index=nullptr, float _max_height=0.0f);
-void syn_tex_quad(window_handle_t _handle, texture_handle_t _tex_handle, const glm::vec2 &_size, const glm::vec2 &_pos=glm::vec2(-1.0f));
+void syn_im_label(window_handle_t _handle, const char *_text);
+bool syn_im_button(window_handle_t _handle, const char *_text);
+void syn_im_float_field(window_handle_t _handle, const char *_label, float *_value, float _min=-FLT_MAX, float _max=FLT_MAX);
+void syn_im_color_picker_sv(window_handle_t _handle, float *_hue, float *_saturation, float *_value);
+void syn_im_color_picker_hue(window_handle_t _handle, float *_hue);
+void syn_im_color_swatch(window_handle_t _handle, float *_r, float *_g, float *_b);
+bool syn_im_list(window_handle_t _handle, const char **_items, uint32_t _count, int *_selected_index, int *_hovered_index=nullptr, float _max_height=0.0f);
+void syn_im_tex_quad(window_handle_t _handle, texture_handle_t _tex_handle, const glm::vec2 &_size, const glm::vec2 &_pos=glm::vec2(-1.0f));
+// 
 void syn_log_window();
+void syn_perf_window();
 void syn_help_window();
 
 //---------------------------------------------------------------------------------------

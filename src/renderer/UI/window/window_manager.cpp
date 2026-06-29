@@ -236,31 +236,32 @@ void window_manager_t::on_mouse_move_event(const event_t &_e)
     if (m_hovered_window_handle.id > 0) {
         window_t *win = &m_pool[m_hovered_window_handle.id - 1];
         resize_handle_t handle = win->get_resize_handle_at_pos(pos);
-
-        switch (handle) {
-            case resize_handle_t::LEFT:
-            case resize_handle_t::RIGHT:
-                root_window.set_cursor(GLFW_RESIZE_EW_CURSOR);
-                break;
-
-            case resize_handle_t::TOP:
-            case resize_handle_t::BOTTOM:
-                root_window.set_cursor(GLFW_RESIZE_NS_CURSOR);
-                break;
-
-            case resize_handle_t::TOP_LEFT:
-            case resize_handle_t::BOTTOM_RIGHT:
-                root_window.set_cursor(GLFW_RESIZE_NWSE_CURSOR);
-                break;
-
-            case resize_handle_t::TOP_RIGHT:
-            case resize_handle_t::BOTTOM_LEFT:
-                root_window.set_cursor(GLFW_RESIZE_NESW_CURSOR);
-                break;
-
-            default:
-                root_window.set_cursor(GLFW_ARROW_CURSOR);
-                break;
+        if (win->is_resizable()) {
+            switch (handle) {
+                case resize_handle_t::LEFT:
+                case resize_handle_t::RIGHT:
+                        root_window.set_cursor(GLFW_RESIZE_EW_CURSOR);
+                    break;
+    
+                case resize_handle_t::TOP:
+                case resize_handle_t::BOTTOM:
+                    root_window.set_cursor(GLFW_RESIZE_NS_CURSOR);
+                    break;
+    
+                case resize_handle_t::TOP_LEFT:
+                case resize_handle_t::BOTTOM_RIGHT:
+                    root_window.set_cursor(GLFW_RESIZE_NWSE_CURSOR);
+                    break;
+    
+                case resize_handle_t::TOP_RIGHT:
+                case resize_handle_t::BOTTOM_LEFT:
+                    root_window.set_cursor(GLFW_RESIZE_NESW_CURSOR);
+                    break;
+    
+                default:
+                    root_window.set_cursor(GLFW_ARROW_CURSOR);
+                    break;
+            }
         }
     }
     else {

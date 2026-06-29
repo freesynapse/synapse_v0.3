@@ -10,6 +10,7 @@
 #include "renderer/entity/entity_types.h"
 #include "renderer/shadow/shadow_types.h"
 
+#include "mplc/figure_types.h"
 
 //
 #define SYN_MAX_RENDER_COMMANDS     1024
@@ -77,11 +78,8 @@ public:
 	// performance stats
 	void reset_perf_counters();
 	void record_frame_time(float _dt_ms);
-	void toggle_perf_overlay();
 	void show_notification(const std::string &_msg, float _duration_s=4.0f);
 	void draw_notifications();
-	void draw_perf_stats();
-	void draw_frame_time_graph(float _x, float _y, float _w, float _h);
 
 	// ui elements
 	void render_ui_transform(const glm::vec3 &_world_pos);
@@ -146,6 +144,7 @@ public:
 
 	// performance stats
 	perf_stats_t m_perf_stats; // .draw_calls_per_frame reset in root_window.prerender()
+	figure_handle_t m_perf_figure = { 0 };
 
 	// notifications
 	struct {

@@ -17,7 +17,6 @@ EDITOR
  DEV TOOLS / HELP
   F1            Show help window
   F2            Toggle wireframe
-  F3            Toggle performance overlay (viewport)
   F5            Toggle rendering normals of selected entity
   F6            Toggle rendering tangents of selected entity
   F7            Toggle rendering AABBs of all entities

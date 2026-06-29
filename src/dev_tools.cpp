@@ -33,10 +33,6 @@ void dev_tools_t::handle_input()
         renderer.toggle_wireframe();
     }
 
-    if (input.was_key_pressed(SYN_KEY_F3)) {
-        renderer.toggle_perf_overlay();
-    }
-
     if (input.was_key_pressed(SYN_KEY_F5)) {
         renderer.toggle_normals();
     }

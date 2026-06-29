@@ -505,29 +505,29 @@ void editor_t::draw_transform_window()
     if (!selected_entity_handle.is_valid()) return;
     entity_t *e = entity_lib.get_entity(selected_entity_handle);
 
-    syn_begin_window(m_transform_window_handle);
+    syn_im_begin_window(m_transform_window_handle);
 
     if (e) {
-        syn_label(m_transform_window_handle, "Position");
-        syn_begin_row(m_transform_window_handle, { 1.0f, 1.0f, 1.0f });
-            syn_float_field(m_transform_window_handle, "px", &e->t_position.x, -10000.0f, 10000.0f);
-            syn_float_field(m_transform_window_handle, "py", &e->t_position.y, -10000.0f, 10000.0f);
-            syn_float_field(m_transform_window_handle, "pz", &e->t_position.z, -10000.0f, 10000.0f);
-        syn_end_row(m_transform_window_handle);
+        syn_im_label(m_transform_window_handle, "Position");
+        syn_im_begin_row(m_transform_window_handle, { 1.0f, 1.0f, 1.0f });
+            syn_im_float_field(m_transform_window_handle, "px", &e->t_position.x, -10000.0f, 10000.0f);
+            syn_im_float_field(m_transform_window_handle, "py", &e->t_position.y, -10000.0f, 10000.0f);
+            syn_im_float_field(m_transform_window_handle, "pz", &e->t_position.z, -10000.0f, 10000.0f);
+        syn_im_end_row(m_transform_window_handle);
     
-        syn_label(m_transform_window_handle, "Rotation");
-        syn_begin_row(m_transform_window_handle, { 1.0f, 1.0f, 1.0f });
-            syn_float_field(m_transform_window_handle, "rx", &e->t_rotation.x, -10000.0f, 10000.0f);
-            syn_float_field(m_transform_window_handle, "ry", &e->t_rotation.y, -10000.0f, 10000.0f);
-            syn_float_field(m_transform_window_handle, "rz", &e->t_rotation.z, -10000.0f, 10000.0f);
-        syn_end_row(m_transform_window_handle);
+        syn_im_label(m_transform_window_handle, "Rotation");
+        syn_im_begin_row(m_transform_window_handle, { 1.0f, 1.0f, 1.0f });
+            syn_im_float_field(m_transform_window_handle, "rx", &e->t_rotation.x, -10000.0f, 10000.0f);
+            syn_im_float_field(m_transform_window_handle, "ry", &e->t_rotation.y, -10000.0f, 10000.0f);
+            syn_im_float_field(m_transform_window_handle, "rz", &e->t_rotation.z, -10000.0f, 10000.0f);
+        syn_im_end_row(m_transform_window_handle);
     
-        syn_label(m_transform_window_handle, "Scale");
-        syn_begin_row(m_transform_window_handle, { 1.0f, 1.0f, 1.0f });
-            syn_float_field(m_transform_window_handle, "sx", &e->t_scale.x, 0.001f, 10000.0f);
-            syn_float_field(m_transform_window_handle, "sy", &e->t_scale.y, 0.001f, 10000.0f);
-            syn_float_field(m_transform_window_handle, "sz", &e->t_scale.z, 0.001f, 10000.0f);
-        syn_end_row(m_transform_window_handle);
+        syn_im_label(m_transform_window_handle, "Scale");
+        syn_im_begin_row(m_transform_window_handle, { 1.0f, 1.0f, 1.0f });
+            syn_im_float_field(m_transform_window_handle, "sx", &e->t_scale.x, 0.001f, 10000.0f);
+            syn_im_float_field(m_transform_window_handle, "sy", &e->t_scale.y, 0.001f, 10000.0f);
+            syn_im_float_field(m_transform_window_handle, "sz", &e->t_scale.z, 0.001f, 10000.0f);
+        syn_im_end_row(m_transform_window_handle);
 
 
         if (im_needs_update(window_manager.get_window(m_transform_window_handle))) {
@@ -547,7 +547,7 @@ void editor_t::draw_transform_window()
         }
     }
     
-    syn_end_window(m_transform_window_handle);
+    syn_im_end_window(m_transform_window_handle);
 
 }
 
@@ -568,24 +568,24 @@ void editor_t::draw_material_window()
         }
     }
     
-    syn_begin_window(m_material_window_handle);
+    syn_im_begin_window(m_material_window_handle);
 
     if (e && mat) {
         material_pbr_payload_t *pbr = mat ? (material_pbr_payload_t *)mat->data : nullptr;
         if (pbr) {
-            syn_begin_row(m_material_window_handle, { 1.0f, 3.0f, 3.0f, 3.0f });
-            syn_color_swatch(m_material_window_handle, &pbr->albedo_color.r, &pbr->albedo_color.g, &pbr->albedo_color.b);
-            syn_float_field(m_material_window_handle, "r", &pbr->albedo_color.r, 0.0f, 1.0f);
-            syn_float_field(m_material_window_handle, "g", &pbr->albedo_color.g, 0.0f, 1.0f);
-            syn_float_field(m_material_window_handle, "b", &pbr->albedo_color.b, 0.0f, 1.0f);
-            syn_end_row(m_material_window_handle);
+            syn_im_begin_row(m_material_window_handle, { 1.0f, 3.0f, 3.0f, 3.0f });
+            syn_im_color_swatch(m_material_window_handle, &pbr->albedo_color.r, &pbr->albedo_color.g, &pbr->albedo_color.b);
+            syn_im_float_field(m_material_window_handle, "r", &pbr->albedo_color.r, 0.0f, 1.0f);
+            syn_im_float_field(m_material_window_handle, "g", &pbr->albedo_color.g, 0.0f, 1.0f);
+            syn_im_float_field(m_material_window_handle, "b", &pbr->albedo_color.b, 0.0f, 1.0f);
+            syn_im_end_row(m_material_window_handle);
 
-            syn_float_field(m_material_window_handle, "rough",  &pbr->roughness,     0.0f, 1.0f);
-            syn_float_field(m_material_window_handle, "metal",  &pbr->metallic,      0.0f, 1.0f);
-            syn_float_field(m_material_window_handle, "ao",     &pbr->ao,            0.0f, 1.0f);
-            syn_float_field(m_material_window_handle, "tiling", &pbr->tiling_factor, 0.0f, 100.0f);
+            syn_im_float_field(m_material_window_handle, "rough",  &pbr->roughness,     0.0f, 1.0f);
+            syn_im_float_field(m_material_window_handle, "metal",  &pbr->metallic,      0.0f, 1.0f);
+            syn_im_float_field(m_material_window_handle, "ao",     &pbr->ao,            0.0f, 1.0f);
+            syn_im_float_field(m_material_window_handle, "tiling", &pbr->tiling_factor, 0.0f, 100.0f);
 
-            if (syn_button(m_material_window_handle, "albedo texture")) {
+            if (syn_im_button(m_material_window_handle, "albedo texture")) {
                 editor.open_texture_select();
             }
 
@@ -598,7 +598,7 @@ void editor_t::draw_material_window()
         }
     }
 
-    syn_end_window(m_material_window_handle);
+    syn_im_end_window(m_material_window_handle);
 }
 
 // 
@@ -614,35 +614,35 @@ void editor_t::draw_color_picker_window()
     float strip_w  = 20.0f;
     float sv_w     = pw->get_content_size().x - strip_w - padding * 3.0f;
 
-    syn_begin_window(m_color_picker_window_handle);
+    syn_im_begin_window(m_color_picker_window_handle);
 
     // SV square and hue strip side by side
-    syn_begin_row(m_color_picker_window_handle, { sv_w, strip_w });
-        syn_color_picker_sv(m_color_picker_window_handle,
+    syn_im_begin_row(m_color_picker_window_handle, { sv_w, strip_w });
+        syn_im_color_picker_sv(m_color_picker_window_handle,
                             &m_color_picker_hsv.x,
                             &m_color_picker_hsv.y,
                             &m_color_picker_hsv.z);
-        syn_color_picker_hue(m_color_picker_window_handle,
+        syn_im_color_picker_hue(m_color_picker_window_handle,
                              &m_color_picker_hsv.x);
-    syn_end_row(m_color_picker_window_handle);
+    syn_im_end_row(m_color_picker_window_handle);
 
     // RGB float fields
-    syn_begin_row(m_color_picker_window_handle, { 1.0f, 1.0f, 1.0f });
-        syn_float_field(m_color_picker_window_handle, "r", &m_color_picker_rgb.x, 0.0f, 1.0f);
-        syn_float_field(m_color_picker_window_handle, "g", &m_color_picker_rgb.y, 0.0f, 1.0f);
-        syn_float_field(m_color_picker_window_handle, "b", &m_color_picker_rgb.z, 0.0f, 1.0f);
-    syn_end_row(m_color_picker_window_handle);
+    syn_im_begin_row(m_color_picker_window_handle, { 1.0f, 1.0f, 1.0f });
+        syn_im_float_field(m_color_picker_window_handle, "r", &m_color_picker_rgb.x, 0.0f, 1.0f);
+        syn_im_float_field(m_color_picker_window_handle, "g", &m_color_picker_rgb.y, 0.0f, 1.0f);
+        syn_im_float_field(m_color_picker_window_handle, "b", &m_color_picker_rgb.z, 0.0f, 1.0f);
+    syn_im_end_row(m_color_picker_window_handle);
 
     // Cancel / Select buttons
-    syn_begin_row(m_color_picker_window_handle, { 1.0f, 1.0f });
-        if (syn_button(m_color_picker_window_handle, "Select")) close_color_picker(true);
-        if (syn_button(m_color_picker_window_handle, "Cancel")) close_color_picker(false);
-    syn_end_row(m_color_picker_window_handle);
+    syn_im_begin_row(m_color_picker_window_handle, { 1.0f, 1.0f });
+        if (syn_im_button(m_color_picker_window_handle, "Select")) close_color_picker(true);
+        if (syn_im_button(m_color_picker_window_handle, "Cancel")) close_color_picker(false);
+    syn_im_end_row(m_color_picker_window_handle);
 
     if (im_needs_update(window_manager.get_window(m_color_picker_window_handle)))
         update_color_picker_from_rgb();
     
-    syn_end_window(m_color_picker_window_handle);
+    syn_im_end_window(m_color_picker_window_handle);
 }
 
 // 
@@ -668,8 +668,8 @@ void editor_t::draw_hierarchy_window()
         count++;
     }
 
-    syn_begin_window(m_hierarchy_window_handle);
-    if (syn_list(m_hierarchy_window_handle, names, count, &selected_index)) {
+    syn_im_begin_window(m_hierarchy_window_handle);
+    if (syn_im_list(m_hierarchy_window_handle, names, count, &selected_index)) {
         selected_entity_handle = handles[selected_index];
         entity_t *e = entity_lib.get_entity(selected_entity_handle);
         // entity selected, store prev transform for undo stack
@@ -684,7 +684,7 @@ void editor_t::draw_hierarchy_window()
         window_t *mw = window_manager.get_window(m_material_window_handle);
         if (mw) mw->im_clear_states();
     }
-    syn_end_window(m_hierarchy_window_handle);
+    syn_im_end_window(m_hierarchy_window_handle);
     
 }
 
@@ -716,12 +716,12 @@ void editor_t::draw_texture_select_window()
     int &selected_index = m_texture_selected_index;
     texture_handle_t &preview_handle = m_texture_preview_handle;
 
-    syn_begin_window(m_texture_select_window_handle);
+    syn_im_begin_window(m_texture_select_window_handle);
 
     float preview_size = 256.0f;
     float list_h = w->get_content_size().y - preview_size - w->im_padding * 3.0f;
     int hovered_index = -1;
-    if (syn_list(m_texture_select_window_handle, names, count, &selected_index, &hovered_index, list_h)) {
+    if (syn_im_list(m_texture_select_window_handle, names, count, &selected_index, &hovered_index, list_h)) {
         if (selected_index == 0) {
             assign_texture_to_selected("(no texture)");
         } else {
@@ -742,11 +742,11 @@ void editor_t::draw_texture_select_window()
             content_pos.x + content_size.x - preview_size - w->im_padding,
             content_pos.y + content_size.y - preview_size - w->im_padding
         };
-        syn_tex_quad(m_texture_select_window_handle, preview_handle, 
+        syn_im_tex_quad(m_texture_select_window_handle, preview_handle, 
                      { preview_size, preview_size }, preview_pos);
     }
     
-    syn_end_window(m_texture_select_window_handle);
+    syn_im_end_window(m_texture_select_window_handle);
 
 }
 
@@ -769,16 +769,16 @@ void editor_t::draw_create_primitive_window()
         { "Torus",       primitive_type_t::TORUS     },
     };
 
-    syn_begin_window(m_create_window_handle);
+    syn_im_begin_window(m_create_window_handle);
 
     for (int i = 0; i < (int)(sizeof(primitives) / sizeof(primitives[0])); i++) {
-        if (syn_button(m_create_window_handle, primitives[i].label)) {
+        if (syn_im_button(m_create_window_handle, primitives[i].label)) {
             create_primitive(primitives[i].type);
             w->set_visible(false);
         }
     }
 
-    syn_end_window(m_create_window_handle);    
+    syn_im_end_window(m_create_window_handle);    
 }
 
 // 

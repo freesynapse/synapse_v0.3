@@ -11,7 +11,7 @@
 // 
 void window_t::init()
 {
-        // default flags
+    // default flags
     m_is_visible = true;
     m_is_active = true;
 
@@ -106,14 +106,6 @@ void window_t::destroy_framebuffer()
 // 
 void window_t::on_resize()
 {
-    // notify widgets
-    // glm::vec2 content_size = get_content_size();
-    // for (uint32_t i = 0; i < m_widget_count; i++) {
-    //     if (m_widgets[i].on_resize) {
-    //         m_widgets[i].on_resize(&m_widgets[i], content_size);
-    //     }
-    // }
-
     // reize framebuffer if present
     if (m_has_framebuffer || m_is_tab_container) {
         resize_framebuffer();
