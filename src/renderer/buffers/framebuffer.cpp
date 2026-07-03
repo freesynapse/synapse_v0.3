@@ -219,7 +219,7 @@ void framebuffer_t::create(const color_format_t &_format,
 				           const std::string &_name)
 {
     m_format = _format;
-    m_pixel_format = getOpenGLPixelFormat(m_format);
+    m_pixel_format = get_opengl_pixel_format(m_format);
     
     m_color_attachment_count = _n_drawbuffers;
     m_color_attachment_ids = new GLuint[m_color_attachment_count];

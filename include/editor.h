@@ -17,7 +17,8 @@ public:
 
 public:
     void init();
-
+    void shutdown() {}
+    
     // 
     void save_scene(const std::string &_path);
     void load_scene(const std::string &_path);

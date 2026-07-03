@@ -38,7 +38,7 @@ struct opengl_pixel_format_t
 };
 
 
-static inline opengl_pixel_format_t getOpenGLPixelFormat(const color_format_t& _fmt) {
+static inline opengl_pixel_format_t get_opengl_pixel_format(const color_format_t& _fmt) {
 	opengl_pixel_format_t fmt;
 
 	switch (_fmt)

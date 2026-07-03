@@ -5,8 +5,6 @@
 #include <glm/glm.hpp>
 
 #include "external/glad/glad.h"
-
-// #include "renderer/material/texture.h"
 #include "renderer/buffers/framebuffer_types.h"
 
 // 

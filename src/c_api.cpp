@@ -51,11 +51,21 @@ orthographic_camera_t       orthographic_camera;
 // editing
 entity_handle_t             selected_entity_handle = { 0 };
 
+// subsystem flags
+static bool s_2d_enabled             = false;
+static bool s_assets_enabled         = false;
+static bool s_font_enabled           = false;
+static bool s_window_manager_enabled = false;
+static bool s_editor_enabled         = false;
+static bool s_mplc_enabled           = false;
+
+bool __was_prerender_called = false;
+
 
 //---------------------------------------------------------------------------------------
-// high-level control
+// core init/shutdown -- context, input, base renderer only
 //
-void syn_init(const char *_name, int _width, int _height, int _mode)
+void syn_init(const char *_name, int _width, int _height)
 {
     // open log file
     syn_open_log();
@@ -78,38 +88,95 @@ void syn_init(const char *_name, int _width, int _height, int _mode)
     api.set_clear_color({ 0.2f, 0.2f, 0.2f, 1.0f });
     renderer.init();
     renderer_2d.init();
-    tex_lib.init();
-    mat_lib.init();
-    cubemap_lib.init();
-    font.init("../assets/font/JetBrainsMono-Regular.ttf", 16);
-    font.set_color(glm::vec4(1.0f));
-
-    window_manager.init();
-    editor.init();
-
-    mplc.init();
     
-    // select main rendering mode
-    switch (_mode) {
-        case SYN_MODE_2D: syn_mode_2d(); SYN_INFO("SYN_MODE_2D enabled.\n"); break;
-        case SYN_MODE_3D: syn_mode_3d(); SYN_INFO("SYN_MODE_3D enabled.\n"); break;
-        default: SYN_FATAL_ERROR("unknown rendering mode selected.\n");
-    }
-
 }
 
 //
-void syn_mode_2d()
+void syn_shutdown()
+{
+    if (s_mplc_enabled)             mplc.shutdown();
+    if (s_font_enabled)             font.destroy();
+    if (s_editor_enabled)           editor.shutdown();
+    if (s_window_manager_enabled)   window_manager.shutdown();
+    if (s_assets_enabled) {
+                                    mesh_lib.shutdown();
+                                    cubemap_lib.shutdown();
+    }
+    if (s_2d_enabled)               renderer_2d.shutdown();
+
+    shader_lib.shutdown();
+    renderer.shutdown();
+
+    syn_close_log();
+    root_window.destroy();
+
+}
+
+
+//---------------------------------------------------------------------------------------
+// subsystems initialization
+//
+void syn_enable_2d()
+{
+    renderer_2d.init();
+    s_2d_enabled = true;
+}
+
+// 
+void syn_enable_assets()
+{
+    tex_lib.init();
+    mat_lib.init();
+    cubemap_lib.init();
+    s_assets_enabled = true;
+}
+
+// 
+void syn_enable_font(const char *_filename, int _px_size)
+{
+    font.init(_filename, _px_size);
+    font.set_color(glm::vec4(1.0f));
+    s_font_enabled = true;
+}
+
+// 
+void syn_enable_window_manager()
+{
+    if (!s_2d_enabled) syn_enable_2d();
+    window_manager.init();
+    s_window_manager_enabled = true;
+}
+
+// 
+void syn_enable_editor()
+{
+    if (!s_window_manager_enabled) syn_enable_window_manager();
+    if (!s_assets_enabled)         syn_enable_assets();
+    if (!s_mplc_enabled)           syn_enable_mplc();
+    editor.init();
+    s_editor_enabled = true;
+}
+
+// 
+void syn_enable_mplc()
+{
+    mplc.init();
+    s_mplc_enabled = true;
+}
+
+// 
+void syn_enable_mode_2d()
 {
     glm::ivec2 dims = root_window.get_window_dims();
     orthographic_camera = orthographic_camera_t((float)dims.x / (float)dims.y);
 }
 
-//
-void syn_mode_3d()
+// 
+void syn_enable_mode_3d()
 {
     glm::ivec2 dims = root_window.get_window_dims();
     orbit_camera.init(60.0f, dims.x, dims.y, 0.1f, 1000.0f);
+
     // sensible defaults
     orbit_camera.m_orbit_speed = 0.5f;
     orbit_camera.m_x_angle = 315.0f;
@@ -118,26 +185,124 @@ void syn_mode_3d()
     
     perspective_camera.init(60.0f, dims.x, dims.y, 0.1f, 1000.0f);
     cam.init(&orbit_camera, &perspective_camera);
+    
+}
+
+
+//---------------------------------------------------------------------------------------
+// rendering loop functions
+//
+void syn_begin_frame()
+{
+    if (__was_prerender_called) return;
+    root_window.pre_render();
+    renderer.reset_perf_counters();
+    events.process_events();
+    __was_prerender_called = true;
+    
+}
+
+// 
+void syn_end_frame()
+{
+    root_window.post_render();
+    time_step.update();
+    time_step.calculate_fps();
+    __was_prerender_called = false;
+    
+}
+
+// 
+void syn_render_begin_3d()
+{
+    syn_begin_frame();
+    
+    //
+    api.set_clear_color({ 0.2f, 0.2f, 0.2f, 1.0f });
+    renderer.bind_scene_fbuffer();
+    
+    // perspective_camera.update(time_step.dt);
+    cam.update(time_step.dt);
+
 }
 
 //
-void syn_shutdown()
+void syn_render_end_3d()
 {
-    mplc.shutdown();
-    
-    font.destroy();
-    
-    shader_lib.shutdown();
-    mesh_lib.shutdown();
-    cubemap_lib.shutdown();
-    window_manager.shutdown();
-    
-    renderer.shutdown();
-    renderer_2d.shutdown();
+    // dev tools
+    if (renderer.debug.show_normals || renderer.debug.show_tangents) {
+        entity_t *e = entity_lib.get_entity(selected_entity_handle);
+        if (e){
+            renderer.render_debug_normals(e->mesh_handle, e->transform);
+        }
+    }
+    if (renderer.debug.show_bounding_boxes) { renderer.render_debug_bounding_box_entities(); }
+    if (renderer.debug.show_grid) { renderer.render_debug_grid(); }
 
-    syn_close_log();
-    root_window.destroy();
+    // always render AABB around selected entity
+    if (selected_entity_handle.is_valid()) {
+        entity_t *e = entity_lib.get_entity(selected_entity_handle);
+        if (e) {
+            bool prev = renderer.debug.show_bounding_boxes;
+            renderer.debug.show_bounding_boxes = true;
+            renderer.render_debug_bounding_box_entities(e);
+            renderer.debug.show_bounding_boxes = prev;
 
+            renderer.render_ui_transform(e->t_position);
+        }
+    }
+    
+    //
+    renderer.render_orientation_obj();
+
+    // draw_perf_overlay does NOT contain font.start_/.end_render_block()
+    renderer.record_frame_time(time_step.dt * 1000.0f);
+
+    // render all scene text
+    syn_flush_font(false);
+    
+    // render scene in viewport window
+    window_t *viewport = window_manager.get_viewport_window();
+    if (viewport && viewport->has_frambuffer()) {
+        api.fbo_handler.unbind();
+    }
+
+    // 
+    syn_flush_windows();
+
+}
+
+// 
+void syn_flush_2d()
+{
+    if (!s_2d_enabled) return;
+    renderer_2d.batch.end_batch();
+    
+}
+
+// 
+void syn_flush_font(bool _use_depth_test)
+{
+    if (!s_font_enabled) return;
+    font.end_render_block(_use_depth_test);
+
+}
+
+// 
+void syn_flush_windows()
+{
+    if (!s_window_manager_enabled) return;
+    api.set_clear_color(0.0f, 0.0f, 0.0f, 1.0f);
+    api.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    // ui rendering
+    api.clear_depth_buffer();
+    window_manager.draw_windows();
+
+    renderer.draw_notifications();
+
+    if (s_editor_enabled) dev_tools.handle_input();
+    
 }
 
 
@@ -421,114 +586,6 @@ void syn_create_color_picker_window(const char *_name, const glm::vec2 &_pos, co
     pw->set_visible(false);
     pw->set_resizable(false);
 
-}
-
-
-//---------------------------------------------------------------------------------------
-// rendering loop functions
-//
-bool __was_prerender_called = false; 
-void syn_prerender()
-{
-    if (__was_prerender_called) return;
-
-    root_window.pre_render();
-    renderer.reset_perf_counters();
-
-    events.process_events();
-    
-    __was_prerender_called = true;
-    
-}
-
-// 
-void syn_render_begin_3d()
-{
-    syn_prerender();
-    
-    //
-    api.set_clear_color({ 0.2f, 0.2f, 0.2f, 1.0f });
-    renderer.bind_scene_fbuffer();
-    
-    // perspective_camera.update(time_step.dt);
-    cam.update(time_step.dt);
-
-}
-
-//
-void syn_render_end_3d()
-{
-    // dev tools
-    if (renderer.debug.show_normals || renderer.debug.show_tangents) {
-        entity_t *e = entity_lib.get_entity(selected_entity_handle);
-        if (e){
-            renderer.render_debug_normals(e->mesh_handle, e->transform);
-        }
-    }
-    if (renderer.debug.show_bounding_boxes) { renderer.render_debug_bounding_box_entities(); }
-    if (renderer.debug.show_grid) { renderer.render_debug_grid(); }
-
-    // always render AABB around selected entity
-    if (selected_entity_handle.is_valid()) {
-        entity_t *e = entity_lib.get_entity(selected_entity_handle);
-        if (e) {
-            bool prev = renderer.debug.show_bounding_boxes;
-            renderer.debug.show_bounding_boxes = true;
-            renderer.render_debug_bounding_box_entities(e);
-            renderer.debug.show_bounding_boxes = prev;
-
-            renderer.render_ui_transform(e->t_position);
-        }
-    }
-    
-    //
-    renderer.render_orientation_obj();
-
-    // draw_perf_overlay does NOT contain font.start_/.end_render_block()
-    renderer.record_frame_time(time_step.dt * 1000.0f);
-
-    // render all scene text
-    font.end_render_block(false);
-    
-    // render scene in viewport window
-    window_t *viewport = window_manager.get_viewport_window();
-    if (viewport && viewport->has_frambuffer()) {
-        api.fbo_handler.unbind();
-    }
-
-    // 
-    syn_render_end();
-
-}
-
-//
-void syn_render_end()
-{
-    // everything is drawn, render the screen NDC quad
-    api.set_clear_color(0.0f, 0.0f, 0.0f, 1.0f);
-    api.clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-    
-    // ui rendering
-    api.clear_depth_buffer();
-    window_manager.draw_windows();
-
-    // 
-    renderer.draw_notifications();
-    font.end_render_block(false);
-
-    // 
-    dev_tools.handle_input();
-}
-
-// 
-void syn_frame_end()
-{
-    root_window.post_render();
-    time_step.update();
-    time_step.calculate_fps();
-
-    __was_prerender_called = false;
 }
 
 
@@ -1004,12 +1061,8 @@ void syn_im_tex_quad(window_handle_t _handle, texture_handle_t _tex_handle, cons
 
     widget_params_t wp;
     im_set_widget_params(w, &wp);
-    if (_pos.x >= 0.0f) {
-        wp.p = _pos;
-        wp.s = _size;
-    } else {
-        wp.s = _size;
-    }
+    if (_pos.x >= 0.0f) { wp.p = _pos; wp.s = _size; } 
+    else                { wp.s = _size; }
 
     shader_t *shader = shader_lib.get_shader(renderer.m_ui_tex_quad_shader_handle);
     if (!shader) return;
@@ -1020,6 +1073,38 @@ void syn_im_tex_quad(window_handle_t _handle, texture_handle_t _tex_handle, cons
     shader->set_uniform_2fv("u_size", wp.s);
     shader->set_uniform_1f("u_depth", w->depth + window_manager.ddepth_layer_widget);
     glBindTextureUnit(0, tex->opengl_id);
+    renderer.m_ui_tex_quad_vao.bind();
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    renderer.m_ui_tex_quad_vao.unbind();
+    shader->disable();
+
+    im_update_cursor_y(w, &wp);    
+    
+}
+
+void syn_im_tex_quad_raw(window_handle_t _handle, GLuint _tex_id, const glm::vec2 &_size, const glm::vec2 &_pos)
+{
+    window_t *w = window_manager.get_window(_handle);
+    if (!w) return;
+
+    uint32_t id = im_widget_hash("__tex_quad", w);
+    widget_state_t *state = w->im_get_or_create_state(id);
+    if (!state) return;
+
+    widget_params_t wp;
+    im_set_widget_params(w, &wp);
+    if (_pos.x >= 0.0f) { wp.p = _pos; wp.s = _size; } 
+    else                { wp.s = _size; }
+
+    shader_t *shader = shader_lib.get_shader(renderer.m_ui_tex_quad_shader_handle);
+    if (!shader) return;
+
+    shader->enable();
+    shader->set_matrix_4fv("u_projection", renderer.m_ui_projection);
+    shader->set_uniform_2fv("u_position", wp.p);
+    shader->set_uniform_2fv("u_size", wp.s);
+    shader->set_uniform_1f("u_depth", w->depth + window_manager.ddepth_layer_widget);
+    glBindTextureUnit(0, _tex_id);
     renderer.m_ui_tex_quad_vao.bind();
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
     renderer.m_ui_tex_quad_vao.unbind();
@@ -1139,8 +1224,8 @@ void syn_perf_window()
     float text_y = wp.p.y;
     float text_h = font.get_font_height();
     font.set_depth(w->depth + window_manager.ddepth_layer_text);
-    font.render_text(wp.p.x, text_y += text_h, "    FPS: %d (%.2f ms)", time_step.fps, time_step.dt * 1000.0f);
-    font.render_text(wp.p.x, text_y += text_h, "    Draw Calls: %d", renderer.m_perf_stats.draw_calls_per_frame);
+    font.render_text(wp.p.x, text_y += text_h, "  FPS: %d (%.2f ms)", time_step.fps, time_step.dt * 1000.0f);
+    font.render_text(wp.p.x, text_y += text_h, "  Draw Calls: %d", renderer.m_perf_stats.draw_calls_per_frame);
 
     wp.p.y = text_y;
     

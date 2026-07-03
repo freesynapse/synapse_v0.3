@@ -39,9 +39,6 @@
 //---------------------------------------------------------------------------------------
 // definitions and enums
 //
-#define SYN_MODE_2D     1
-#define SYN_MODE_3D     2
-
 #define UPPER_LEFT      1
 #define UPPER_RIGHT     2
 #define LOWER_LEFT      3
@@ -93,10 +90,34 @@ extern entity_handle_t              selected_entity_handle;
 //---------------------------------------------------------------------------------------
 // high-level control
 //
-void syn_init(const char *_name, int _width, int _height, int _mode);
-void syn_mode_2d();
-void syn_mode_3d();
+void syn_init(const char *_name, int _width, int _height);
 void syn_shutdown();
+void syn_enable_2d();
+void syn_enable_assets();
+void syn_enable_font(const char *_filename, int _px_size);
+void syn_enable_window_manager();
+void syn_enable_editor();
+void syn_enable_mplc();
+void syn_enable_mode_2d();
+void syn_enable_mode_3d();
+
+
+//---------------------------------------------------------------------------------------
+// rendering loop functions
+//
+void syn_begin_frame();
+void syn_end_frame();
+
+// optional per-frame subsystem flushes
+// void syn_prerender();
+void syn_render_begin_3d();
+void syn_render_end_3d();
+void syn_flush_2d();
+void syn_flush_font(bool _use_depth_test=false);
+void syn_flush_windows();
+
+// void syn_render_end();
+// void syn_frame_end();
 
 
 //---------------------------------------------------------------------------------------
@@ -118,18 +139,6 @@ void syn_create_color_picker_window(const char *_name, const glm::vec2 &_pos, co
 
 
 //---------------------------------------------------------------------------------------
-// rendering loop functions
-//
-void syn_prerender();
-void syn_render_begin_3d();
-void syn_render_end_3d();
-void syn_render_end();
-void syn_frame_end();
-
-extern bool __was_prerender_called; 
-
-
-//---------------------------------------------------------------------------------------
 // immediate mode ui
 // 
 void syn_im_begin();
@@ -147,6 +156,8 @@ void syn_im_color_picker_hue(window_handle_t _handle, float *_hue);
 void syn_im_color_swatch(window_handle_t _handle, float *_r, float *_g, float *_b);
 bool syn_im_list(window_handle_t _handle, const char **_items, uint32_t _count, int *_selected_index, int *_hovered_index=nullptr, float _max_height=0.0f);
 void syn_im_tex_quad(window_handle_t _handle, texture_handle_t _tex_handle, const glm::vec2 &_size, const glm::vec2 &_pos=glm::vec2(-1.0f));
+void syn_im_tex_quad_raw(window_handle_t _handle, GLuint _tex_id, const glm::vec2 &_size, const glm::vec2 &_pos=glm::vec2(-1.0f));
+
 // 
 void syn_log_window();
 void syn_perf_window();

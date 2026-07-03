@@ -9,13 +9,16 @@ entity_handle_t test_cube;
 
 void setup_lights();
 void render(float _dt);
-void handle_input();
 
 //
 int main()
 {
-    syn_init("synapse v0.3", 0, 0, SYN_MODE_3D);
+    syn_init("synapse v0.3", 0, 0);
     // syn_init("synapse v0.3", 2000, 1400, SYN_MODE_3D);
+    syn_enable_font("../assets/font/JetBrainsMono-Regular.ttf", 16);
+    syn_enable_editor();
+    syn_enable_mode_3d();
+
     root_window.set_exit_key(SYN_KEY_W, SYN_MOD_CTRL);
 
     syn_load_assets("../assets/manifest.syn");
@@ -37,9 +40,8 @@ int main()
     //
     while (!root_window.should_close()) {
 
-        handle_input();
-
-        //
+        syn_begin_frame();
+        
         syn_render_begin_3d();
         render(time_step.dt);
         syn_render_end_3d();
@@ -58,7 +60,8 @@ int main()
     
         syn_im_end();
 
-        syn_frame_end();
+        syn_end_frame();
+        
     }
 
     syn_shutdown();
@@ -81,10 +84,6 @@ void render(float _dt)
     renderer.cmd_flush();
     
 }
-
-//
-void handle_input()
-{}
 
 // 
 void setup_lights()
