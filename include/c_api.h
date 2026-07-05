@@ -19,6 +19,7 @@
 #include "renderer/mesh/mesh_generator.h"
 #include "renderer/entity/entity_library.h"
 #include "renderer/font/font.h"
+#include "renderer/font/font_utf8.h"
 #include "renderer/camera/camera_controller.h"
 #include "renderer/camera/orbit_camera.h"
 #include "renderer/camera/perspective_camera.h"
@@ -72,6 +73,7 @@ extern dev_tools_t                  dev_tools;
 
 // rendering
 extern font_t                       font;
+extern font_utf8_t                  font_utf8;
 extern camera_controller_t          cam;
 extern perspective_camera_t         perspective_camera;
 extern orbit_camera_t               orbit_camera;

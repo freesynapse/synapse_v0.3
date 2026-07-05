@@ -43,6 +43,7 @@ dev_tools_t                 dev_tools;
 
 // rendering
 font_t                      font;
+font_utf8_t                 font_utf8;
 camera_controller_t         cam;
 perspective_camera_t        perspective_camera;
 orbit_camera_t              orbit_camera;
@@ -605,6 +606,7 @@ void syn_im_end()
     font.end_render_block(true);
 }
 
+// 
 window_t *syn_im_begin_window(window_handle_t _handle)
 {
     window_t *w = window_manager.get_window(_handle);
@@ -1082,6 +1084,7 @@ void syn_im_tex_quad(window_handle_t _handle, texture_handle_t _tex_handle, cons
     
 }
 
+// 
 void syn_im_tex_quad_raw(window_handle_t _handle, GLuint _tex_id, const glm::vec2 &_size, const glm::vec2 &_pos)
 {
     window_t *w = window_manager.get_window(_handle);

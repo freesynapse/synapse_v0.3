@@ -1,21 +1,26 @@
-#ifndef __FONT_H
-#define __FONT_H
+#ifndef __FONT_UTF8_H
+#define __FONT_UTF8_H
 
 #include <vector>
 #include <freetype2/ft2build.h>
 #include FT_FREETYPE_H
+#include <unordered_map>
 #include <glm/glm.hpp>
 
 #include "renderer/font/font_types.h"
 #include "renderer/buffers/vertex_array.h"
 #include "event/event.h"
 
+
 // 
-class font_t
+#define SYN_FONT_UTF8_ATLAS_WIDTH   2048
+
+// 
+class font_utf8_t
 {
 public:
-	font_t() = default;
-	~font_t() = default;
+	font_utf8_t() = default;
+	~font_utf8_t() = default;
 	
 	void init(const char *_filename, const int &_pixel_size=12, const glm::vec2 &_vp_sz=glm::vec2(0.0f));
 	void destroy();
@@ -40,7 +45,7 @@ public:
 	const std::vector<font_vertex_t> &get_vertices() { return m_vertices; }
 	
 private:
-	int init_font_atlas(const char *_filename, const int &_pixel_size, const glm::vec2 &_vp_sz);
+	int init_font_atlas(const char *_filename, const int &_pixel_size);
 	void render_text_raw(const float &_x, const float &_y, const char *_str);
 	
 private:
@@ -57,7 +62,7 @@ private:
 	// atlas
 	char m_tmp_buffer[SYN_FONT_MAX_STRING_LENGTH];
 	std::vector<font_vertex_t> m_vertices;
-	character_info_s m_chars[SYN_FONT_MAX_CHAR_SET_SIZE];
+	std::unordered_map<uint32_t, character_info_s> m_chars;
 	float m_font_ascender;  // pixels from base to top of the tallest glyph
 
 	// GLSL shaders
@@ -73,4 +78,4 @@ private:
 };
 
 
-#endif // __FONT_H
+#endif // __FONT_UTF8_H

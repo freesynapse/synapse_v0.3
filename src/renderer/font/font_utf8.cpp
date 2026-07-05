@@ -1,0 +1,390 @@
+
+#include <string>
+#include <string.h>
+#include <stdarg.h>
+
+#include "renderer/font/font_utf8.h"
+
+#include "utils/log.h"
+#include "utils/math_utils.h"
+#include "glfw_window.h"
+
+#include "c_api.h"
+
+
+// static codepoint ranges (for now)
+static const std::vector<codepoint_range_t> s_codepoint_ranges = {
+    {     32,    126 }, // ASCII range
+    { 0x2500, 0x257F }, // box drawing
+    { 0x2580, 0x25A0 }, // block elements
+    { 0x25A0, 0x25FF }, // geometric shapes
+};
+
+//
+void font_utf8_t::init(const char *_filename, const int &_pixel_size, const glm::vec2 &_vp_sz)
+{
+	m_shader_handle = shader_lib.load_from_file("font_shader", "../assets/shaders/font.glsl");
+
+	// initialize the text atlas texture
+	init_font_atlas(_filename, _pixel_size);
+
+	m_viewport_size = _vp_sz;
+
+	// 6 vertices per character
+	m_vertices.reserve(SYN_FONT_MAX_BUFFER_LENGTH * 6);
+
+}
+
+//
+void font_utf8_t::destroy()
+{
+    m_vao.destroy();
+    glDeleteTextures(1, &m_atlas_texture_id);
+    FT_Done_Face(m_ft_face);
+    FT_Done_FreeType(m_ft_lib);
+
+}
+
+//
+int font_utf8_t::init_font_atlas(const char* _filename, const int &_pixel_size)
+{
+	// Init the FreeType lib
+	if (FT_Init_FreeType(&m_ft_lib)) {
+		SYN_ERROR("FreeType could not be initialized.\n");
+		return (-1);
+	}
+
+	SYN_INFO("loading font atlas from '%s'.\n", _filename);
+
+	if (FT_New_Face(m_ft_lib, _filename, 0, &m_ft_face)) {
+		SYN_ERROR("could not font load atlas from '%s'.\n", _filename);
+		return (-1);
+	}
+
+	// Initialize variables before atlas creation
+	FT_Set_Pixel_Sizes(m_ft_face, 0, _pixel_size);
+	FT_GlyphSlot g = m_ft_face->glyph;
+	FT_Load_Char(m_ft_face, 'H', FT_LOAD_RENDER);
+	m_font_ascender = (float)m_ft_face->glyph->bitmap.rows;
+
+	unsigned int roww = 0;
+	unsigned int rowh = 0;
+
+	m_texture_width = 0;
+	m_texture_height = 0;
+
+	//
+	for (auto &range : s_codepoint_ranges) {
+    	for (uint32_t cp = range.start; cp < range.end; cp++) {
+    		if (FT_Load_Char(m_ft_face, cp, FT_LOAD_RENDER)) {
+    			SYN_WARNING("could not load codepoint %d.\n", cp);
+    			continue;
+    		}
+    
+    		if (roww + g->bitmap.width + 1 >= SYN_FONT_UTF8_ATLAS_WIDTH) {
+    			m_texture_width = max(m_texture_width, roww);
+    			m_texture_height += rowh;
+    			roww = 0;
+    			rowh = 0;
+    		}
+    
+    		roww += g->bitmap.width + 1;
+    		rowh = max(rowh, g->bitmap.rows);
+    	}
+	}
+
+	m_texture_width = max(m_texture_width, roww);
+	m_texture_height += rowh;
+
+	// Create a texture to hold the character set
+	glGenTextures(1, &m_atlas_texture_id);
+	glBindTexture(GL_TEXTURE_2D, m_atlas_texture_id);
+
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, m_texture_width, m_texture_height, 0, GL_RED, GL_UNSIGNED_BYTE, 0);
+
+	// 1 byte alignment
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+	// Clamping to edges and linear filtering
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	// Paste glyphs bitmaps into the texture
+	int ox = 0;
+	int oy = 0;
+	rowh = 0;
+
+	for (auto &range : s_codepoint_ranges) {
+	    for (uint32_t cp = range.start; cp < range.end; cp++) {
+    		if (FT_Load_Char(m_ft_face, cp, FT_LOAD_RENDER)) {
+    			SYN_WARNING("could not load codepoint bitmap %d into texture.\n", cp);
+    			continue;
+    		}
+    
+    		if (ox + g->bitmap.width + 1 >= SYN_FONT_UTF8_ATLAS_WIDTH) {
+    			oy += rowh;
+    			rowh = 0;
+    			ox = 0;
+    		}
+    
+    		glTexSubImage2D(GL_TEXTURE_2D,
+    			            0,
+    			            ox,
+    			            oy,
+    			            g->bitmap.width,
+    			            g->bitmap.rows,
+    			            GL_RED,
+    			            GL_UNSIGNED_BYTE,
+    			            g->bitmap.buffer);
+    
+    		m_chars[cp].ax = (float)(g->advance.x >> 6);
+    		m_chars[cp].ay = (float)(g->advance.y >> 6);
+    		m_chars[cp].bw = (float)g->bitmap.width;
+    		m_chars[cp].bh = (float)g->bitmap.rows;
+    		m_chars[cp].bl = (float)g->bitmap_left;
+    		m_chars[cp].bt = (float)g->bitmap_top;
+    		m_chars[cp].tx = ox / (float)m_texture_width;
+    		m_chars[cp].ty = oy / (float)m_texture_height;
+    
+    		rowh = max(rowh, g->bitmap.rows);
+    		ox += g->bitmap.width + 1;
+    	}
+	}
+
+	m_vao.set_buffer_layout({
+	    { VERTEX_ATTRIB_LOCATION_POSITION, shader_data_type_t::FLOAT2 },
+		{ VERTEX_ATTRIB_LOCATION_UV, shader_data_type_t::FLOAT2 },
+		{ VERTEX_ATTRIB_LOCATION_COLOR, shader_data_type_t::FLOAT4 },
+		{ VERTEX_ATTRIB_LOCATION_DEPTH, shader_data_type_t::FLOAT },
+	});
+	m_vao.create_empty_vertices(6 * sizeof(font_vertex_t) * SYN_FONT_MAX_BUFFER_LENGTH, GL_DYNAMIC_DRAW);
+
+	SYN_INFO("generated %dx%d text atlas.\n", m_texture_width, m_texture_height);
+
+	return 0;
+
+}
+
+//
+void font_utf8_t::render_text(const float &_x, const float &_y, const char* _str, ...)
+{
+    if (!_str) return;
+
+	va_list arglist;
+	memset(m_tmp_buffer, 0, SYN_FONT_MAX_STRING_LENGTH);
+	va_start(arglist, _str);
+	size_t str_len = vsnprintf(m_tmp_buffer, SYN_FONT_MAX_STRING_LENGTH, _str, arglist);
+	va_end(arglist);
+
+	render_text_raw(_x, _y, m_tmp_buffer);
+
+}
+  
+//
+void font_utf8_t::render_text_clipped(const float &_x, const float &_y, float _max_width, const char *_str, ...)
+{
+    if (!_str) return;
+
+    va_list arglist;
+    memset(m_tmp_buffer, 0, SYN_FONT_MAX_STRING_LENGTH);
+    va_start(arglist, _str);
+    size_t str_len = vsnprintf(m_tmp_buffer, SYN_FONT_MAX_STRING_LENGTH, _str, arglist);
+    va_end(arglist);
+
+    float x = std::round(_x);
+    float y = std::round(_y);
+    float clip_x = _x + _max_width;
+
+    for (size_t i = 0; i < str_len; i++) {
+        if (m_tmp_buffer[i] == '\0' || m_tmp_buffer[i] == '\n') break;
+
+        uint8_t ascii_val = (uint8_t)m_tmp_buffer[i];
+        if (ascii_val < 32 || ascii_val >= SYN_FONT_MAX_CHAR_SET_SIZE) continue;
+
+        character_info_s c = m_chars[ascii_val];
+        float x2 = std::round(x + c.bl);
+        float y2 = std::round(y - c.bt);
+        float w = c.bw;
+        float h = c.bh;
+
+        if (x2 >= clip_x) return;
+
+        x += c.ax;
+        y += c.ay;
+
+        if (!w || !h) continue;
+
+        float u0 = c.tx;
+        float v0 = c.ty;
+        float u1 = c.tx + c.bw / (float)m_texture_width;
+        float v1 = c.ty + c.bh / (float)m_texture_height;
+
+        m_vertices.push_back(font_vertex_t({ x2,     y2 + h }, { u0, v1 }, m_text_color, m_current_depth));  // bottom-left
+        m_vertices.push_back(font_vertex_t({ x2 + w, y2 + h }, { u1, v1 }, m_text_color, m_current_depth));  // bottom-right
+        m_vertices.push_back(font_vertex_t({ x2 + w, y2     }, { u1, v0 }, m_text_color, m_current_depth));  // top-right
+        m_vertices.push_back(font_vertex_t({ x2,     y2 + h }, { u0, v1 }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2 + w, y2     }, { u1, v0 }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2,     y2     }, { u0, v0 }, m_text_color, m_current_depth));  // top-left
+    }
+}
+
+// 
+void font_utf8_t::render_text_centered(const float &_x, const float &_y, const char *_str, ...)
+{
+    if (!_str) return;
+
+    char buf[SYN_FONT_MAX_STRING_LENGTH];
+    va_list arglist;
+    memset(buf, 0, SYN_FONT_MAX_STRING_LENGTH);
+    va_start(arglist, _str);
+    vsnprintf(buf, SYN_FONT_MAX_STRING_LENGTH, _str, arglist);
+    va_end(arglist);
+
+    float w = get_string_width(buf);
+    render_text_raw(_x - w * 0.5f, _y, buf);
+    
+}
+
+// 
+void font_utf8_t::render_text_right(const float &_x, const float &_y, const char *_str, ...)
+{
+    if (!_str) return;
+    
+    char buf[SYN_FONT_MAX_STRING_LENGTH];
+    va_list arglist;
+    memset(buf, 0, SYN_FONT_MAX_STRING_LENGTH);
+    va_start(arglist, _str);
+    vsnprintf(buf, SYN_FONT_MAX_STRING_LENGTH, _str, arglist);
+    va_end(arglist);
+
+    float w = get_string_width(buf);
+    render_text_raw(_x - w, _y, buf);
+    
+}
+
+// 
+void font_utf8_t::render_text_raw(const float &_x, const float &_y, const char *_str)
+{
+    float x = std::round(_x);
+    float y = std::round(_y);
+    const uint8_t *p = (const uint8_t *)_str;
+    while (*p) {
+        uint32_t cp = 0;
+        if      (*p < 0x80)     { cp = *p++; }
+        else if (*p < 0xE0)     { cp = (*p++ & 0x1F) << 6;  cp |= (*p++ & 0x3F); }
+        else if (*p < 0xF0)     { cp = (*p++ & 0x0F) << 12; cp |= (*p++ & 0x3F) << 6; cp |= (*p++ & 0x3F); }
+        else                    { cp = (*p++ & 0x07) << 18; cp |= (*p++ & 0x3F) << 12; cp |= (*p++ & 0x3F) << 6; cp |= (*p++ & 0x3F); }
+
+        if (cp == 0x2588) { SYN_DEBUG("hit 0x2588\n"); }
+        auto it = m_chars.find(cp);
+        if (cp == 0x2588) {
+            SYN_DEBUG("bw=%.0f bh=%.0f bl=%.0f bt=%.0f tx=%.4f ty=%.4f\n",
+                it->second.bw, it->second.bh, it->second.bl, it->second.bt,
+                it->second.tx, it->second.ty);
+        }
+        if (it == m_chars.end()) { x += m_chars[32].ax; continue; } // skip for now
+        
+        character_info_s &c = it->second;
+        
+        float x2 = std::round(x + c.bl);
+        float y2 = std::round(y - c.bt);
+        float w = c.bw;
+        float h = c.bh;
+        x += c.ax;
+        y += c.ay;
+        
+        if (!w || !h) continue;
+        float u0 = c.tx, v0 = c.ty;
+        float u1 = c.tx + c.bw / (float)m_texture_width;
+        float v1 = c.ty + c.bh / (float)m_texture_height;
+        m_vertices.push_back(font_vertex_t({ x2,     y2 + h }, { u0, v1 }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2 + w, y2 + h }, { u1, v1 }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2 + w, y2     }, { u1, v0 }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2,     y2 + h }, { u0, v1 }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2 + w, y2     }, { u1, v0 }, m_text_color, m_current_depth));
+        m_vertices.push_back(font_vertex_t({ x2,     y2     }, { u0, v0 }, m_text_color, m_current_depth));
+    }
+}
+
+//
+void font_utf8_t::begin_render_block()
+{
+    m_vertices.clear();
+    
+}
+
+//
+void font_utf8_t::end_render_block(bool _use_depth_test)
+{    
+    if (m_vertices.empty()) return;
+
+    if (!_use_depth_test) {
+        api.disable_depth_test();
+    }
+
+    glm::mat4 proj = glm::ortho(0.0f, root_window.get_fwidth(), 
+                                root_window.get_fheight(), 0.0f, 
+                                window_manager.get_zfar(), window_manager.get_znear());
+    
+    
+    shader_t *shader = shader_lib.get_shader(m_shader_handle);
+	shader->enable();
+	shader->set_matrix_4fv("u_projection", proj);
+    
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, m_atlas_texture_id);
+
+	m_vao.bind();
+	m_vao.update_vertices(&m_vertices[0], sizeof(font_vertex_t) * m_vertices.size(), 0);	
+	glDrawArrays(GL_TRIANGLES, 0, m_vertices.size());
+    m_vao.unbind();
+
+    renderer.m_perf_stats.draw_calls_per_frame++;
+    
+    shader->disable();
+
+    if (!_use_depth_test) {
+        api.enable_depth_test();
+    }
+
+	m_vertices.clear();
+}
+
+void font_utf8_t::end_render_block_with_proj(const glm::mat4 &_proj)
+{
+    if (m_vertices.empty()) return;
+
+    shader_t *shader = shader_lib.get_shader(m_shader_handle);
+    shader->enable();
+    shader->set_matrix_4fv("u_projection", _proj);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, m_atlas_texture_id);
+
+    m_vao.bind();
+    m_vao.update_vertices(&m_vertices[0], sizeof(font_vertex_t) * m_vertices.size(), 0);
+    glDrawArrays(GL_TRIANGLES, 0, m_vertices.size());    
+    m_vao.unbind();
+
+    shader->disable();
+    m_vertices.clear();
+    
+}
+
+//
+float font_utf8_t::get_string_width(const char* _str, ...)
+{
+	memset(m_tmp_buffer, 0, 256);
+
+	va_list arglist;
+	va_start(arglist, _str);
+	int offset = vsprintf(m_tmp_buffer, _str, arglist);
+	va_end(arglist);
+
+	// monospaced font required here...
+	return offset * m_chars[(uint32_t)m_tmp_buffer[0]].ax;
+}
+
